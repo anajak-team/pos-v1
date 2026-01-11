@@ -1,0 +1,7 @@
+{
+  "name": "Nexus POS",
+  "description": "A professional, mobile-first Point of Sale management system featuring AI-driven sales insights and inventory management.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
