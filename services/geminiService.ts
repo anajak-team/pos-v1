@@ -1,13 +1,16 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { Transaction, Product } from '../types';
 
-// FIX: Initialize GoogleGenAI with API key directly from environment variables as per guidelines.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Initialize with a check. If no key, we handle errors gracefully later.
+// The key is injected by Vite at build time.
+const apiKey = process.env.API_KEY || '';
+const ai = new GoogleGenAI({ apiKey });
 
 const MODEL_FLASH = 'gemini-2.5-flash';
 
 export const generateSalesInsight = async (transactions: Transaction[]): Promise<string> => {
-  // FIX: Removed API key check as per guidelines assuming it's always available.
+  if (!apiKey) return "AI features disabled (Missing API Key).";
 
   // Summarize data to reduce token usage
   const recentSales = transactions.slice(0, 20);
@@ -36,7 +39,7 @@ export const generateSalesInsight = async (transactions: Transaction[]): Promise
 };
 
 export const generateProductDescription = async (name: string, category: string): Promise<string> => {
-  // FIX: Removed API key check as per guidelines.
+  if (!apiKey) return "Premium quality product.";
 
   const prompt = `Write a short, appealing marketing description (max 15 words) for a product named "${name}" in the category "${category}". Return only the text.`;
 
@@ -53,7 +56,7 @@ export const generateProductDescription = async (name: string, category: string)
 };
 
 export const suggestUpsell = async (cartItems: string[]): Promise<string> => {
-    // FIX: Removed API key check as per guidelines.
+    if (!apiKey) return "";
     if (cartItems.length === 0) return "";
 
     const prompt = `
