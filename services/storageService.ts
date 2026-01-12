@@ -17,7 +17,7 @@ const DEFAULT_USERS: StoredUser[] = [
   { id: 'user3', name: 'Staff User', email: 'staff@nexus.com', password: 'password', role: 'Staff', avatar: 'S' },
 ];
 const DEFAULT_SETTINGS: StoreSettings = {
-    storeName: 'Nexus POS',
+    storeName: 'Anajak POS',
     currency: '$',
     secondaryCurrency: '៛',
     exchangeRate: 4100,
