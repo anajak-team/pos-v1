@@ -689,6 +689,16 @@ export const savePurchaseOrder = async (order: PurchaseOrder): Promise<PurchaseO
     }
 };
 
+// --- Connection Check ---
+export const checkConnection = async (): Promise<boolean> => {
+    try {
+        const { error } = await supabase.from('products').select('count', { count: 'exact', head: true });
+        return !error;
+    } catch {
+        return false;
+    }
+};
+
 // --- Data Management (Backup/Restore) ---
 export const exportFullBackup = async (): Promise<void> => {
     const backupData: { [key: string]: any } = {
