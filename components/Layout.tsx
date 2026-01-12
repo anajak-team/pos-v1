@@ -115,7 +115,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col h-full overflow-hidden relative">
         {/* Mobile Header - Glass - SUPER COMPACT */}
-        <div className="md:hidden h-auto min-h-12 pt-[env(safe-area-inset-top)] flex items-center justify-between px-3 py-1.5 shrink-0 z-30 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border-b border-white/20 dark:border-white/10">
+        <div className="md:hidden h-auto min-h-12 pt-[max(env(safe-area-inset-top),10px)] flex items-center justify-between px-3 py-1.5 shrink-0 z-30 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border-b border-white/20 dark:border-white/10">
            <div className="flex items-center gap-2 overflow-hidden">
              <div className="w-7 h-7 bg-primary/90 backdrop-blur-sm rounded-lg flex items-center justify-center shrink-0 shadow-lg">
                  <span className="text-white font-bold text-sm">N</span>
@@ -146,7 +146,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
         {isMobileMenuOpen && (
           <div className="md:hidden absolute inset-0 z-40 flex flex-col justify-end bg-black/20 backdrop-blur-[2px]" onClick={() => setIsMobileMenuOpen(false)}>
             <div 
-                className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl rounded-t-[2rem] p-6 pb-28 border-t border-white/20 dark:border-white/10 shadow-2xl animate-slide-up"
+                className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-t-[2rem] p-6 pb-28 border-t border-white/20 dark:border-white/10 shadow-2xl animate-slide-up"
                 onClick={e => e.stopPropagation()}
             >
                 <div className="flex justify-between items-center mb-4">

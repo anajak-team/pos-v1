@@ -5,6 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#2563eb" />
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="description" content="Professional POS System for Android">
@@ -13,7 +14,7 @@
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json">
     
-    <!-- Tailwind CSS (Dev/Preview only - Vite handles CSS in build, but keeping for safety if CSS build fails) -->
+    <!-- Tailwind CSS (Dev/Preview only) -->
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- QR Code Scanner Lib -->
@@ -87,6 +88,10 @@
       }
       
       body {
+        /* App-like feel: disable text selection */
+        -webkit-user-select: none;
+        user-select: none;
+        
         /* Mesh Gradient Light */
         background-color: #e0f2fe;
         background-image: 
@@ -120,6 +125,12 @@
         color: #f1f5f9; 
       }
       
+      /* Re-enable text selection for inputs */
+      input, textarea {
+        -webkit-user-select: text;
+        user-select: text;
+      }
+
       /* Hide scrollbar for clean UI */
       .no-scrollbar::-webkit-scrollbar {
         display: none;
@@ -165,7 +176,7 @@
         border: 1px solid rgba(255, 255, 255, 0.1);
       }
     </style>
-<script type="importmap">
+  <script type="importmap">
 {
   "imports": {
     "react": "https://esm.sh/react@^19.2.3",
