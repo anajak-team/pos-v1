@@ -19,10 +19,10 @@ const DEFAULT_USERS: StoredUser[] = [
 ];
 const DEFAULT_SETTINGS: StoreSettings = {
     storeName: 'ANAJAK POS',
-    currency: '$',
-    secondaryCurrency: '៛',
-    exchangeRate: 4100,
-    taxRate: 8,
+    currency: '៛',
+    secondaryCurrency: '$',
+    exchangeRate: 0.0002439, // 1 KHR = ~0.0002439 USD (Assuming 1 USD = 4100 KHR)
+    taxRate: 0,
     lowStockThreshold: 10,
     receiptHeader: 'Thank you for your business!',
     receiptFooter: 'Please come again!',
@@ -31,7 +31,7 @@ const DEFAULT_SETTINGS: StoreSettings = {
     printers: [],
     autoOpenDrawer: true,
     enableLoyalty: true,
-    loyaltyRate: 1,
+    loyaltyRate: 0.01, // 1 point per 100 Riel
     landingPage: {
         sections: [
             {
@@ -791,8 +791,26 @@ export const importBackup = async (jsonString: string): Promise<void> => {
 };
 
 export const clearAllData = async (): Promise<void> => {
+    // Define the default entities to restore
+    const defaultAdmin = DEFAULT_USERS.find(u => u.role === 'Admin');
+    const takeawayCustomer: Customer = {
+        id: `cust-takeaway`,
+        name: 'Takeaway',
+        phone: '',
+        email: '',
+        totalSpent: 0,
+        visits: 0,
+        lastVisit: new Date().toISOString(),
+        points: 0
+    };
+
     if (isDemo()) {
         localStorage.clear();
+        if (defaultAdmin) saveDemoLocal('users', [defaultAdmin]);
+        saveDemoLocal('customers', [takeawayCustomer]);
+        saveDemoLocal('settings', DEFAULT_SETTINGS);
+        saveDemoLocal('categories', DEFAULT_CATEGORIES);
+        saveDemoLocal('expense_categories', DEFAULT_EXPENSE_CATEGORIES);
         return;
     }
     
@@ -809,15 +827,18 @@ export const clearAllData = async (): Promise<void> => {
     await supabase.from('purchase_orders').delete().neq('id', '0');
     await supabase.from('app_config').delete().neq('key', '0');
     
-    // 2. Clear Users EXCEPT Admins
-    // We keep accounts with role 'Admin' so the business owner isn't locked out.
-    await supabase.from('users').delete().neq('role', 'Admin');
+    // 2. Clear Users
+    await supabase.from('users').delete().neq('id', '0');
     
-    // 3. Reseed Default Data
-    await supabase.from('products').insert(SEED_PRODUCTS);
+    // 3. Add Default Admin
+    if (defaultAdmin) {
+        await supabase.from('users').insert(defaultAdmin);
+    }
+
+    // 4. Add Default Customer
+    await supabase.from('customers').insert(takeawayCustomer);
     
-    // Note: We do NOT reseed DEFAULT_USERS here to avoid duplicates/conflicts 
-    // since we preserved the existing Admin(s).
+    // Note: We do NOT reseed SEED_PRODUCTS here. Data will be completely empty.
     
     await saveConfig('settings', DEFAULT_SETTINGS);
     await saveConfig('categories', DEFAULT_CATEGORIES);

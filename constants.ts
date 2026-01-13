@@ -1,16 +1,15 @@
 
-
 import { Product } from './types';
 
-export const TAX_RATE = 0.08;
-export const CURRENCY = '$';
+export const TAX_RATE = 0; // Local markets often don't add tax on top
+export const CURRENCY = '៛';
 
 export const SEED_PRODUCTS: Product[] = [
   {
     id: '1',
     name: 'Artisan Coffee',
-    price: 4.50,
-    cost: 1.80,
+    price: 18000,
+    cost: 7200,
     category: 'Beverage',
     stock: 100,
     description: 'Rich, full-bodied roast from Ethiopian beans.',
@@ -21,8 +20,8 @@ export const SEED_PRODUCTS: Product[] = [
   {
     id: '2',
     name: 'Croissant',
-    price: 3.25,
-    cost: 1.20,
+    price: 13000,
+    cost: 4800,
     category: 'Food',
     stock: 25,
     description: 'Buttery, flaky pastry baked fresh daily.',
@@ -33,8 +32,8 @@ export const SEED_PRODUCTS: Product[] = [
   {
     id: '3',
     name: 'Green Tea Latte',
-    price: 5.00,
-    cost: 2.10,
+    price: 20000,
+    cost: 8400,
     category: 'Beverage',
     stock: 50,
     description: 'Premium matcha powder with steamed milk.',
@@ -45,8 +44,8 @@ export const SEED_PRODUCTS: Product[] = [
   {
     id: '4',
     name: 'Avocado Toast',
-    price: 12.00,
-    cost: 4.50,
+    price: 48000,
+    cost: 18000,
     category: 'Food',
     stock: 15,
     description: 'Sourdough bread topped with fresh avocado and spices.',
@@ -57,8 +56,8 @@ export const SEED_PRODUCTS: Product[] = [
   {
     id: '5',
     name: 'Reusable Cup',
-    price: 15.00,
-    cost: 5.00,
+    price: 60000,
+    cost: 20000,
     category: 'Retail',
     stock: 30,
     description: 'Eco-friendly thermal cup.',
