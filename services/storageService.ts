@@ -17,7 +17,7 @@ const DEFAULT_USERS: StoredUser[] = [
   { id: 'user3', name: 'Staff User', email: 'staff@nexus.com', password: 'password', role: 'Staff', avatar: 'S' },
 ];
 const DEFAULT_SETTINGS: StoreSettings = {
-    storeName: 'Anajak POS',
+    storeName: 'Nexus POS',
     currency: '$',
     secondaryCurrency: '៛',
     exchangeRate: 4100,
@@ -686,16 +686,6 @@ export const savePurchaseOrder = async (order: PurchaseOrder): Promise<PurchaseO
         const { data, error } = await supabase.from('purchase_orders').insert(newOrder).select().single();
         if (error) throw error;
         return data;
-    }
-};
-
-// --- Connection Check ---
-export const checkConnection = async (): Promise<boolean> => {
-    try {
-        const { error } = await supabase.from('products').select('count', { count: 'exact', head: true });
-        return !error;
-    } catch {
-        return false;
     }
 };
 
