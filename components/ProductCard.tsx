@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Product } from '../types';
 import { Plus } from 'lucide-react';
