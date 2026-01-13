@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { Shift } from '../types';
-import { X, Wallet, Banknote, CreditCard, Smartphone, Calculator, CheckCircle2 } from 'lucide-react';
+import { X, Wallet, Banknote, CreditCard, Smartphone, Calculator, CheckCircle2, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 
 interface CloseShiftModalProps {
   isOpen: boolean;
@@ -23,7 +22,10 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({ isOpen, onClos
   if (!isOpen || !shift) return null;
 
   const totalSales = shift.cashSales + shift.cardSales + shift.digitalSales;
-  const expectedCash = shift.startingCash + shift.cashSales;
+  const payIn = shift.cashMovements?.filter(m => m.type === 'in').reduce((sum, m) => sum + m.amount, 0) || 0;
+  const payOut = shift.cashMovements?.filter(m => m.type === 'out').reduce((sum, m) => sum + m.amount, 0) || 0;
+  
+  const expectedCash = shift.startingCash + shift.cashSales + payIn - payOut;
   const difference = parseFloat(countedCash) - expectedCash;
 
   const formatCurrency = (amount: number) => {
@@ -38,7 +40,7 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({ isOpen, onClos
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-xl flex items-center justify-center p-4 animate-fade-in">
+    <div className="fixed inset-0 z-[120] bg-black/40 backdrop-blur-xl flex items-center justify-center p-4 animate-fade-in">
       <div className="w-full max-w-lg bg-white/60 dark:bg-black/60 backdrop-blur-2xl rounded-3xl shadow-2xl overflow-hidden border border-white/40 dark:border-white/10 relative flex flex-col">
         <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/10 dark:bg-black/10">
           <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Close Shift</h2>
@@ -83,6 +85,20 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({ isOpen, onClos
                 <span className="font-medium text-slate-600 dark:text-slate-300">(+) Cash Sales</span>
                 <span className="font-mono text-slate-700 dark:text-slate-200">{formatCurrency(shift.cashSales)}</span>
               </div>
+              
+              {payIn > 0 && (
+                  <div className="flex justify-between items-center text-sm text-emerald-600 dark:text-emerald-400">
+                    <span className="font-medium flex items-center gap-1"><ArrowDownLeft size={14}/> (+) Pay In</span>
+                    <span className="font-mono">{formatCurrency(payIn)}</span>
+                  </div>
+              )}
+              {payOut > 0 && (
+                  <div className="flex justify-between items-center text-sm text-red-600 dark:text-red-400">
+                    <span className="font-medium flex items-center gap-1"><ArrowUpRight size={14}/> (-) Pay Out</span>
+                    <span className="font-mono">{formatCurrency(payOut)}</span>
+                  </div>
+              )}
+
               <div className="pt-3 border-t border-white/20 dark:border-white/10 flex justify-between items-center">
                 <span className="font-bold text-slate-700 dark:text-slate-200">Expected in Drawer</span>
                 <span className="font-bold text-lg text-slate-900 dark:text-white">{formatCurrency(expectedCash)}</span>

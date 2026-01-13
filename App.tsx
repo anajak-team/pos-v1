@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Layout } from './components/Layout';
 import { LoginView } from './views/LoginView';
@@ -16,7 +15,8 @@ import { Invoice } from './components/Invoice';
 import { ShiftReport } from './components/ShiftReport';
 import { ShiftEntryModal } from './components/ShiftEntryModal';
 import { CloseShiftModal } from './components/CloseShiftModal';
-import { ViewState, Product, Transaction, StoreSettings, PurchaseOrder, User, Shift, Expense, CartItem, Customer, StoredUser, RepairTicket } from './types';
+import { WalletModal } from './components/WalletModal';
+import { ViewState, Product, Transaction, StoreSettings, PurchaseOrder, User, Shift, Expense, CartItem, Customer, StoredUser, RepairTicket, CashMovement } from './types';
 import * as api from './services/storageService';
 import { FileText, Printer, Wand2, ScanBarcode, Box, Image as ImageIcon, Upload, X, Check, ZoomIn, ZoomOut, Move, Save, Loader2, Minus, Plus, Undo2, Eye, Camera } from 'lucide-react';
 import { useToast } from './components/Toast';
@@ -448,6 +448,7 @@ export const App: React.FC = () => {
   const [transactionToView, setTransactionToView] = useState<Transaction | null>(null);
   const [productModalState, setProductModalState] = useState<{isOpen: boolean; product: Partial<Product> | null}>({isOpen: false, product: null});
   const [isCloseShiftModalOpen, setIsCloseShiftModalOpen] = useState(false);
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [shiftReportData, setShiftReportData] = useState<Shift | null>(null);
   
   const { showToast } = useToast();
@@ -583,7 +584,7 @@ export const App: React.FC = () => {
   const handleStartShift = async (amount: number) => {
     if (!currentUser) return;
     try {
-      const newShift = await api.saveShift({ userId: currentUser.id, userName: currentUser.name, startTime: new Date().toISOString(), startingCash: amount, cashSales: 0, cardSales: 0, digitalSales: 0, status: 'OPEN' });
+      const newShift = await api.saveShift({ userId: currentUser.id, userName: currentUser.name, startTime: new Date().toISOString(), startingCash: amount, cashSales: 0, cardSales: 0, digitalSales: 0, status: 'OPEN', cashMovements: [] });
       setCurrentShift(newShift);
       showToast(`Shift started with ${settings?.currency || '$'}${amount.toFixed(2)} float`, 'success');
     } catch (error) {
@@ -594,17 +595,47 @@ export const App: React.FC = () => {
   const handleConfirmCloseShift = async (countedCash: number) => {
     if (!currentShift) return;
     const totalSales = (currentShift.cashSales || 0) + (currentShift.cardSales || 0) + (currentShift.digitalSales || 0);
-    const expectedCash = (currentShift.startingCash || 0) + (currentShift.cashSales || 0);
+    
+    const payIn = currentShift.cashMovements?.filter(m => m.type === 'in').reduce((sum, m) => sum + m.amount, 0) || 0;
+    const payOut = currentShift.cashMovements?.filter(m => m.type === 'out').reduce((sum, m) => sum + m.amount, 0) || 0;
+    
+    const expectedCash = (currentShift.startingCash || 0) + (currentShift.cashSales || 0) + payIn - payOut;
     const difference = countedCash - expectedCash;
     const shiftToClose: Partial<Shift> = { id: currentShift.id, endTime: new Date().toISOString(), status: 'CLOSED', totalSales, expectedCash, countedCash, difference };
     try {
       const savedShift = await api.saveShift(shiftToClose);
       setCurrentShift(null);
       setIsCloseShiftModalOpen(false);
+      setIsWalletModalOpen(false);
       setShiftReportData(savedShift); // Show report before logout
       showToast('Shift closed successfully.', 'success');
     } catch (error) {
       showToast('Failed to close shift', 'error');
+    }
+  };
+
+  const handleCashMovement = async (type: 'in' | 'out', amount: number, reason: string) => {
+    if (!currentShift || !currentUser) return;
+    
+    const newMovement: CashMovement = {
+        id: Date.now().toString(),
+        type,
+        amount,
+        reason,
+        timestamp: new Date().toISOString(),
+        userId: currentUser.id,
+        userName: currentUser.name
+    };
+
+    const updatedMovements = [...(currentShift.cashMovements || []), newMovement];
+    const updatedShift = { ...currentShift, cashMovements: updatedMovements };
+    
+    try {
+        await api.saveShift(updatedShift);
+        setCurrentShift(updatedShift);
+        showToast(`Cash ${type === 'in' ? 'added' : 'removed'} successfully`, 'success');
+    } catch (error) {
+        showToast('Failed to record cash movement', 'error');
     }
   };
 
@@ -945,7 +976,7 @@ export const App: React.FC = () => {
       ) : (
         <>
             <div className="print:hidden h-full text-secondary dark:text-slate-300 transition-colors duration-200">
-                <Layout currentView={currentView} onNavigate={setCurrentView} storeName={settings.storeName} onLogout={handleLogout} currentUser={currentUser} onCloseShift={() => setIsCloseShiftModalOpen(true)}>
+                <Layout currentView={currentView} onNavigate={setCurrentView} storeName={settings.storeName} onLogout={handleLogout} currentUser={currentUser} onWalletClick={() => setIsWalletModalOpen(true)}>
                 {renderView()}
                 </Layout>
             </div>
@@ -953,6 +984,16 @@ export const App: React.FC = () => {
             {transactionToView && <Invoice transaction={transactionToView} settings={settings} onClose={() => setTransactionToView(null)} />}
             <ProductModal isOpen={productModalState.isOpen} productToEdit={productModalState.product} onSave={handleSaveProductFromModal} onClose={handleCloseProductModal} categories={categories} />
             <CloseShiftModal isOpen={isCloseShiftModalOpen} onClose={() => setIsCloseShiftModalOpen(false)} onConfirm={handleConfirmCloseShift} shift={currentShift || undefined} currency={settings.currency} />
+            {currentShift && (
+                <WalletModal 
+                    isOpen={isWalletModalOpen} 
+                    onClose={() => setIsWalletModalOpen(false)} 
+                    shift={currentShift} 
+                    onAddMovement={handleCashMovement} 
+                    onCloseShift={() => setIsCloseShiftModalOpen(true)}
+                    currency={settings.currency}
+                />
+            )}
             <ReturnModal isOpen={!!transactionToReturn} onClose={() => setTransactionToReturn(null)} transaction={transactionToReturn} onProcessReturn={handleReturnTransaction} />
         </>
       )}

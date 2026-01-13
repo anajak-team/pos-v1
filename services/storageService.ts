@@ -391,19 +391,21 @@ export const getActiveShift = async (): Promise<Shift | null> => {
 };
 
 export const saveShift = async (shift: Partial<Shift>): Promise<Shift> => {
+    const shiftData = { ...shift, cashMovements: shift.cashMovements || [] }; // Ensure movements array exists if new
+
     if (isDemo()) {
         const shifts = getDemoLocal<Shift[]>('shifts', []);
         let savedShift: Shift;
         if (shift.id) {
             const index = shifts.findIndex(s => s.id === shift.id);
             if (index !== -1) {
-                shifts[index] = { ...shifts[index], ...shift } as Shift;
+                shifts[index] = { ...shifts[index], ...shiftData } as Shift;
                 savedShift = shifts[index];
             } else {
                 throw new Error("Shift not found");
             }
         } else {
-            savedShift = { ...shift, id: `shift-${Date.now()}` } as Shift;
+            savedShift = { ...shiftData, id: `shift-${Date.now()}` } as Shift;
             shifts.unshift(savedShift);
         }
         saveDemoLocal('shifts', shifts);
@@ -412,9 +414,9 @@ export const saveShift = async (shift: Partial<Shift>): Promise<Shift> => {
 
     let result;
     if (shift.id) {
-        result = await supabase.from('shifts').update(shift).eq('id', shift.id).select().single();
+        result = await supabase.from('shifts').update(shiftData).eq('id', shift.id).select().single();
     } else {
-        const newShift = { ...shift, id: `shift-${Date.now()}` };
+        const newShift = { ...shiftData, id: `shift-${Date.now()}` };
         result = await supabase.from('shifts').insert(newShift).select().single();
     }
     if (result.error) throw result.error;

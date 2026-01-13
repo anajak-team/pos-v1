@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ViewState, User } from '../types';
 import { LayoutDashboard, ShoppingCart, Package, History, Settings, Truck, LogOut, Wallet, Receipt, BarChart3, Wrench, MoreHorizontal, X } from 'lucide-react';
@@ -10,10 +9,10 @@ interface LayoutProps {
   storeName: string;
   onLogout: () => void;
   currentUser: User;
-  onCloseShift: () => void;
+  onWalletClick: () => void;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigate, storeName, onLogout, currentUser, onCloseShift }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigate, storeName, onLogout, currentUser, onWalletClick }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Reordered for Priority: Top 4 go to bottom bar, rest go to "More" menu
@@ -84,9 +83,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
 
           <div className="grid grid-cols-3 gap-2">
             <button 
-              onClick={onCloseShift}
+              onClick={onWalletClick}
               className="col-span-1 flex flex-col items-center justify-center p-2 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition-colors border border-amber-500/20"
-              title="Close Shift"
+              title="Shift Wallet"
             >
               <Wallet size={16} />
             </button>
@@ -123,7 +122,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
              <span className="font-bold text-sm text-slate-800 dark:text-slate-100 truncate drop-shadow-sm">{storeName}</span>
            </div>
            <div className="flex items-center gap-1.5">
-             <button onClick={onCloseShift} className="p-1.5 text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 rounded-lg transition-colors border border-amber-500/10">
+             <button onClick={onWalletClick} className="p-1.5 text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 rounded-lg transition-colors border border-amber-500/10">
                 <Wallet size={16} />
              </button>
              <button onClick={() => onNavigate('SETTINGS')} className="p-1.5 text-slate-600 dark:text-slate-400 bg-white/30 dark:bg-white/10 hover:bg-white/40 rounded-lg transition-colors border border-white/20">

@@ -1,4 +1,3 @@
-
 export interface Product {
   id: string;
   name: string;
@@ -115,6 +114,16 @@ export interface StoredUser extends User {
   password: string;
 }
 
+export interface CashMovement {
+  id: string;
+  type: 'in' | 'out';
+  amount: number;
+  reason: string;
+  timestamp: string;
+  userId: string;
+  userName: string;
+}
+
 export interface Shift {
   id: string;
   userId: string;
@@ -130,6 +139,7 @@ export interface Shift {
   countedCash?: number;
   difference?: number; // countedCash - expectedCash
   status: 'OPEN' | 'CLOSED';
+  cashMovements: CashMovement[];
 }
 
 export interface Customer {
