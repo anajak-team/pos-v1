@@ -1,10 +1,9 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { Transaction } from '../types';
 
 // Initialize exclusively from environment variable as per coding guidelines
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-const MODEL_NAME = 'gemini-3-pro-preview';
+const MODEL_NAME = 'gemini-3-flash-preview';
 
 export const generateSalesInsight = async (transactions: Transaction[]): Promise<string> => {
   if (!process.env.API_KEY) return "AI features disabled (Missing API Key).";
