@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { StoreSettings, Transaction, PrinterConfig, User, StoredUser, Customer, ViewState } from '../types';
-import { Save, Store, Receipt, Database, Percent, Download, AlertTriangle, Volume2, VolumeX, Printer, Plus, Trash2, Wifi, RefreshCw, Loader2, Moon, Sun, Users, Shield, UserPlus, Lock, Mail, FileJson, Coins, Contact, Search, Tag, Upload, Edit, Wallet, Check, X, Crown, Gift, Globe, Layout, ArrowRight, Cloud, CloudOff } from 'lucide-react';
+import { Save, Store, Receipt, Database, Percent, Download, AlertTriangle, Volume2, VolumeX, Printer, Plus, Trash2, Wifi, RefreshCw, Loader2, Moon, Sun, Users, Shield, UserPlus, Lock, Mail, FileJson, Coins, Contact, Search, Tag, Upload, Edit, Wallet, Check, X, Crown, Gift, Globe, Layout, ArrowRight } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { useAlert } from '../components/Alert';
-import { exportFullBackup, importBackup, clearAllData, checkConnection } from '../services/storageService';
+import { exportFullBackup, importBackup, clearAllData } from '../services/storageService';
 
 interface SettingsViewProps {
   settings: StoreSettings;
@@ -30,19 +30,15 @@ interface SectionCardProps {
   icon: React.ElementType;
   children: React.ReactNode;
   colorClass: string;
-  headerRight?: React.ReactNode;
 }
 
-const SectionCard: React.FC<SectionCardProps> = ({ title, icon: Icon, children, colorClass, headerRight }) => (
+const SectionCard: React.FC<SectionCardProps> = ({ title, icon: Icon, children, colorClass }) => (
   <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-3xl border border-white/30 dark:border-white/10 shadow-lg transition-all hover:bg-white/50 dark:hover:bg-slate-900/50">
-    <div className="flex items-center justify-between mb-6">
-      <div className="flex items-center gap-3">
-        <div className={`p-2.5 ${colorClass} bg-opacity-20 rounded-2xl shadow-sm`}>
-          <Icon size={22} />
-        </div>
-        <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg">{title}</h3>
+    <div className="flex items-center gap-3 mb-6">
+      <div className={`p-2.5 ${colorClass} bg-opacity-20 rounded-2xl shadow-sm`}>
+        <Icon size={22} />
       </div>
-      {headerRight}
+      <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg">{title}</h3>
     </div>
     <div className="space-y-5">{children}</div>
   </div>
@@ -168,16 +164,9 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
   // Printer State
   const [newPrinter, setNewPrinter] = useState<{name: string, address: string, type: 'receipt' | 'kitchen'}>({ name: '', address: '', type: 'receipt' });
 
-  // Database Connection State
-  const [isConnected, setIsConnected] = useState<boolean | null>(null);
-
   const { showToast } = useToast();
   const { showConfirm } = useAlert();
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-      checkConnection().then(setIsConnected);
-  }, []);
 
   const handleChange = (field: keyof StoreSettings, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -372,33 +361,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
         
         <SectionCard title="Customer Database" icon={Contact} colorClass="bg-pink-500 text-pink-600 dark:text-pink-400"><div className="space-y-4"><div className="flex gap-2"><div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16}/><input placeholder="Search customers..." className={`${commonInputClass} pl-10`} value={customerSearch} onChange={e => setCustomerSearch(e.target.value)} /></div><button onClick={handleAddCustomerClick} className="p-3 bg-pink-500 text-white rounded-2xl shadow-lg hover:bg-pink-600 transition-colors"><Plus size={20}/></button></div><div className="max-h-60 overflow-y-auto space-y-2 pr-1">{filteredCustomers.length === 0 ? (<div className="text-center text-slate-400 text-sm py-4">No customers found</div>) : (filteredCustomers.map(customer => (<div key={customer.id} className="flex items-center justify-between p-3 bg-white/50 dark:bg-white/5 rounded-2xl border border-white/20 dark:border-white/10 hover:bg-white/70 dark:hover:bg-white/10 transition-colors"><div className="min-w-0 flex-1 pr-3"><div className="font-bold text-sm truncate text-slate-800 dark:text-slate-100">{customer.name}</div><div className="flex items-center gap-2 mt-0.5"><span className="text-xs text-slate-500">{customer.phone}</span>{(settings.enableLoyalty !== false) && <span className="text-[10px] px-2 py-0.5 bg-amber-500/10 text-amber-600 rounded-full font-bold flex items-center gap-1 border border-amber-500/20"><Crown size={10} /> {customer.points || 0} pts</span>}</div></div><div className="flex items-center gap-2"><div className="text-right mr-2 hidden sm:block"><div className="text-xs text-slate-400 font-medium">Spent</div><div className="text-sm font-bold text-slate-700 dark:text-slate-200">${customer.totalSpent.toFixed(0)}</div></div><button onClick={() => handleEditCustomerClick(customer)} className="p-1.5 text-blue-500 hover:bg-blue-500/10 rounded-lg"><Edit size={16} /></button><button onClick={() => handleDeleteCustomer(customer.id)} className="text-red-400 p-2 hover:bg-red-500/10 rounded-xl shrink-0"><Trash2 size={16} /></button></div></div>)))}</div></div></SectionCard>
         
-        {!isStaff && (
-            <SectionCard 
-                title="Data Management" 
-                icon={Database} 
-                colorClass="bg-red-500 text-red-600 dark:text-red-400"
-                headerRight={
-                    <div className="flex items-center gap-2 px-3 py-1 bg-white/50 dark:bg-white/10 rounded-lg text-xs font-bold border border-white/20">
-                        {isConnected === null ? (
-                            <span className="text-slate-400 flex items-center gap-1"><Loader2 size={12} className="animate-spin" /> Checking...</span>
-                        ) : isConnected ? (
-                            <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1"><Cloud size={14} /> Connected</span>
-                        ) : (
-                            <span className="text-red-500 flex items-center gap-1"><CloudOff size={14} /> Offline</span>
-                        )}
-                    </div>
-                }
-            >
-                <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                        <button onClick={handleImportClick} className="p-4 bg-white/50 border rounded-2xl"><Upload size={20} /> Import</button>
-                        <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json" />
-                        <button onClick={handleExportData} className="p-4 bg-white/50 border rounded-2xl"><FileJson size={20} /> Export</button>
-                    </div>
-                    {isAdmin && <button onClick={handleFactoryReset} className="w-full p-4 bg-red-500/5 border border-red-500/20 rounded-2xl"><AlertTriangle size={20} /> Factory Reset (Preserve Admins)</button>}
-                </div>
-            </SectionCard>
-        )}
+        {!isStaff && <SectionCard title="Data Management" icon={Database} colorClass="bg-red-500 text-red-600 dark:text-red-400"><div className="space-y-3"><div className="grid grid-cols-2 gap-3"><button onClick={handleImportClick} className="p-4 bg-white/50 border rounded-2xl"><Upload size={20} /> Import</button><input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json" /><button onClick={handleExportData} className="p-4 bg-white/50 border rounded-2xl"><FileJson size={20} /> Export</button></div>{isAdmin && <button onClick={handleFactoryReset} className="w-full p-4 bg-red-500/5 border border-red-500/20 rounded-2xl"><AlertTriangle size={20} /> Factory Reset (Preserve Admins)</button>}</div></SectionCard>}
       </div>
       
       {editingUser && <EditUserModal isOpen={!!editingUser} onClose={() => setEditingUser(null)} user={editingUser} onSave={handleSaveUserEdit} />}
