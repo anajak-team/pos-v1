@@ -809,8 +809,8 @@ export const clearAllData = async (): Promise<void> => {
         if (defaultAdmin) saveDemoLocal('users', [defaultAdmin]);
         saveDemoLocal('customers', [takeawayCustomer]);
         saveDemoLocal('settings', DEFAULT_SETTINGS);
-        saveDemoLocal('categories', DEFAULT_CATEGORIES);
-        saveDemoLocal('expense_categories', DEFAULT_EXPENSE_CATEGORIES);
+        saveDemoLocal('categories', []);
+        saveDemoLocal('expense_categories', []);
         return;
     }
     
@@ -841,8 +841,8 @@ export const clearAllData = async (): Promise<void> => {
     // Note: We do NOT reseed SEED_PRODUCTS here. Data will be completely empty.
     
     await saveConfig('settings', DEFAULT_SETTINGS);
-    await saveConfig('categories', DEFAULT_CATEGORIES);
-    await saveConfig('expense_categories', DEFAULT_EXPENSE_CATEGORIES);
+    await saveConfig('categories', []);
+    await saveConfig('expense_categories', []);
 };
 
 // --- Cart (Remains Synchronous Local Storage) ---
