@@ -1,37 +1,33 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
-import { Transaction, Product } from '../types';
+import { GoogleGenAI } from "@google/genai";
+import { Transaction } from '../types';
 
-// Initialize with a check. If no key, we handle errors gracefully later.
-// The key is injected by Vite at build time.
-const apiKey = process.env.API_KEY || '';
-const ai = new GoogleGenAI({ apiKey });
-
-const MODEL_FLASH = 'gemini-2.5-flash';
+// Initialize exclusively from environment variable
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+const MODEL_NAME = 'gemini-3-flash-preview';
 
 export const generateSalesInsight = async (transactions: Transaction[]): Promise<string> => {
-  if (!apiKey) return "AI features disabled (Missing API Key).";
+  if (!process.env.API_KEY) return "AI features disabled (Missing API Key).";
 
-  // Summarize data to reduce token usage
-  const recentSales = transactions.slice(0, 20);
+  const recentSales = transactions.slice(0, 30);
   const totalRevenue = transactions.reduce((acc, t) => acc + t.total, 0);
   
   const prompt = `
-    Analyze these recent POS transactions for a small business.
+    You are a professional business consultant. Analyze these recent POS transactions for a small business.
     Total Revenue All Time: ${totalRevenue.toFixed(2)}
     Recent Transactions JSON: ${JSON.stringify(recentSales)}
     
     Provide a concise, encouraging 3-sentence summary of sales performance and one actionable tip for the manager.
-    Focus on which items are popular or time-of-day trends if visible.
-    Do not use markdown formatting like bold or headers, just plain text.
+    Focus on popular items, busy periods, or upsell opportunities.
+    Do not use markdown formatting.
   `;
 
   try {
     const response = await ai.models.generateContent({
-      model: MODEL_FLASH,
+      model: MODEL_NAME,
       contents: prompt,
     });
-    return response.text || "No insights available.";
+    return response.text || "Insights currently being generated. Check back in a moment.";
   } catch (error) {
     console.error("Gemini Sales Insight Error:", error);
     return "Unable to generate insights at this time.";
@@ -39,35 +35,33 @@ export const generateSalesInsight = async (transactions: Transaction[]): Promise
 };
 
 export const generateProductDescription = async (name: string, category: string): Promise<string> => {
-  if (!apiKey) return "Premium quality product.";
+  if (!process.env.API_KEY) return "Premium quality item.";
 
   const prompt = `Write a short, appealing marketing description (max 15 words) for a product named "${name}" in the category "${category}". Return only the text.`;
 
   try {
     const response = await ai.models.generateContent({
-      model: MODEL_FLASH,
+      model: MODEL_NAME,
       contents: prompt,
     });
-    return response.text?.trim() || "Premium quality product.";
+    return response.text?.trim() || "Premium quality item.";
   } catch (error) {
-    console.error("Gemini Description Error:", error);
-    return "Premium quality product.";
+    return "Premium quality item.";
   }
 };
 
 export const suggestUpsell = async (cartItems: string[]): Promise<string> => {
-    if (!apiKey) return "";
-    if (cartItems.length === 0) return "";
+    if (!process.env.API_KEY || cartItems.length === 0) return "";
 
     const prompt = `
         A customer is buying: ${cartItems.join(', ')}.
-        Suggest ONE complementary generic product name (e.g., "Cookie", "Water") to upsell.
+        Suggest ONE complementary generic product name (e.g., "Cookie", "Cold Soda", "Warranty Plan") to upsell.
         Return ONLY the product name, nothing else.
     `;
 
     try {
         const response = await ai.models.generateContent({
-            model: MODEL_FLASH,
+            model: MODEL_NAME,
             contents: prompt,
         });
         return response.text?.trim() || "";
