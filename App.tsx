@@ -184,42 +184,62 @@ const BarcodeScanner = ({ onScan, onClose }: { onScan: (code: string) => void, o
         }
 
         const elementId = "product-modal-scanner-reader";
-        const html5QrCode = new Html5Qrcode(elementId);
-        scannerRef.current = html5QrCode;
         
-        const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
-        
-        html5QrCode.start(
-            { facingMode: "environment" }, 
-            config, 
-            (decodedText: string) => {
-                if (scannerRef.current) {
-                    scannerRef.current.stop().then(() => {
-                        scannerRef.current.clear();
-                        onScan(decodedText);
-                    }).catch((err: any) => {
-                        onScan(decodedText);
-                    });
+        try {
+            const html5QrCode = new Html5Qrcode(elementId);
+            scannerRef.current = html5QrCode;
+            
+            // Fix: Dynamic QR box to prevent 'min_edge' error on small screens
+            const config = { 
+                fps: 10, 
+                qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+                    const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                    return {
+                        width: Math.floor(minEdge * 0.7),
+                        height: Math.floor(minEdge * 0.7)
+                    };
+                },
+                aspectRatio: 1.0,
+                disableFlip: false
+            };
+            
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                config, 
+                (decodedText: string) => {
+                    if (scannerRef.current) {
+                        // Debounce stop to prevent races
+                        scannerRef.current.stop().then(() => {
+                            scannerRef.current.clear();
+                            onScan(decodedText);
+                        }).catch((err: any) => {
+                            // If stop fails (e.g. already stopped), still proceed
+                            onScan(decodedText);
+                        });
+                    }
+                },
+                (errorMessage: string) => {
+                    // ignore
                 }
-            },
-            (errorMessage: string) => {
-                // ignore
-            }
-        ).catch((err: any) => {
-            console.error("Error starting scanner", err);
-        });
+            ).catch((err: any) => {
+                console.error("Error starting scanner", err);
+            });
+        } catch (e) {
+            console.error("Error init scanner", e);
+        }
     }, 100);
 
     return () => {
         clearTimeout(timer);
         if (scannerRef.current) {
-            if (scannerRef.current.isScanning) {
+            try {
                 scannerRef.current.stop().then(() => {
                     scannerRef.current.clear();
-                }).catch(console.error);
-            } else {
-                scannerRef.current.clear();
-            }
+                }).catch((err: any) => {
+                    // Ignore stop errors on unmount
+                    try { scannerRef.current.clear(); } catch(e){}
+                });
+            } catch(e) {}
         }
     };
   }, []);

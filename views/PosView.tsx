@@ -431,37 +431,59 @@ export const PosView: React.FC<PosViewProps> = ({
             }
 
             // Create instance
-            html5QrCode = new Html5Qrcode("reader");
-            scannerInstanceRef.current = html5QrCode;
+            try {
+                html5QrCode = new Html5Qrcode("reader");
+                scannerInstanceRef.current = html5QrCode;
 
-            const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
-            
-            html5QrCode.start(
-                { facingMode: "environment" }, 
-                config, 
-                (decodedText: string) => {
-                    handleScan(decodedText);
-                },
-                (errorMessage: string) => {
-                    // parse error, ignore
-                }
-            ).catch((err: any) => {
-                console.error(err);
-                setScannerError("Camera permission denied or not available.");
-            });
+                // FIX: Use dynamic qrbox to prevent 'min_edge' errors on different devices
+                const config = { 
+                    fps: 10, 
+                    qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+                        const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                        return {
+                            width: Math.floor(minEdge * 0.7),
+                            height: Math.floor(minEdge * 0.7)
+                        };
+                    },
+                    aspectRatio: 1.0,
+                    disableFlip: false
+                };
+                
+                html5QrCode.start(
+                    { facingMode: "environment" }, 
+                    config, 
+                    (decodedText: string) => {
+                        handleScan(decodedText);
+                    },
+                    (errorMessage: string) => {
+                        // parse error, ignore
+                    }
+                ).catch((err: any) => {
+                    console.error("Scanner Start Error:", err);
+                    setScannerError("Camera permission denied or error.");
+                });
+            } catch (e) {
+                console.error("Scanner Init Error:", e);
+                setScannerError("Failed to initialize scanner.");
+            }
         }, 300);
 
-        return () => clearTimeout(timer);
-    } else {
-        // Cleanup if closed
-        if (scannerInstanceRef.current) {
-            scannerInstanceRef.current.stop().then(() => {
-                scannerInstanceRef.current.clear();
-                scannerInstanceRef.current = null;
-            }).catch((err: any) => {
-                console.warn("Failed to stop scanner", err);
-            });
-        }
+        return () => {
+            clearTimeout(timer);
+            if (scannerInstanceRef.current) {
+                try {
+                    scannerInstanceRef.current.stop().then(() => {
+                        scannerInstanceRef.current.clear();
+                        scannerInstanceRef.current = null;
+                    }).catch((err: any) => {
+                        console.warn("Failed to stop scanner safely", err);
+                        try { scannerInstanceRef.current.clear(); } catch (e) {}
+                    });
+                } catch(e) {
+                    console.warn("Scanner cleanup error", e);
+                }
+            }
+        };
     }
   }, [isScannerOpen, handleScan]);
 
