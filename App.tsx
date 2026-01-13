@@ -796,9 +796,10 @@ export const App: React.FC = () => {
   };
   
   // Customers
-  const handleAddCustomer = async (customer: Omit<Customer, 'id'>) => {
+  const handleAddCustomer = async (customer: Omit<Customer, 'id'>): Promise<Customer> => {
     const savedCustomer = await api.addCustomer(customer);
     setCustomers(prev => [...prev, savedCustomer]);
+    return savedCustomer;
   };
   const handleUpdateCustomer = async (customer: Customer) => {
     const updatedCustomer = await api.updateCustomer(customer);
@@ -981,7 +982,7 @@ export const App: React.FC = () => {
   const renderView = () => {
     switch (currentView) {
       case 'DASHBOARD': return <DashboardView transactions={transactions} isDarkMode={settings.theme === 'dark'} currentUser={currentUser!} expenses={expenses} />;
-      case 'POS': return <PosView products={products} onCompleteTransaction={handleTransaction} onPrint={handlePrintReceipt} settings={settings} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} currentUser={currentUser!} onOpenProductModal={handleOpenProductModal} categories={categories} />;
+      case 'POS': return <PosView products={products} onCompleteTransaction={handleTransaction} onPrint={handlePrintReceipt} settings={settings} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} currentUser={currentUser!} onOpenProductModal={handleOpenProductModal} categories={categories} customers={customers} onAddCustomer={handleAddCustomer} />;
       case 'REPAIRS': return <RepairsView repairs={repairs} customers={customers} onAddRepair={handleAddRepair} onUpdateRepair={handleUpdateRepair} onDeleteRepair={handleDeleteRepair} settings={settings} currentUser={currentUser!} />;
       case 'INVENTORY': return <InventoryView products={products} onDeleteProduct={handleDeleteProduct} onUpdateProduct={handleUpdateProduct} onImportProducts={handleImportProducts} settings={settings} currentUser={currentUser!} onOpenProductModal={handleOpenProductModal} />;
       case 'PURCHASES': return <PurchaseView orders={purchases} products={products} settings={settings} onCreateOrder={handleCreatePurchaseOrder} onReceiveOrder={handleReceiveOrder} currentUser={currentUser!} />;
@@ -990,7 +991,7 @@ export const App: React.FC = () => {
       case 'TRANSACTIONS': return <TransactionsHistory transactions={transactions} currency={settings.currency} onPrint={handlePrintReceipt} onReturn={handleOpenReturnModal} onView={handleViewReceipt} />;
       case 'SETTINGS': return <SettingsView settings={settings} onSave={handleUpdateSettings} transactions={transactions} currentUser={currentUser!} categories={categories} onUpdateCategories={handleUpdateCategories} onRenameCategory={handleRenameCategory} users={users} customers={customers} onAddUser={handleAddUser} onUpdateUser={handleUpdateUser} onDeleteUser={handleDeleteUser} onAddCustomer={handleAddCustomer} onUpdateCustomer={handleUpdateCustomer} onDeleteCustomer={handleDeleteCustomer} onNavigate={setCurrentView} />;
       case 'LANDING_BUILDER': return <LandingPageBuilderView settings={settings} onSave={handleUpdateSettings} onBack={() => setCurrentView('SETTINGS')} />;
-      default: return <PosView products={products} onCompleteTransaction={handleTransaction} settings={settings} onPrint={handlePrintReceipt} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} currentUser={currentUser!} onOpenProductModal={handleOpenProductModal} categories={categories} />;
+      default: return <PosView products={products} onCompleteTransaction={handleTransaction} settings={settings} onPrint={handlePrintReceipt} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} currentUser={currentUser!} onOpenProductModal={handleOpenProductModal} categories={categories} customers={customers} onAddCustomer={handleAddCustomer} />;
     }
   };
 

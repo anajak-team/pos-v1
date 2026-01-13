@@ -19,7 +19,7 @@ interface SettingsViewProps {
   onUpdateUser: (user: StoredUser) => Promise<void>;
   onDeleteUser: (userId: string) => Promise<void>;
   customers: Customer[];
-  onAddCustomer: (customer: Omit<Customer, 'id'>) => Promise<void>;
+  onAddCustomer: (customer: Omit<Customer, 'id'>) => Promise<void | Customer>;
   onUpdateCustomer: (customer: Customer) => Promise<void>;
   onDeleteCustomer: (customerId: string) => Promise<void>;
   onNavigate: (view: ViewState) => void;
