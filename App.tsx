@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Layout } from './components/Layout';
 import { LoginView } from './views/LoginView';
@@ -856,7 +857,11 @@ export const App: React.FC = () => {
       if (transaction.customerId) await api.updateCustomerStats(transaction.customerId, transaction.total);
       showToast(`Sale completed: ${settings?.currency || '$'}${transaction.total.toFixed(2)}`, 'success');
       if (savedTransaction.paymentMethod === 'cash' && settings?.autoOpenDrawer) { handlePrintReceipt(savedTransaction); }
-    } catch(error) { showToast('Failed to save transaction', 'error'); }
+    } catch(error: any) { 
+        console.error(error);
+        const msg = error?.message || 'Failed to save transaction';
+        showToast(msg, 'error'); 
+    }
   };
 
   const handleReturnTransaction = async (originalTx: Transaction, itemsToReturn: CartItem[]) => {

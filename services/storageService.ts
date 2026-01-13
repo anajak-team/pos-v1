@@ -275,17 +275,36 @@ export const getTransactions = async (): Promise<Transaction[]> => {
 };
 
 export const saveTransaction = async (transaction: Transaction): Promise<Transaction> => {
-    const newTransaction = { ...transaction, id: transaction.id || `trx-${Date.now()}` };
+    // Optimization: Sanitize items to remove large base64 images from transaction history
+    // This prevents hitting database payload limits and speeds up history loading
+    const cleanItems = transaction.items.map(item => {
+        if (item.image && item.image.startsWith('data:')) {
+            const { image, ...rest } = item;
+            return rest;
+        }
+        return item;
+    });
+
+    const newTransaction = { 
+        ...transaction, 
+        items: cleanItems,
+        id: transaction.id || `trx-${Date.now()}` 
+    };
+
     if (isDemo()) {
         const transactions = getDemoLocal('transactions', []);
         transactions.unshift(newTransaction);
         saveDemoLocal('transactions', transactions);
-        return newTransaction;
+        return newTransaction as Transaction;
     }
-    const { data, error } = await supabase.from('transactions').insert(newTransaction).select().single();
+
+    // Deep copy to ensure no undefined values are passed (sanitize for Supabase)
+    const payload = JSON.parse(JSON.stringify(newTransaction));
+
+    const { data, error } = await supabase.from('transactions').insert(payload).select().single();
     if (error) {
         console.error("Error saving transaction:", error);
-        throw error;
+        throw new Error(error.message); // Throw actual error message for UI
     }
     return data;
 };
