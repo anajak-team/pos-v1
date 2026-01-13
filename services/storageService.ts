@@ -8,16 +8,17 @@ const KEYS = {
   CART: 'nexus_cart',
 };
 
+// ... (existing code: Default Data and Helpers remain unchanged) ...
 // --- Default Data ---
 const DEFAULT_CATEGORIES = ['Food', 'Beverage', 'Retail', 'Service', 'Other', 'Electronics', 'Apparel', 'Books', 'Home Goods', 'Toys'];
 const DEFAULT_EXPENSE_CATEGORIES = ['Rent', 'Utilities', 'Wages', 'Supplies', 'Marketing', 'Other'];
 const DEFAULT_USERS: StoredUser[] = [
-  { id: 'user1', name: 'Admin User', email: 'admin@nexus.com', password: 'password', role: 'Admin', avatar: 'A' },
-  { id: 'user2', name: 'Manager User', email: 'manager@nexus.com', password: 'password', role: 'Manager', avatar: 'M' },
-  { id: 'user3', name: 'Staff User', email: 'staff@nexus.com', password: 'password', role: 'Staff', avatar: 'S' },
+  { id: 'user1', name: 'Admin User', email: 'admin@anajak.com', password: 'password', role: 'Admin', avatar: 'A' },
+  { id: 'user2', name: 'Manager User', email: 'manager@anajak.com', password: 'password', role: 'Manager', avatar: 'M' },
+  { id: 'user3', name: 'Staff User', email: 'staff@anajak.com', password: 'password', role: 'Staff', avatar: 'S' },
 ];
 const DEFAULT_SETTINGS: StoreSettings = {
-    storeName: 'Nexus POS',
+    storeName: 'ANAJAK POS',
     currency: '$',
     secondaryCurrency: '៛',
     exchangeRate: 4100,
@@ -71,7 +72,7 @@ const DEFAULT_SETTINGS: StoreSettings = {
                 order: 2,
                 content: {
                     title: 'See It In Action',
-                    subtitle: 'Watch how Nexus POS transforms retail operations.',
+                    subtitle: 'Watch how ANAJAK POS transforms retail operations.',
                     videoUrl: 'https://www.youtube.com/embed/D0cgsCA9tRY'
                 }
             },
@@ -135,7 +136,7 @@ const DEFAULT_SETTINGS: StoreSettings = {
                 visible: true,
                 order: 7,
                 content: {
-                    copyright: 'Nexus POS Systems. All rights reserved.'
+                    copyright: 'ANAJAK POS Systems. All rights reserved.'
                 }
             }
         ]
@@ -250,18 +251,11 @@ export const deleteProduct = async (id: string): Promise<void> => {
 export const saveProducts = async (products: Product[]): Promise<void> => {
     if (isDemo()) {
         const currentProducts = getDemoLocal<Product[]>('products', SEED_PRODUCTS);
-        
-        // Create a map for faster lookup
         const productMap = new Map(currentProducts.map(p => [p.id, p]));
-        
-        // Update or add new products (Merge)
         products.forEach(p => {
             productMap.set(p.id, p);
         });
-        
-        // Convert back to array
         const updatedList = Array.from(productMap.values());
-        
         saveDemoLocal('products', updatedList);
         return;
     }
@@ -289,7 +283,10 @@ export const saveTransaction = async (transaction: Transaction): Promise<Transac
         return newTransaction;
     }
     const { data, error } = await supabase.from('transactions').insert(newTransaction).select().single();
-    if (error) throw error;
+    if (error) {
+        console.error("Error saving transaction:", error);
+        throw error;
+    }
     return data;
 };
 
@@ -297,7 +294,6 @@ export const saveTransaction = async (transaction: Transaction): Promise<Transac
 export const getSettings = async (forceProduction = false): Promise<StoreSettings> => {
     const settings = await getConfig<StoreSettings>('settings', DEFAULT_SETTINGS, forceProduction);
     
-    // Merge Landing Page Sections logic (keep identical to ensure consistency)
     if (settings && settings.landingPage && settings.landingPage.sections) {
         const dbSections = settings.landingPage.sections;
         const defaultSections = DEFAULT_SETTINGS.landingPage.sections;
@@ -391,7 +387,7 @@ export const getActiveShift = async (): Promise<Shift | null> => {
 };
 
 export const saveShift = async (shift: Partial<Shift>): Promise<Shift> => {
-    const shiftData = { ...shift, cashMovements: shift.cashMovements || [] }; // Ensure movements array exists if new
+    const shiftData = { ...shift, cashMovements: shift.cashMovements || [] }; 
 
     if (isDemo()) {
         const shifts = getDemoLocal<Shift[]>('shifts', []);
@@ -459,7 +455,7 @@ export const updateCustomer = async (customer: Customer): Promise<Customer> => {
     return data;
 };
 
-export const updateCustomerStats = async (customerId: string, transactionTotal: number): Promise<void> => {
+export const updateCustomerStats = async (customerId: string, transactionTotal: number, pointsRedeemed: number = 0): Promise<void> => {
     if (isDemo()) {
         const customers = getDemoLocal<Customer[]>('customers', []);
         const idx = customers.findIndex(c => c.id === customerId);
@@ -467,12 +463,16 @@ export const updateCustomerStats = async (customerId: string, transactionTotal: 
             const customer = customers[idx];
             const settings = await getSettings();
             const pointsEarned = (settings.enableLoyalty !== false) ? Math.floor(transactionTotal * (settings.loyaltyRate || 1)) : 0;
+            const currentPoints = customer.points || 0;
+            
+            const newPoints = Math.max(0, currentPoints + pointsEarned - pointsRedeemed);
+
             customers[idx] = {
                 ...customer,
                 totalSpent: (customer.totalSpent || 0) + transactionTotal,
                 visits: (customer.visits || 0) + 1,
                 lastVisit: new Date().toISOString(),
-                points: (customer.points || 0) + pointsEarned
+                points: newPoints
             };
             saveDemoLocal('customers', customers);
         }
@@ -486,12 +486,15 @@ export const updateCustomerStats = async (customerId: string, transactionTotal: 
     const pointsEarned = (settings.enableLoyalty !== false) 
         ? Math.floor(transactionTotal * (settings.loyaltyRate || 1)) 
         : 0;
+    
+    const currentPoints = customer.points || 0;
+    const newPoints = Math.max(0, currentPoints + pointsEarned - pointsRedeemed);
 
     const updates = {
         totalSpent: (customer.totalSpent || 0) + transactionTotal,
         visits: (customer.visits || 0) + 1,
         lastVisit: new Date().toISOString(),
-        points: (customer.points || 0) + pointsEarned
+        points: newPoints
     };
 
     await supabase.from('customers').update(updates).eq('id', customerId);
@@ -716,7 +719,7 @@ export const exportFullBackup = async (): Promise<void> => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `nexus_backup_${isDemo() ? 'demo_' : ''}${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `anajak_backup_${isDemo() ? 'demo_' : ''}${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

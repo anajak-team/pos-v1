@@ -44,7 +44,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
       <aside className="hidden md:flex flex-col w-60 bg-white/40 dark:bg-slate-900/60 backdrop-blur-2xl border-r border-white/20 dark:border-white/5 z-20 transition-all duration-300">
         <div className="p-5 flex items-center gap-3">
           <div className="w-8 h-8 bg-primary/90 backdrop-blur-md rounded-lg flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/30">
-             <span className="text-white font-bold text-lg">N</span>
+             <span className="text-white font-bold text-lg">A</span>
           </div>
           <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100 tracking-tight truncate drop-shadow-sm" title={storeName}>{storeName}</h1>
         </div>
@@ -117,7 +117,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
         <div className="md:hidden h-auto min-h-12 pt-[env(safe-area-inset-top)] flex items-center justify-between px-3 py-1.5 shrink-0 z-30 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border-b border-white/20 dark:border-white/10">
            <div className="flex items-center gap-2 overflow-hidden">
              <div className="w-7 h-7 bg-primary/90 backdrop-blur-sm rounded-lg flex items-center justify-center shrink-0 shadow-lg">
-                 <span className="text-white font-bold text-sm">N</span>
+                 <span className="text-white font-bold text-sm">A</span>
              </div>
              <span className="font-bold text-sm text-slate-800 dark:text-slate-100 truncate drop-shadow-sm">{storeName}</span>
            </div>

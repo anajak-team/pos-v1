@@ -63,7 +63,7 @@ const ReceiptContent = ({ transaction, settings }: { transaction: Transaction, s
             <div className="text-center text-xs">
                 <p className="font-bold mb-2">Thank You!</p>
                 {settings.receiptFooter && <p>{settings.receiptFooter}</p>}
-                <p className="mt-4 text-[8px] text-gray-400">Powered by Nexus POS</p>
+                <p className="mt-4 text-[8px] text-gray-400">Powered by ANAJAK POS</p>
             </div>
         </div>
     )

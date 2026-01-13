@@ -635,7 +635,7 @@ const SubscriptionCheckout = ({ plan, onBack, onComplete }: { plan: any, onBack:
                     <button onClick={onBack} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-8">
                         <ArrowLeft size={20} /> Back
                     </button>
-                    <h2 className="text-3xl font-bold mb-2">Subscribe to Nexus POS</h2>
+                    <h2 className="text-3xl font-bold mb-2">Subscribe to ANAJAK POS</h2>
                     <p className="text-slate-400 mb-8">Unlock the full potential of your business.</p>
                     
                     <div className="bg-white/10 rounded-2xl p-6 backdrop-blur-md border border-white/10">
@@ -655,7 +655,7 @@ const SubscriptionCheckout = ({ plan, onBack, onComplete }: { plan: any, onBack:
                     </div>
                 </div>
                 <div className="mt-8 text-xs text-slate-500">
-                    <p>© Nexus POS Inc. Secure Checkout.</p>
+                    <p>© ANAJAK POS Inc. Secure Checkout.</p>
                 </div>
             </div>
 
@@ -728,7 +728,7 @@ const SubscriptionCheckout = ({ plan, onBack, onComplete }: { plan: any, onBack:
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onViewDemo, settings, products = [] }) => {
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
-  const storeName = settings?.storeName || 'Nexus POS';
+  const storeName = settings?.storeName || 'ANAJAK POS';
   const sections = settings?.landingPage?.sections || [];
   
   // Sort sections by order

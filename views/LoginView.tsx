@@ -63,7 +63,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin, onBack }) => {
           <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg border border-white/20">
             <Store size={32} className="text-white drop-shadow-md" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight drop-shadow-sm">Nexus POS</h1>
+          <h1 className="text-2xl font-bold tracking-tight drop-shadow-sm">ANAJAK POS</h1>
           <p className="text-blue-100 text-sm mt-1 font-medium">Next Gen Store Management</p>
         </div>
 
@@ -143,7 +143,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin, onBack }) => {
         <div className="p-4 bg-white/20 dark:bg-black/20 border-t border-white/10 text-center backdrop-blur-md">
            <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
               <p className="font-bold mb-1">Default Admin:</p>
-              <p><span className="font-mono bg-white/40 dark:bg-white/10 px-1.5 py-0.5 rounded text-slate-800 dark:text-slate-200">admin@nexus.com</span> / <span className="font-mono bg-white/40 dark:bg-white/10 px-1.5 py-0.5 rounded text-slate-800 dark:text-slate-200">password</span></p>
+              <p><span className="font-mono bg-white/40 dark:bg-white/10 px-1.5 py-0.5 rounded text-slate-800 dark:text-slate-200">admin@anajak.com</span> / <span className="font-mono bg-white/40 dark:bg-white/10 px-1.5 py-0.5 rounded text-slate-800 dark:text-slate-200">password</span></p>
            </div>
         </div>
       </div>
