@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Shift } from '../types';
 import { X, Wallet, Banknote, CreditCard, Smartphone, Calculator, CheckCircle2, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
@@ -29,7 +30,7 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({ isOpen, onClos
   const difference = parseFloat(countedCash) - expectedCash;
 
   const formatCurrency = (amount: number) => {
-    return `${currency}${amount.toFixed(2)}`;
+    return `${currency}${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
   
   const handleConfirm = () => {

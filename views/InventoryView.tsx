@@ -40,7 +40,14 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
 
   useEffect(() => {
     if (lowStockItems.length > 0 && notificationPermission === 'granted' && lowStockItems.length > prevLowStockCount.current) {
-        // ... notification logic ...
+        try {
+            new Notification('Low Stock Warning', {
+                body: `${lowStockItems.length} products are running low on inventory.`,
+                icon: '/vite.svg', // Assuming a default icon exists or browser default
+            });
+        } catch (e) {
+            console.error("Notification failed", e);
+        }
     }
     prevLowStockCount.current = lowStockItems.length;
   }, [lowStockItems.length, notificationPermission]);
@@ -226,8 +233,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
                     <td className="p-4"><div className="flex items-center gap-3 min-w-[200px]"><img src={product.image} className="w-10 h-10 rounded-xl object-cover bg-white/20 shadow-sm" alt="" /><div><div className="font-bold text-slate-900 dark:text-slate-100 line-clamp-1">{product.name}</div><div className="text-slate-500 text-xs truncate max-w-[150px]">{product.description}</div></div></div></td>
                     <td className="p-4">{product.barcode ? (<span className="font-mono text-xs bg-white/50 dark:bg-white/10 border border-white/20 px-2 py-1 rounded-lg text-slate-600 dark:text-slate-400 flex items-center w-fit gap-1"><ScanBarcode size={12} /> {product.barcode}</span>) : <span className="text-slate-300 text-xs italic">None</span>}</td>
                     <td className="p-4"><span className="px-3 py-1 rounded-lg bg-white/50 dark:bg-white/10 border border-white/20 text-slate-600 dark:text-slate-300 text-xs font-bold">{product.category}</span></td>
-                    <td className="p-4 font-bold text-slate-800 dark:text-slate-200">{settings.currency}{product.price.toFixed(2)}</td>
-                    {!isStaff && <td className="p-4 font-medium text-slate-500">{product.cost ? `${settings.currency}${product.cost.toFixed(2)}` : '-'}</td>}
+                    <td className="p-4 font-bold text-slate-800 dark:text-slate-200">{settings.currency}{product.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    {!isStaff && <td className="p-4 font-medium text-slate-500">{product.cost ? `${settings.currency}${product.cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}</td>}
                     <td className="p-4"><div className={`flex items-center gap-2 font-bold transition-all ${isLow ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>{product.stock} Units {isLow && <AlertTriangle size={16} className="text-red-500 animate-pulse" />}</div>{cases !== null && <div className="text-xs text-slate-400 mt-0.5 flex gap-1"><Box size={12}/>{cases} cases</div>}</td>
                     <td className="p-4 text-right"><div className="flex items-center justify-end gap-2">{isStaff ? <span className="text-slate-300 p-2"><Lock size={16} /></span> : (<>{isLow && <button onClick={() => handleReorder(product)} className="p-2 bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 rounded-lg" title="Reorder"><RefreshCw size={16} /></button>}<button onClick={() => onOpenProductModal(product)} className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg" title="Edit"><Edit size={16} /></button><button onClick={() => handleDeleteClick(product.id)} className="p-2 text-red-400 hover:bg-red-500/10 hover:text-red-600 rounded-lg" title="Delete"><Trash2 size={16} /></button></>)}</div></td>
                   </tr>
@@ -243,14 +250,14 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
               const cases = product.itemsPerCase && product.itemsPerCase > 1 ? Math.floor(product.stock / product.itemsPerCase) : null;
               return (
                 <div key={product.id} className={`p-3 rounded-xl border ${isLow ? 'bg-red-500/5 border-red-500/20' : 'bg-white/50 dark:bg-slate-800/50 border-white/20 dark:border-white/10'} backdrop-blur-md shadow-sm`}>
-                   <div className="flex gap-3 mb-2"><img src={product.image} className="w-12 h-12 rounded-lg object-cover bg-white/20 shadow-sm" alt="" /><div className="flex-1 min-w-0"><div className="flex justify-between items-start"><h4 className="font-bold text-slate-900 dark:text-slate-100 line-clamp-1 text-sm">{product.name}</h4><span className="font-bold text-slate-900 dark:text-slate-100 text-sm">{settings.currency}{product.price.toFixed(2)}</span></div><p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{product.category}</p>{product.barcode && (<div className="flex items-center gap-1 mt-1"><ScanBarcode size={10} className="text-slate-400" /><span className="text-[10px] font-mono text-slate-500 bg-white/40 dark:bg-white/10 px-1.5 py-0.5 rounded">{product.barcode}</span></div>)}</div></div>
+                   <div className="flex gap-3 mb-2"><img src={product.image} className="w-12 h-12 rounded-lg object-cover bg-white/20 shadow-sm" alt="" /><div className="flex-1 min-w-0"><div className="flex justify-between items-start"><h4 className="font-bold text-slate-900 dark:text-slate-100 line-clamp-1 text-sm">{product.name}</h4><span className="font-bold text-slate-900 dark:text-slate-100 text-sm">{settings.currency}{product.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div><p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{product.category}</p>{product.barcode && (<div className="flex items-center gap-1 mt-1"><ScanBarcode size={10} className="text-slate-400" /><span className="text-[10px] font-mono text-slate-500 bg-white/40 dark:bg-white/10 px-1.5 py-0.5 rounded">{product.barcode}</span></div>)}</div></div>
                    <div className="flex items-center justify-between pt-2 border-t border-black/5 dark:border-white/5">
                       <div className="flex flex-col">
                          <div className={`text-xs font-bold flex items-center gap-1 ${isLow ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>{isLow && <AlertTriangle size={12} />}{product.stock} Units</div>
                          {cases !== null && <span className="text-[9px] text-slate-400 flex items-center gap-1"><Box size={10}/> {cases} cases</span>}
                       </div>
                       <div className="flex gap-2">
-                        {!isStaff && product.cost && (<div className="flex items-center text-[10px] text-slate-400 bg-slate-100 dark:bg-white/5 px-2 rounded-lg mr-auto"><DollarSign size={10}/> Cost: {product.cost}</div>)}
+                        {!isStaff && product.cost && (<div className="flex items-center text-[10px] text-slate-400 bg-slate-100 dark:bg-white/5 px-2 rounded-lg mr-auto"><DollarSign size={10}/> Cost: {product.cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>)}
                         {!isStaff && isLow && (<button onClick={() => handleReorder(product)} className="p-1.5 bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 rounded-lg text-[10px] font-bold flex items-center gap-1"><RefreshCw size={12} /> Restock</button>)}
                         {!isStaff && (<><button onClick={() => onOpenProductModal(product)} className="p-1.5 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 rounded-lg"><Edit size={14} /></button><button onClick={() => handleDeleteClick(product.id)} className="p-1.5 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg"><Trash2 size={14} /></button></>)}
                       </div>

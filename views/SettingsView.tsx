@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { StoreSettings, Transaction, PrinterConfig, User, StoredUser, Customer, ViewState } from '../types';
-import { Save, Store, Receipt, Database, Percent, Download, AlertTriangle, Volume2, VolumeX, Printer, Plus, Trash2, Wifi, RefreshCw, Loader2, Moon, Sun, Users, Shield, UserPlus, Lock, Mail, FileJson, Coins, Contact, Search, Tag, Upload, Edit, Wallet, Check, X, Crown, Gift, Globe, Layout, ArrowRight } from 'lucide-react';
+import { Save, Store, Receipt, Database, Percent, Download, AlertTriangle, Volume2, VolumeX, Printer, Plus, Trash2, Wifi, RefreshCw, Loader2, Moon, Sun, Users, Shield, UserPlus, Lock, Mail, FileJson, Coins, Contact, Search, Tag, Upload, Edit, Wallet, Check, X, Crown, Gift, Globe, Layout, ArrowRight, EyeOff, Package } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { useAlert } from '../components/Alert';
 import { exportFullBackup, importBackup, clearAllData } from '../services/storageService';
@@ -271,6 +271,16 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                    <InputGroup label="Currency Symbol" value={formData.currency} onChange={(v) => handleChange('currency', v)} placeholder="$" />
                    <InputGroup label="Low Stock Alert" type="number" value={formData.lowStockThreshold} onChange={(v) => handleChange('lowStockThreshold', parseInt(v) || 0)} />
                 </div>
+                <div className="flex flex-col gap-2 mt-2">
+                    <div className="flex items-center justify-between p-3 bg-white/50 dark:bg-white/5 rounded-2xl border border-white/20">
+                        <div className="flex items-center gap-3"><div className={`p-2 rounded-xl ${formData.showStockLevels !== false ? 'bg-indigo-500/20 text-indigo-600 dark:text-indigo-400' : 'bg-slate-200 text-slate-500'}`}><Package size={20} /></div><span className="font-bold text-sm text-slate-700 dark:text-slate-200">Show Stock Levels in POS</span></div>
+                        <button onClick={() => handleChange('showStockLevels', !(formData.showStockLevels !== false))} className={`w-12 h-6 rounded-full transition-colors relative ${formData.showStockLevels !== false ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-600'}`}><div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${formData.showStockLevels !== false ? 'translate-x-6' : ''}`} /></button>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-white/50 dark:bg-white/5 rounded-2xl border border-white/20">
+                        <div className="flex items-center gap-3"><div className={`p-2 rounded-xl ${formData.hideOutOfStockProducts ? 'bg-slate-500/20 text-slate-600 dark:text-slate-400' : 'bg-slate-200 text-slate-500'}`}><EyeOff size={20} /></div><span className="font-bold text-sm text-slate-700 dark:text-slate-200">Hide Out of Stock Items</span></div>
+                        <button onClick={() => handleChange('hideOutOfStockProducts', !formData.hideOutOfStockProducts)} className={`w-12 h-6 rounded-full transition-colors relative ${formData.hideOutOfStockProducts ? 'bg-slate-600' : 'bg-slate-300 dark:bg-slate-600'}`}><div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${formData.hideOutOfStockProducts ? 'translate-x-6' : ''}`} /></button>
+                    </div>
+                </div>
               </>
             )}
             <div className="space-y-1.5 pt-2"><label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">Appearance</label><div className="grid grid-cols-2 gap-3"><button onClick={() => handleChange('theme', 'light')} className={`flex items-center justify-center gap-2 p-3 rounded-2xl border ${formData.theme === 'light' ? 'bg-blue-500/20 text-blue-700' : 'bg-white/30 text-slate-500'}`}><Sun size={18}/> Light</button><button onClick={() => handleChange('theme', 'dark')} className={`flex items-center justify-center gap-2 p-3 rounded-2xl border ${formData.theme === 'dark' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-white/30 text-slate-500'}`}><Moon size={18}/> Dark</button></div></div>
@@ -359,13 +369,60 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             <div className="pt-2 border-t border-white/10"><div className="flex gap-2"><input placeholder="New category name..." className={commonInputClass} value={newCategory} onChange={e => setNewCategory(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()} /><button onClick={handleAddCategory} className="p-3 bg-primary text-white rounded-2xl font-bold"><Plus size={20} /></button></div></div>
         </SectionCard>}
         
-        <SectionCard title="Customer Database" icon={Contact} colorClass="bg-pink-500 text-pink-600 dark:text-pink-400"><div className="space-y-4"><div className="flex gap-2"><div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16}/><input placeholder="Search customers..." className={`${commonInputClass} pl-10`} value={customerSearch} onChange={e => setCustomerSearch(e.target.value)} /></div><button onClick={handleAddCustomerClick} className="p-3 bg-pink-500 text-white rounded-2xl shadow-lg hover:bg-pink-600 transition-colors"><Plus size={20}/></button></div><div className="max-h-60 overflow-y-auto space-y-2 pr-1">{filteredCustomers.length === 0 ? (<div className="text-center text-slate-400 text-sm py-4">No customers found</div>) : (filteredCustomers.map(customer => (<div key={customer.id} className="flex items-center justify-between p-3 bg-white/50 dark:bg-white/5 rounded-2xl border border-white/20 dark:border-white/10 hover:bg-white/70 dark:hover:bg-white/10 transition-colors"><div className="min-w-0 flex-1 pr-3"><div className="font-bold text-sm truncate text-slate-800 dark:text-slate-100">{customer.name}</div><div className="flex items-center gap-2 mt-0.5"><span className="text-xs text-slate-500">{customer.phone}</span>{(settings.enableLoyalty !== false) && <span className="text-[10px] px-2 py-0.5 bg-amber-500/10 text-amber-600 rounded-full font-bold flex items-center gap-1 border border-amber-500/20"><Crown size={10} /> {customer.points || 0} pts</span>}</div></div><div className="flex items-center gap-2"><div className="text-right mr-2 hidden sm:block"><div className="text-xs text-slate-400 font-medium">Spent</div><div className="text-sm font-bold text-slate-700 dark:text-slate-200">${customer.totalSpent.toFixed(0)}</div></div><button onClick={() => handleEditCustomerClick(customer)} className="p-1.5 text-blue-500 hover:bg-blue-500/10 rounded-lg"><Edit size={16} /></button><button onClick={() => handleDeleteCustomer(customer.id)} className="text-red-400 p-2 hover:bg-red-500/10 rounded-xl shrink-0"><Trash2 size={16} /></button></div></div>)))}</div></div></SectionCard>
-        
-        {!isStaff && <SectionCard title="Data Management" icon={Database} colorClass="bg-red-500 text-red-600 dark:text-red-400"><div className="space-y-3"><div className="grid grid-cols-2 gap-3"><button onClick={handleImportClick} className="p-4 bg-white/50 border rounded-2xl"><Upload size={20} /> Import</button><input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json" /><button onClick={handleExportData} className="p-4 bg-white/50 border rounded-2xl"><FileJson size={20} /> Export</button></div>{isAdmin && <button onClick={handleFactoryReset} className="w-full p-4 bg-red-500/5 border border-red-500/20 rounded-2xl"><AlertTriangle size={20} /> Factory Reset (Preserve Admins)</button>}</div></SectionCard>}
+        <SectionCard title="Customer Database" icon={Contact} colorClass="bg-pink-500 text-pink-600 dark:text-pink-400">
+            <div className="space-y-4">
+                <div className="flex gap-2">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16}/>
+                        <input 
+                            placeholder="Search customers..." 
+                            className={commonInputClass + " pl-10"} 
+                            value={customerSearch} 
+                            onChange={e => setCustomerSearch(e.target.value)} 
+                        />
+                    </div>
+                    <button onClick={handleAddCustomerClick} className="p-3 bg-pink-500 text-white rounded-2xl font-bold hover:bg-pink-600 transition-colors">
+                        <UserPlus size={20} />
+                    </button>
+                </div>
+                <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+                    {filteredCustomers.map(cust => (
+                        <div key={cust.id} className="flex items-center justify-between p-3 bg-white/50 dark:bg-white/5 rounded-2xl border border-white/20">
+                            <div>
+                                <div className="font-bold text-sm text-slate-800 dark:text-slate-200">{cust.name}</div>
+                                <div className="text-xs text-slate-500">{cust.phone}</div>
+                            </div>
+                            <div className="flex gap-1">
+                                <button onClick={() => handleEditCustomerClick(cust)} className="p-1.5 text-blue-500 hover:bg-blue-500/10 rounded-lg"><Edit size={16} /></button>
+                                <button onClick={() => handleDeleteCustomer(cust.id)} className="p-1.5 text-red-400 hover:bg-red-500/10 rounded-lg"><Trash2 size={16} /></button>
+                            </div>
+                        </div>
+                    ))}
+                    {filteredCustomers.length === 0 && <div className="text-center text-xs text-slate-400 py-2">No customers found</div>}
+                </div>
+            </div>
+        </SectionCard>
+
+        {isAdmin && <SectionCard title="Data Management" icon={Database} colorClass="bg-slate-500 text-slate-600 dark:text-slate-400">
+            <div className="grid grid-cols-2 gap-3">
+                <button onClick={handleExportData} className="flex flex-col items-center justify-center p-4 bg-white/50 dark:bg-white/5 rounded-2xl border border-white/20 hover:bg-blue-500/10 hover:border-blue-500/30 transition-all gap-2 group">
+                    <Download size={24} className="text-blue-500 group-hover:scale-110 transition-transform" />
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Backup Data</span>
+                </button>
+                <button onClick={handleImportClick} className="flex flex-col items-center justify-center p-4 bg-white/50 dark:bg-white/5 rounded-2xl border border-white/20 hover:bg-emerald-500/10 hover:border-emerald-500/30 transition-all gap-2 group">
+                    <Upload size={24} className="text-emerald-500 group-hover:scale-110 transition-transform" />
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Restore Data</span>
+                </button>
+                <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleFileChange} />
+            </div>
+            <button onClick={handleFactoryReset} className="w-full mt-2 p-3 bg-red-500/10 text-red-600 rounded-xl font-bold text-xs hover:bg-red-500/20 border border-red-500/20 flex items-center justify-center gap-2">
+                <AlertTriangle size={16} /> Factory Reset
+            </button>
+        </SectionCard>}
       </div>
-      
-      {editingUser && <EditUserModal isOpen={!!editingUser} onClose={() => setEditingUser(null)} user={editingUser} onSave={handleSaveUserEdit} />}
-      <CustomerModal isOpen={showCustomerModal} onClose={() => setShowCustomerModal(false)} customer={editingCustomer} onSave={handleCustomerSave} />
+
+      <EditUserModal isOpen={!!editingUser} user={editingUser} onClose={() => setEditingUser(null)} onSave={handleSaveUserEdit} />
+      <CustomerModal isOpen={showCustomerModal} customer={editingCustomer} onClose={() => setShowCustomerModal(false)} onSave={handleCustomerSave} />
     </div>
   );
 };

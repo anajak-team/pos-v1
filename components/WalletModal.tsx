@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Shift, CashMovement } from '../types';
 import { X, ArrowDownLeft, ArrowUpRight, Wallet, History, LogOut } from 'lucide-react';
@@ -22,6 +23,8 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, shift
   const totalPayIn = shift.cashMovements?.filter(m => m.type === 'in').reduce((sum, m) => sum + m.amount, 0) || 0;
   const totalPayOut = shift.cashMovements?.filter(m => m.type === 'out').reduce((sum, m) => sum + m.amount, 0) || 0;
   const currentDrawerCash = shift.startingCash + shift.cashSales + totalPayIn - totalPayOut;
+
+  const format = (val: number) => val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,15 +53,15 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, shift
             <div className="bg-gradient-to-br from-slate-800 to-slate-900 text-white p-5 rounded-2xl shadow-lg mb-6 relative overflow-hidden">
                 <div className="relative z-10">
                     <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Expected In Drawer</p>
-                    <div className="text-4xl font-bold mb-4">{currency}{currentDrawerCash.toFixed(2)}</div>
+                    <div className="text-4xl font-bold mb-4">{currency}{format(currentDrawerCash)}</div>
                     <div className="grid grid-cols-2 gap-4 text-sm border-t border-white/10 pt-3">
                         <div>
                             <span className="text-slate-400 block text-xs">Opening Float</span>
-                            <span className="font-mono">{currency}{shift.startingCash.toFixed(2)}</span>
+                            <span className="font-mono">{currency}{format(shift.startingCash)}</span>
                         </div>
                         <div>
                             <span className="text-slate-400 block text-xs">Cash Sales</span>
-                            <span className="font-mono text-emerald-400">+{currency}{shift.cashSales.toFixed(2)}</span>
+                            <span className="font-mono text-emerald-400">+{currency}{format(shift.cashSales)}</span>
                         </div>
                     </div>
                 </div>
@@ -149,7 +152,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, shift
                                     <div className="text-xs text-slate-500 dark:text-slate-400">{new Date(m.timestamp).toLocaleTimeString()} • {m.userName}</div>
                                 </div>
                                 <div className={`font-bold ${m.type === 'in' ? 'text-emerald-500' : 'text-red-500'}`}>
-                                    {m.type === 'in' ? '+' : '-'}{currency}{m.amount.toFixed(2)}
+                                    {m.type === 'in' ? '+' : '-'}{currency}{format(m.amount)}
                                 </div>
                             </div>
                         ))

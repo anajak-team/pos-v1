@@ -1,3 +1,4 @@
+
 export interface Product {
   id: string;
   name: string;
@@ -99,6 +100,8 @@ export interface StoreSettings {
   autoOpenDrawer?: boolean;
   enableLoyalty: boolean;
   loyaltyRate: number; // Points earned per 1 currency unit
+  hideOutOfStockProducts?: boolean;
+  showStockLevels?: boolean;
   landingPage: LandingPageConfig;
 }
 

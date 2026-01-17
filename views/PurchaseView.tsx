@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { PurchaseOrder, Product, StoreSettings, PurchaseItem, User, Supplier } from '../types';
 import { Plus, Search, PackageCheck, Clock, Truck, ChevronDown, X, CheckCircle2, AlertCircle, Building, User as UserIcon, Phone, Mail, Edit, Trash2, Eye, Printer } from 'lucide-react';
@@ -138,8 +137,8 @@ const PurchaseOrderDetailsModal = ({ order, onClose, settings }: { order: Purcha
                                         <tr key={i}>
                                             <td className="p-3 font-medium text-slate-800">{item.productName}</td>
                                             <td className="p-3 text-center text-slate-600">{item.quantity}</td>
-                                            <td className="p-3 text-right text-slate-600">{settings.currency}{item.unitCost.toFixed(2)}</td>
-                                            <td className="p-3 text-right font-bold text-slate-800">{settings.currency}{(item.quantity * item.unitCost).toFixed(2)}</td>
+                                            <td className="p-3 text-right text-slate-600">{settings.currency}{item.unitCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                            <td className="p-3 text-right font-bold text-slate-800">{settings.currency}{(item.quantity * item.unitCost).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -151,7 +150,7 @@ const PurchaseOrderDetailsModal = ({ order, onClose, settings }: { order: Purcha
                             <div className="w-full sm:w-1/2 space-y-2">
                                 <div className="flex justify-between items-center pt-4 border-t-2 border-slate-900">
                                     <span className="font-bold text-lg text-slate-900">Total Amount</span>
-                                    <span className="font-extrabold text-2xl text-primary">{settings.currency}{order.totalCost.toFixed(2)}</span>
+                                    <span className="font-extrabold text-2xl text-primary">{settings.currency}{order.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 </div>
                                 <p className="text-xs text-slate-400 text-right mt-2">Authorized Signature</p>
                             </div>
@@ -328,7 +327,7 @@ export const PurchaseView: React.FC<PurchaseViewProps> = ({ orders, products, se
                     </div>
                     <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto pl-16 sm:pl-0">
                        <div className="text-right">
-                          <div className="font-bold text-slate-900 dark:text-slate-100 text-lg">{settings.currency}{order.totalCost.toFixed(2)}</div>
+                          <div className="font-bold text-slate-900 dark:text-slate-100 text-lg">{settings.currency}{order.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                           <div className="text-xs font-bold uppercase text-slate-400">{order.status}</div>
                        </div>
                        <div className="flex gap-2">

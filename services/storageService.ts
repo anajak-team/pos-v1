@@ -32,6 +32,8 @@ const DEFAULT_SETTINGS: StoreSettings = {
     autoOpenDrawer: true,
     enableLoyalty: true,
     loyaltyRate: 0.01, // 1 point per 100 Riel
+    hideOutOfStockProducts: false,
+    showStockLevels: true,
     landingPage: {
         sections: [
             {

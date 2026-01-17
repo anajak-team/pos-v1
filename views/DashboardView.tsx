@@ -1,6 +1,8 @@
+
 import React, { useEffect, useState } from 'react';
-import { Transaction, User, Expense } from '../types';
+import { Transaction, User, Expense, StoreSettings } from '../types';
 import { generateSalesInsight } from '../services/geminiService';
+import { getSettings } from '../services/storageService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Sparkles, TrendingUp, DollarSign, ShoppingBag, ShieldAlert, PieChart as PieChartIcon, ArrowDownRight, ArrowUpRight } from 'lucide-react';
 
@@ -14,6 +16,11 @@ interface DashboardProps {
 export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMode, currentUser, expenses }) => {
   const [insight, setInsight] = useState<string>("");
   const [loadingInsight, setLoadingInsight] = useState(false);
+  const [settings, setSettings] = useState<StoreSettings | null>(null);
+
+  useEffect(() => {
+    getSettings().then(setSettings);
+  }, []);
 
   // Separate sales and returns
   const sales = transactions.filter(t => t.type === 'sale');
@@ -93,6 +100,23 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMo
   const tooltipBg = isDarkMode ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)';
   const tooltipText = isDarkMode ? '#f1f5f9' : '#1e293b';
 
+  const formatCurrency = (val: number) => val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const renderDualCurrency = (amount: number) => {
+    if (!settings) return `${formatCurrency(amount)}`;
+    const primary = `${settings.currency}${formatCurrency(amount)}`;
+    if (settings.secondaryCurrency && settings.exchangeRate) {
+        const secondary = `${settings.secondaryCurrency}${formatCurrency(amount * settings.exchangeRate)}`;
+        return (
+            <div>
+                {primary}
+                <div className="text-xs sm:text-sm font-medium opacity-60 mt-0.5">≈ {secondary}</div>
+            </div>
+        );
+    }
+    return primary;
+  };
+
   if (currentUser.role === 'Staff') {
     return (
       <div className="max-w-4xl mx-auto space-y-6">
@@ -164,7 +188,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMo
                 </div>
                 <div>
                     <p className="text-sm text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide">Net Revenue</p>
-                    <h4 className="text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">${netRevenue.toFixed(2)}</h4>
+                    <div className="text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">{renderDualCurrency(netRevenue)}</div>
                 </div>
             </div>
         </div>
@@ -188,7 +212,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMo
                 </div>
                 <div>
                     <p className="text-sm text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide">Avg. Order</p>
-                    <h4 className="text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">${avgOrderValue.toFixed(2)}</h4>
+                    <div className="text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">{renderDualCurrency(avgOrderValue)}</div>
                 </div>
             </div>
         </div>
@@ -201,7 +225,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMo
             <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-3xl border border-white/30 dark:border-white/10 shadow-lg flex flex-col justify-between">
                <p className="text-sm text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wide">Gross Profit</p>
                <div>
-                  <h4 className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">${grossProfit.toFixed(2)}</h4>
+                  <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{renderDualCurrency(grossProfit)}</div>
                   <p className="text-xs text-slate-400 mt-1">Net Rev - Net COGS</p>
                </div>
             </div>
@@ -210,7 +234,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMo
             <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-3xl border border-white/30 dark:border-white/10 shadow-lg flex flex-col justify-between">
                <p className="text-sm text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wide">Total Expenses</p>
                <div>
-                  <h4 className="text-2xl font-bold text-red-500 dark:text-red-400">${totalExpenses.toFixed(2)}</h4>
+                  <div className="text-2xl font-bold text-red-500 dark:text-red-400">{renderDualCurrency(totalExpenses)}</div>
                   <p className="text-xs text-slate-400 mt-1">Operational costs</p>
                </div>
             </div>
@@ -220,10 +244,12 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMo
                <p className="text-sm text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wide">Net Profit</p>
                <div>
                   <div className="flex items-center gap-2">
-                     <h4 className={`text-3xl font-extrabold ${netProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                        ${netProfit.toFixed(2)}
-                     </h4>
-                     {netProfit >= 0 ? <ArrowUpRight className="text-emerald-500" size={24} /> : <ArrowDownRight className="text-red-500" size={24} />}
+                     <div className={`text-3xl font-extrabold ${netProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                        {renderDualCurrency(netProfit)}
+                     </div>
+                     <div className="ml-auto">
+                        {netProfit >= 0 ? <ArrowUpRight className="text-emerald-500" size={24} /> : <ArrowDownRight className="text-red-500" size={24} />}
+                     </div>
                   </div>
                   <p className="text-xs text-slate-400 mt-1">Gross Profit - Expenses</p>
                </div>
@@ -261,7 +287,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMo
                              color: tooltipText
                           }}
                           itemStyle={{ color: tooltipText }}
-                          formatter={(value: number) => `$${value.toFixed(2)}`}
+                          formatter={(value: number) => `$${formatCurrency(value)}`}
                        />
                        <Legend iconSize={8} layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{fontSize: '10px'}} />
                     </PieChart>
@@ -315,7 +341,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMo
                 }}
                 itemStyle={{ color: '#2563eb', fontWeight: 700 }}
                 labelStyle={{ color: isDarkMode ? '#cbd5e1' : '#64748b', marginBottom: '4px', fontSize: '12px' }}
-                formatter={(value: number) => [`$${value.toFixed(2)}`, 'Sales']}
+                formatter={(value: number) => [`$${formatCurrency(value)}`, 'Sales']}
             />
             <Area type="monotone" dataKey="amount" stroke="#2563eb" strokeWidth={4} fillOpacity={1} fill="url(#colorAmt)" activeDot={{r: 6, strokeWidth: 0, fill: '#2563eb'}} />
           </AreaChart>

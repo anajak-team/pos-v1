@@ -16,6 +16,8 @@ export const ShiftReport: React.FC<ShiftReportProps> = ({ shift, settings, onClo
     const difference = shift.difference !== undefined ? shift.difference : (actualCash - expectedCash);
     const endTime = shift.endTime ? new Date(shift.endTime) : new Date();
 
+    const format = (val: number) => val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
     useEffect(() => {
         // Automatically print when report opens (optional, but convenient for POS)
         // setTimeout(() => window.print(), 500);
@@ -48,23 +50,23 @@ export const ShiftReport: React.FC<ShiftReportProps> = ({ shift, settings, onClo
 
                     <div className="mb-4 pb-4 border-b-2 border-black border-dashed">
                         <p className="font-bold mb-2 uppercase border-b border-black pb-1">Sales Summary</p>
-                        <div className="flex justify-between mb-1"><span>Cash Sales</span><span>{settings.currency}{shift.cashSales.toFixed(2)}</span></div>
-                        <div className="flex justify-between mb-1"><span>Card Sales</span><span>{settings.currency}{shift.cardSales.toFixed(2)}</span></div>
-                        <div className="flex justify-between mb-1"><span>Digital Sales</span><span>{settings.currency}{shift.digitalSales.toFixed(2)}</span></div>
-                        <div className="flex justify-between font-bold mt-2 pt-1 border-t border-dotted border-gray-400 text-sm"><span>TOTAL SALES</span><span>{settings.currency}{totalSales.toFixed(2)}</span></div>
+                        <div className="flex justify-between mb-1"><span>Cash Sales</span><span>{settings.currency}{format(shift.cashSales)}</span></div>
+                        <div className="flex justify-between mb-1"><span>Card Sales</span><span>{settings.currency}{format(shift.cardSales)}</span></div>
+                        <div className="flex justify-between mb-1"><span>Digital Sales</span><span>{settings.currency}{format(shift.digitalSales)}</span></div>
+                        <div className="flex justify-between font-bold mt-2 pt-1 border-t border-dotted border-gray-400 text-sm"><span>TOTAL SALES</span><span>{settings.currency}{format(totalSales)}</span></div>
                     </div>
 
                     <div className="mb-6 pb-4 border-b-2 border-black border-dashed">
                         <p className="font-bold mb-2 uppercase border-b border-black pb-1">Cash Reconciliation</p>
-                        <div className="flex justify-between mb-1"><span>Opening Float</span><span>{settings.currency}{shift.startingCash.toFixed(2)}</span></div>
-                        <div className="flex justify-between mb-1"><span>(+) Cash Sales</span><span>{settings.currency}{shift.cashSales.toFixed(2)}</span></div>
-                        <div className="flex justify-between font-bold mt-1 bg-gray-100 p-1"><span>Expected Cash</span><span>{settings.currency}{expectedCash.toFixed(2)}</span></div>
-                        <div className="flex justify-between font-bold mt-1 p-1"><span>Actual Count</span><span>{settings.currency}{actualCash.toFixed(2)}</span></div>
+                        <div className="flex justify-between mb-1"><span>Opening Float</span><span>{settings.currency}{format(shift.startingCash)}</span></div>
+                        <div className="flex justify-between mb-1"><span>(+) Cash Sales</span><span>{settings.currency}{format(shift.cashSales)}</span></div>
+                        <div className="flex justify-between font-bold mt-1 bg-gray-100 p-1"><span>Expected Cash</span><span>{settings.currency}{format(expectedCash)}</span></div>
+                        <div className="flex justify-between font-bold mt-1 p-1"><span>Actual Count</span><span>{settings.currency}{format(actualCash)}</span></div>
                         
                         <div className="flex justify-between font-bold mt-2 pt-1 border-t border-dotted border-gray-400">
                             <span>Difference</span>
                             <span className={`${difference < 0 ? 'text-black font-black' : ''}`}>
-                                {difference > 0 ? '+' : ''}{settings.currency}{difference.toFixed(2)}
+                                {difference > 0 ? '+' : ''}{settings.currency}{format(difference)}
                             </span>
                         </div>
                         {difference !== 0 && (

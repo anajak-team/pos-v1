@@ -65,9 +65,9 @@ const RepairTicketPrint = ({ ticket, settings, onClose }: { ticket: RepairTicket
                 </div>
 
                 <div className="text-right space-y-1 mb-6">
-                    <div className="flex justify-between"><span>Est. Cost:</span><span>{settings.currency}{ticket.estimatedCost.toFixed(2)}</span></div>
-                    {ticket.deposit > 0 && <div className="flex justify-between"><span>Deposit Paid:</span><span>-{settings.currency}{ticket.deposit.toFixed(2)}</span></div>}
-                    <div className="flex justify-between font-bold text-sm border-t border-black pt-1 mt-1"><span>Due:</span><span>{settings.currency}{(ticket.estimatedCost - ticket.deposit).toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span>Est. Cost:</span><span>{settings.currency}{ticket.estimatedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                    {ticket.deposit > 0 && <div className="flex justify-between"><span>Deposit Paid:</span><span>-{settings.currency}{ticket.deposit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>}
+                    <div className="flex justify-between font-bold text-sm border-t border-black pt-1 mt-1"><span>Due:</span><span>{settings.currency}{(ticket.estimatedCost - ticket.deposit).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
                 </div>
 
                 <div className="text-center text-[10px]">
@@ -304,7 +304,7 @@ export const RepairsView: React.FC<RepairsViewProps> = ({ repairs, customers, on
                              <div className="mt-4 pt-4 border-t border-white/20 dark:border-white/5 flex items-center justify-between">
                                  <div>
                                      <p className="text-[10px] text-slate-400 uppercase font-bold">Estimated Cost</p>
-                                     <p className="font-bold text-slate-800 dark:text-slate-100">{settings.currency}{ticket.estimatedCost.toFixed(2)}</p>
+                                     <p className="font-bold text-slate-800 dark:text-slate-100">{settings.currency}{ticket.estimatedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                  </div>
                                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                      <button onClick={() => setPrintingTicket(ticket)} className="p-2 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg" title="Print Ticket"><Printer size={16}/></button>

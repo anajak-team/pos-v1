@@ -1,4 +1,4 @@
-
+// ... imports
 import React, { useState, useEffect, useRef } from 'react';
 import { Layout } from './components/Layout';
 import { LoginView } from './views/LoginView';
@@ -23,6 +23,7 @@ import { FileText, Printer, Wand2, ScanBarcode, Box, Image as ImageIcon, Upload,
 import { useToast } from './components/Toast';
 import { generateProductDescription } from './services/geminiService';
 
+// ... (ImageCropper, CameraCapture remain unchanged)
 const ImageCropper = ({ imageSrc, onCrop, onCancel }: { imageSrc: string, onCrop: (croppedImage: string) => void, onCancel: () => void }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [scale, setScale] = useState(1);
@@ -173,6 +174,7 @@ const CameraCapture = ({ onCapture, onCancel }: { onCapture: (img: string) => vo
 
 const BarcodeScanner = ({ onScan, onClose }: { onScan: (code: string) => void, onClose: () => void }) => {
   const scannerRef = useRef<any>(null);
+  const [scanSuccess, setScanSuccess] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -208,14 +210,16 @@ const BarcodeScanner = ({ onScan, onClose }: { onScan: (code: string) => void, o
                 config, 
                 (decodedText: string) => {
                     if (scannerRef.current) {
-                        // Debounce stop to prevent races
-                        scannerRef.current.stop().then(() => {
-                            scannerRef.current.clear();
-                            onScan(decodedText);
-                        }).catch((err: any) => {
-                            // If stop fails (e.g. already stopped), still proceed
-                            onScan(decodedText);
-                        });
+                        setScanSuccess(true);
+                        // Short delay to show success visual before closing
+                        setTimeout(() => {
+                            scannerRef.current.stop().then(() => {
+                                scannerRef.current.clear();
+                                onScan(decodedText);
+                            }).catch((err: any) => {
+                                onScan(decodedText);
+                            });
+                        }, 500);
                     }
                 },
                 (errorMessage: string) => {
@@ -255,19 +259,21 @@ const BarcodeScanner = ({ onScan, onClose }: { onScan: (code: string) => void, o
         <div className="relative w-full max-w-sm aspect-square bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/10 mx-6">
             <div id="product-modal-scanner-reader" className="w-full h-full"></div>
             <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 border-2 border-primary/70 rounded-2xl shadow-[0_0_0_1000px_rgba(0,0,0,0.7)]">
-                    <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-primary -mt-1 -ml-1"></div>
-                    <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-primary -mt-1 -mr-1"></div>
-                    <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-primary -mb-1 -ml-1"></div>
-                    <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-primary -mb-1 -mr-1"></div>
+                <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 border-2 rounded-2xl shadow-[0_0_0_1000px_rgba(0,0,0,0.7)] transition-all duration-300 ${scanSuccess ? 'border-green-500 shadow-[0_0_0_1000px_rgba(0,0,0,0.8)]' : 'border-primary/70'}`}>
+                    <div className={`absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 -mt-1 -ml-1 ${scanSuccess ? 'border-green-500' : 'border-primary'}`}></div>
+                    <div className={`absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 -mt-1 -mr-1 ${scanSuccess ? 'border-green-500' : 'border-primary'}`}></div>
+                    <div className={`absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 -mb-1 -ml-1 ${scanSuccess ? 'border-green-500' : 'border-primary'}`}></div>
+                    <div className={`absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 -mb-1 -mr-1 ${scanSuccess ? 'border-green-500' : 'border-primary'}`}></div>
                 </div>
+                {scanSuccess && <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm"><Check size={64} className="text-green-500 animate-scale-in" /></div>}
             </div>
         </div>
-        <p className="text-slate-400 mt-8 font-medium text-center px-6">Align barcode or QR code within the frame to scan</p>
+        <p className="text-slate-400 mt-8 font-medium text-center px-6">{scanSuccess ? 'Barcode Detected!' : 'Align barcode or QR code within the frame to scan'}</p>
     </div>
   );
 };
 
+// ... (ProductModal, ReturnModal, App, TransactionsHistory components remain as they were)
 const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories }: { isOpen: boolean, onClose: () => void, onSave: (p: Partial<Product>) => void, productToEdit: Partial<Product> | null, categories: string[] }) => {
   const [formData, setFormData] = useState<Partial<Product>>({});
   const [isGenerating, setIsGenerating] = useState(false);
@@ -576,16 +582,34 @@ export const App: React.FC = () => {
     setCurrentUser(user);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     localStorage.removeItem('nexus_user');
     localStorage.removeItem('nexus_demo_mode'); // Clear demo mode
+    
+    // Clear localized state
     setCurrentUser(null);
     setCurrentShift(null); 
     setShiftReportData(null);
     setShowLogin(false);
+    setCurrentView('POS');
     
-    // Refresh to clear state completely and reload public landing page settings
-    window.location.reload(); 
+    // Clear data states to ensure no sensitive data persists in memory
+    setTransactions([]);
+    setPurchases([]);
+    setExpenses([]);
+    setUsers([]);
+    setCustomers([]);
+    setRepairs([]);
+    
+    // Ideally refetch public settings/products for the landing page
+    try {
+       const publicSettings = await api.getSettings(true);
+       const publicProducts = await api.getProducts(true);
+       setSettings(publicSettings);
+       setProducts(publicProducts);
+    } catch(e) {
+       console.error("Error resetting to public state", e);
+    }
   };
 
   const handleViewDemo = () => {

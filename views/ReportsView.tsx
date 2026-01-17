@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Transaction, Expense, StoreSettings, User } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
@@ -112,7 +113,18 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ transactions, expenses
   const axisTextColor = isDarkMode ? '#94a3b8' : '#64748b';
   const tooltipBg = isDarkMode ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)';
   const tooltipText = isDarkMode ? '#f1f5f9' : '#1e293b';
+
+  const formatCurrency = (val: number) => val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   
+  const renderDual = (val: number) => {
+      const primary = `${settings.currency}${formatCurrency(val)}`;
+      if (settings.secondaryCurrency && settings.exchangeRate) {
+          const secondary = `${settings.secondaryCurrency}${formatCurrency(val * settings.exchangeRate)}`;
+          return `${primary} / ${secondary}`;
+      }
+      return primary;
+  };
+
   if (currentUser.role === 'Staff') {
     return <div className="text-center p-10">Access to reports is restricted.</div>;
   }
@@ -143,10 +155,10 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ transactions, expenses
       
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard title="Net Revenue" value={`${settings.currency}${netRevenue.toFixed(2)}`} icon={DollarSign} color="green"/>
-        <KPICard title="Gross Profit" value={`${settings.currency}${grossProfit.toFixed(2)}`} icon={TrendingUp} color="blue"/>
-        <KPICard title="Total Expenses" value={`${settings.currency}${totalExpenses.toFixed(2)}`} icon={ArrowDownRight} color="amber"/>
-        <KPICard title="Net Profit" value={`${settings.currency}${netProfit.toFixed(2)}`} icon={netProfit >= 0 ? ArrowUpRight : ArrowDownRight} color={netProfit >= 0 ? "emerald" : "red"}/>
+        <KPICard title="Net Revenue" value={renderDual(netRevenue)} icon={DollarSign} color="green"/>
+        <KPICard title="Gross Profit" value={renderDual(grossProfit)} icon={TrendingUp} color="blue"/>
+        <KPICard title="Total Expenses" value={renderDual(totalExpenses)} icon={ArrowDownRight} color="amber"/>
+        <KPICard title="Net Profit" value={renderDual(netProfit)} icon={netProfit >= 0 ? ArrowUpRight : ArrowDownRight} color={netProfit >= 0 ? "emerald" : "red"}/>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -158,7 +170,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ transactions, expenses
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor}/>
               <XAxis dataKey="date" tick={{fill: axisTextColor, fontSize: 12}} dy={10} />
               <YAxis tick={{fill: axisTextColor, fontSize: 12}} tickFormatter={(val: number) => `$${val}`} dx={-5} />
-              <Tooltip cursor={{fill: 'rgba(128,128,128,0.1)'}} contentStyle={{ backgroundColor: tooltipBg, borderRadius: '12px', border: 'none', color: tooltipText }}/>
+              <Tooltip cursor={{fill: 'rgba(128,128,128,0.1)'}} contentStyle={{ backgroundColor: tooltipBg, borderRadius: '12px', border: 'none', color: tooltipText }} formatter={(value: number) => `$${formatCurrency(value)}`}/>
               <Bar dataKey="amount" fill="#3b82f6" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -171,7 +183,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ transactions, expenses
                 {topProducts.map((p, index) => (
                     <div key={index} className="flex justify-between items-center bg-white/40 dark:bg-white/5 p-3 rounded-xl border border-white/20">
                         <span className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{p.name}</span>
-                        <span className="text-sm font-bold text-primary">{settings.currency}{p.revenue.toFixed(2)}</span>
+                        <span className="text-sm font-bold text-primary">{settings.currency}{formatCurrency(p.revenue)}</span>
                     </div>
                 ))}
                 {topProducts.length === 0 && <p className="text-sm text-slate-400 text-center pt-10">No sales in this period.</p>}
@@ -187,7 +199,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ transactions, expenses
             <Pie data={salesByCategory} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
               {salesByCategory.map((entry, index) => <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]} />)}
             </Pie>
-            <Tooltip contentStyle={{ backgroundColor: tooltipBg, borderRadius: '12px', border: 'none', color: tooltipText }} formatter={(value: number) => `$${value.toFixed(2)}`} />
+            <Tooltip contentStyle={{ backgroundColor: tooltipBg, borderRadius: '12px', border: 'none', color: tooltipText }} formatter={(value: number) => `$${formatCurrency(value)}`} />
             <Legend iconSize={10} wrapperStyle={{fontSize: '12px'}}/>
           </PieChart>
         </ResponsiveContainer>
@@ -208,7 +220,7 @@ const KPICard = ({ title, value, icon: Icon, color }: { title: string, value: st
     <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-5 rounded-3xl border border-white/30 dark:border-white/10 shadow-lg">
       <div className={`p-3 rounded-2xl w-fit mb-3 ${colorClasses[color]}`}><Icon size={22}/></div>
       <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{title}</p>
-      <h4 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">{value}</h4>
+      <h4 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight whitespace-pre-wrap">{value}</h4>
     </div>
   )
 };

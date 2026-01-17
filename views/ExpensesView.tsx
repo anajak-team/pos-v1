@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Expense, User, StoreSettings } from '../types';
 import { Receipt, Plus, Trash2, Tag, X, DollarSign } from 'lucide-react';
@@ -86,7 +87,7 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({ expenses, categories
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{new Date(expense.date).toLocaleDateString()} • {expense.category}</p>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="font-bold text-slate-700 dark:text-slate-200 text-sm">{settings.currency}{expense.amount.toFixed(2)}</span>
+                    <span className="font-bold text-slate-700 dark:text-slate-200 text-sm">{settings.currency}{expense.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     <button onClick={() => onDeleteExpense(expense.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-500/10 rounded-xl transition-colors">
                       <Trash2 size={16} />
                     </button>

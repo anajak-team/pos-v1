@@ -38,9 +38,9 @@ const ReceiptContent = ({ transaction, settings }: { transaction: Transaction, s
                         <td className="align-top py-1">{item.quantity}</td>
                         <td className="align-top py-1">
                         {item.name}
-                        {item.quantity > 1 && <div className="text-[10px] text-gray-600">@{settings.currency}{item.price.toFixed(2)}</div>}
+                        {item.quantity > 1 && <div className="text-[10px] text-gray-600">@{settings.currency}{item.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>}
                         </td>
-                        <td className="align-top py-1 text-right">{settings.currency}{(item.price * item.quantity).toFixed(2)}</td>
+                        <td className="align-top py-1 text-right">{settings.currency}{(item.price * item.quantity).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     </tr>
                     ))}
                 </tbody>
@@ -48,11 +48,11 @@ const ReceiptContent = ({ transaction, settings }: { transaction: Transaction, s
             </div>
 
             <div className="mb-4 pb-4 border-b-2 border-black border-dashed text-right text-sm">
-                <div className="flex justify-between mb-1"><span>Subtotal</span><span>{settings.currency}{subtotal.toFixed(2)}</span></div>
-                {transaction.discount && transaction.discount > 0 && <div className="flex justify-between mb-1"><span>Discount</span><span>-{settings.currency}{transaction.discount.toFixed(2)}</span></div>}
-                <div className="flex justify-between mb-1"><span>Tax ({settings.taxRate}%)</span><span>{settings.currency}{transaction.tax.toFixed(2)}</span></div>
-                <div className="flex justify-between font-bold text-lg mt-2"><span>TOTAL</span><span>{settings.currency}{transaction.total.toFixed(2)}</span></div>
-                {settings.exchangeRate > 0 && <div className="flex justify-between font-bold text-[10px] mt-1 text-gray-600"><span>{settings.secondaryCurrency}</span><span>{(transaction.total * settings.exchangeRate).toLocaleString()}</span></div>}
+                <div className="flex justify-between mb-1"><span>Subtotal</span><span>{settings.currency}{subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                {transaction.discount && transaction.discount > 0 && <div className="flex justify-between mb-1"><span>Discount</span><span>-{settings.currency}{transaction.discount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>}
+                <div className="flex justify-between mb-1"><span>Tax ({settings.taxRate}%)</span><span>{settings.currency}{transaction.tax.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                <div className="flex justify-between font-bold text-lg mt-2"><span>TOTAL</span><span>{settings.currency}{transaction.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                {settings.exchangeRate > 0 && <div className="flex justify-between font-bold text-[10px] mt-1 text-gray-600"><span>{settings.secondaryCurrency}</span><span>{(transaction.total * settings.exchangeRate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>}
             </div>
 
             <div className="mb-6 text-xs text-center">
