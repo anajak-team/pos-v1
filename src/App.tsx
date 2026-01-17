@@ -453,6 +453,9 @@ const App = () => {
         } catch(e) { return null; }
     });
 
+    // 2. State to track current URL path for routing
+    const [path, setPath] = useState(() => window.location.pathname.toLowerCase().replace(/\/$/, '') || '/');
+
     const [currentView, setCurrentView] = useState<ViewState>('DASHBOARD');
     const [products, setProducts] = useState<Product[]>([]);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -474,45 +477,21 @@ const App = () => {
     const [invoiceToPrint, setInvoiceToPrint] = useState<Transaction | null>(null);
     const { showToast } = useToast();
 
-    // 2. Routing Logic for Landing Page (State initialization)
-    const [landingPageMode, setLandingPageMode] = useState<boolean>(() => {
-        // If user is already logged in, they skip the landing page unless explicitly logged out
-        if (localStorage.getItem('nexus_user')) return false;
-        
-        // Otherwise check the URL
-        const path = window.location.pathname;
-        // If path is '/admin', showing login page (landingPageMode = false)
-        // If path is '/' (or anything else), show landing page (landingPageMode = true)
-        return path !== '/admin';
-    });
-
-    // 3. Navigation Helpers (URL Management)
-    const navigateToLogin = () => {
-        window.history.pushState(null, '', '/admin');
-        setLandingPageMode(false);
-    };
-
-    const navigateToLanding = () => {
-        window.history.pushState(null, '', '/');
-        setLandingPageMode(true);
-    };
-
-    // 4. Handle Browser Navigation (Back/Forward)
+    // 3. Handle Browser Navigation (Back/Forward) and URL Updates
     useEffect(() => {
         const handlePopState = () => {
-            const path = window.location.pathname;
-            if (path === '/admin') {
-                setLandingPageMode(false);
-            } else if (path === '/') {
-                // Only go to landing page if not logged in
-                if (!localStorage.getItem('nexus_user')) {
-                    setLandingPageMode(true);
-                }
-            }
+            const current = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
+            setPath(current);
         };
         window.addEventListener('popstate', handlePopState);
         return () => window.removeEventListener('popstate', handlePopState);
     }, []);
+
+    // Helper to change URL without reload
+    const navigate = (to: string) => {
+        window.history.pushState(null, '', to);
+        setPath(to.toLowerCase().replace(/\/$/, '') || '/');
+    };
 
     useEffect(() => {
         const loadData = async () => {
@@ -545,14 +524,15 @@ const App = () => {
     }, []); // Run once on mount
 
     const handleLogin = (user: User) => {
-        // Persist session
         localStorage.setItem('nexus_user', JSON.stringify(user));
         setCurrentUser(user);
         
-        // Ensure URL is clean/correct upon login (optional, but good practice)
-        // Usually we keep them at /admin or move to /dashboard if we had real routing
+        // Ensure URL is App-friendly upon login
+        // If they were at /admin, we can stay there or move to /dashboard
+        // Generally good UX to move to root or dashboard path if we had one
+        // navigate('/dashboard'); // Optional: We don't have separate dashboard path logic yet, just view state
         
-        if (!shift && user.role !== 'Admin') { // Admins might not need shift
+        if (!shift && user.role !== 'Admin') {
             setShiftModalOpen(true);
         }
     };
@@ -560,8 +540,8 @@ const App = () => {
     const handleLogout = () => {
         localStorage.removeItem('nexus_user');
         setCurrentUser(null);
-        // Redirect to login page url (/admin) instead of landing page
-        navigateToLogin(); 
+        // Force navigate to admin login after logout
+        navigate('/admin'); 
     };
 
     const handleStartShift = async (amount: number) => {
@@ -676,42 +656,47 @@ const App = () => {
         showToast(`Cash ${type === 'in' ? 'added' : 'removed'}`, 'success');
     };
 
-    if (landingPageMode && !currentUser) {
-        return <LandingPage onGetStarted={navigateToLogin} onViewDemo={navigateToLogin} settings={settings} products={products} />;
+    // 4. Routing Decision Logic
+    // If user IS logged in, always show App Layout (regardless of URL for now, or you could redirect / to dashboard)
+    if (currentUser) {
+        return (
+            <Layout 
+                currentView={currentView} 
+                onNavigate={setCurrentView} 
+                storeName={settings?.storeName || 'POS'} 
+                currentUser={currentUser} 
+                onLogout={handleLogout}
+                onWalletClick={() => setWalletModalOpen(true)}
+            >
+                {currentView === 'DASHBOARD' && settings && <DashboardView transactions={transactions} isDarkMode={settings.theme === 'dark'} currentUser={currentUser} expenses={expenses} products={products} />}
+                {currentView === 'POS' && settings && <PosView products={products} onCompleteTransaction={handleTransaction} onPrint={setInvoiceToPrint} settings={settings} currentUser={currentUser} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} onOpenProductModal={(p) => { setEditingProduct(p); setProductModalOpen(true); }} categories={categories} customers={customers} onAddCustomer={api.addCustomer} />}
+                {currentView === 'INVENTORY' && settings && <InventoryView products={products} onDeleteProduct={handleDeleteProduct} onUpdateProduct={handleUpdateProduct} onImportProducts={async (ps) => { await api.saveProducts(ps); setProducts(await api.getProducts()); }} settings={settings} currentUser={currentUser} onOpenProductModal={(p) => { setEditingProduct(p); setProductModalOpen(true); }} />}
+                {currentView === 'TRANSACTIONS' && settings && <TransactionHistoryView transactions={transactions} settings={settings} onPrint={setInvoiceToPrint} />}
+                {currentView === 'SETTINGS' && settings && <SettingsView settings={settings} onSave={async (s) => { await api.saveSettings(s); setSettings(s); showToast('Settings saved', 'success'); }} transactions={transactions} currentUser={currentUser} categories={categories} onUpdateCategories={async (c) => { await api.saveCategories(c); setCategories(c); }} onRenameCategory={async (o, n) => { /* impl */ }} users={users} onAddUser={async (u) => { await api.addUser(u); setUsers(await api.getUsers()); }} onUpdateUser={async (u) => { await api.updateUser(u); setUsers(await api.getUsers()); }} onDeleteUser={async (id) => { await api.deleteUser(id); setUsers(await api.getUsers()); }} customers={customers} onAddCustomer={async (c) => { await api.addCustomer(c); setCustomers(await api.getCustomers()); }} onUpdateCustomer={async (c) => { await api.updateCustomer(c); setCustomers(await api.getCustomers()); }} onDeleteCustomer={async (id) => { await api.deleteCustomer(id); setCustomers(await api.getCustomers()); }} onNavigate={setCurrentView} />}
+                {currentView === 'PURCHASES' && settings && <PurchaseView orders={orders} products={products} settings={settings} onCreateOrder={async (o) => { await api.savePurchaseOrder(o); setOrders(await api.getPurchaseOrders()); }} onReceiveOrder={async (id) => { /* impl */ }} currentUser={currentUser} />}
+                {currentView === 'EXPENSES' && settings && <ExpensesView expenses={expenses} categories={categories} onAddExpense={async (e) => { await api.addExpense(e); setExpenses(await api.getExpenses()); }} onDeleteExpense={async (id) => { await api.deleteExpense(id); setExpenses(await api.getExpenses()); }} onUpdateCategories={async (c) => { await api.saveExpenseCategories(c); }} settings={settings} currentUser={currentUser} />}
+                {currentView === 'REPORTS' && settings && <ReportsView transactions={transactions} expenses={expenses} settings={settings} currentUser={currentUser} />}
+                {currentView === 'REPAIRS' && settings && <RepairsView repairs={repairs} customers={customers} onAddRepair={async (r) => { await api.addRepair(r); setRepairs(await api.getRepairs()); }} onUpdateRepair={async (r) => { await api.updateRepair(r); setRepairs(await api.getRepairs()); }} onDeleteRepair={async (id) => { await api.deleteRepair(id); setRepairs(await api.getRepairs()); }} settings={settings} currentUser={currentUser} />}
+                {currentView === 'LANDING_BUILDER' && settings && <LandingPageBuilderView settings={settings} onSave={async (s) => { await api.saveSettings(s); setSettings(s); showToast('Layout saved', 'success'); }} onBack={() => setCurrentView('SETTINGS')} />}
+                
+                {shiftModalOpen && settings && <ShiftEntryModal currentUser={currentUser} onStartShift={handleStartShift} currency={settings.currency} onLogout={handleLogout} />}
+                {walletModalOpen && shift && settings && <WalletModal isOpen={walletModalOpen} onClose={() => setWalletModalOpen(false)} shift={shift} onAddMovement={handleAddWalletMovement} onCloseShift={() => setCloseShiftModalOpen(true)} currency={settings.currency} />}
+                {closeShiftModalOpen && shift && settings && <CloseShiftModal isOpen={closeShiftModalOpen} onClose={() => setCloseShiftModalOpen(false)} onConfirm={handleCloseShift} shift={shift} currency={settings.currency} />}
+                {shiftReport && settings && <ShiftReport shift={shiftReport} settings={settings} onClose={() => setShiftReport(null)} />}
+                {invoiceToPrint && settings && <Invoice transaction={invoiceToPrint} settings={settings} onClose={() => setInvoiceToPrint(null)} />}
+                <ProductModal isOpen={productModalOpen} onClose={() => setProductModalOpen(false)} onSave={async (p) => { if(editingProduct) await handleUpdateProduct({...editingProduct, ...p} as Product); else await handleAddProduct(p); setProductModalOpen(false); }} productToEdit={editingProduct} categories={categories} />
+            </Layout>
+        );
     }
 
-    if (!currentUser) {
-        return <LoginView onLogin={handleLogin} onBack={navigateToLanding} />;
+    // If user is NOT logged in:
+    // Check path for /admin to show Login
+    if (path === '/admin') {
+        return <LoginView onLogin={handleLogin} onBack={() => navigate('/')} />;
     }
 
-    return (
-        <Layout 
-            currentView={currentView} 
-            onNavigate={setCurrentView} 
-            storeName={settings?.storeName || 'POS'} 
-            currentUser={currentUser} 
-            onLogout={handleLogout}
-            onWalletClick={() => setWalletModalOpen(true)}
-        >
-            {currentView === 'DASHBOARD' && settings && <DashboardView transactions={transactions} isDarkMode={settings.theme === 'dark'} currentUser={currentUser} expenses={expenses} products={products} />}
-            {currentView === 'POS' && settings && <PosView products={products} onCompleteTransaction={handleTransaction} onPrint={setInvoiceToPrint} settings={settings} currentUser={currentUser} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} onOpenProductModal={(p) => { setEditingProduct(p); setProductModalOpen(true); }} categories={categories} customers={customers} onAddCustomer={api.addCustomer} />}
-            {currentView === 'INVENTORY' && settings && <InventoryView products={products} onDeleteProduct={handleDeleteProduct} onUpdateProduct={handleUpdateProduct} onImportProducts={async (ps) => { await api.saveProducts(ps); setProducts(await api.getProducts()); }} settings={settings} currentUser={currentUser} onOpenProductModal={(p) => { setEditingProduct(p); setProductModalOpen(true); }} />}
-            {currentView === 'TRANSACTIONS' && settings && <TransactionHistoryView transactions={transactions} settings={settings} onPrint={setInvoiceToPrint} />}
-            {currentView === 'SETTINGS' && settings && <SettingsView settings={settings} onSave={async (s) => { await api.saveSettings(s); setSettings(s); showToast('Settings saved', 'success'); }} transactions={transactions} currentUser={currentUser} categories={categories} onUpdateCategories={async (c) => { await api.saveCategories(c); setCategories(c); }} onRenameCategory={async (o, n) => { /* impl */ }} users={users} onAddUser={async (u) => { await api.addUser(u); setUsers(await api.getUsers()); }} onUpdateUser={async (u) => { await api.updateUser(u); setUsers(await api.getUsers()); }} onDeleteUser={async (id) => { await api.deleteUser(id); setUsers(await api.getUsers()); }} customers={customers} onAddCustomer={async (c) => { await api.addCustomer(c); setCustomers(await api.getCustomers()); }} onUpdateCustomer={async (c) => { await api.updateCustomer(c); setCustomers(await api.getCustomers()); }} onDeleteCustomer={async (id) => { await api.deleteCustomer(id); setCustomers(await api.getCustomers()); }} onNavigate={setCurrentView} />}
-            {currentView === 'PURCHASES' && settings && <PurchaseView orders={orders} products={products} settings={settings} onCreateOrder={async (o) => { await api.savePurchaseOrder(o); setOrders(await api.getPurchaseOrders()); }} onReceiveOrder={async (id) => { /* impl */ }} currentUser={currentUser} />}
-            {currentView === 'EXPENSES' && settings && <ExpensesView expenses={expenses} categories={categories} onAddExpense={async (e) => { await api.addExpense(e); setExpenses(await api.getExpenses()); }} onDeleteExpense={async (id) => { await api.deleteExpense(id); setExpenses(await api.getExpenses()); }} onUpdateCategories={async (c) => { await api.saveExpenseCategories(c); }} settings={settings} currentUser={currentUser} />}
-            {currentView === 'REPORTS' && settings && <ReportsView transactions={transactions} expenses={expenses} settings={settings} currentUser={currentUser} />}
-            {currentView === 'REPAIRS' && settings && <RepairsView repairs={repairs} customers={customers} onAddRepair={async (r) => { await api.addRepair(r); setRepairs(await api.getRepairs()); }} onUpdateRepair={async (r) => { await api.updateRepair(r); setRepairs(await api.getRepairs()); }} onDeleteRepair={async (id) => { await api.deleteRepair(id); setRepairs(await api.getRepairs()); }} settings={settings} currentUser={currentUser} />}
-            {currentView === 'LANDING_BUILDER' && settings && <LandingPageBuilderView settings={settings} onSave={async (s) => { await api.saveSettings(s); setSettings(s); showToast('Layout saved', 'success'); }} onBack={() => setCurrentView('SETTINGS')} />}
-            
-            {shiftModalOpen && settings && <ShiftEntryModal currentUser={currentUser} onStartShift={handleStartShift} currency={settings.currency} onLogout={handleLogout} />}
-            {walletModalOpen && shift && settings && <WalletModal isOpen={walletModalOpen} onClose={() => setWalletModalOpen(false)} shift={shift} onAddMovement={handleAddWalletMovement} onCloseShift={() => setCloseShiftModalOpen(true)} currency={settings.currency} />}
-            {closeShiftModalOpen && shift && settings && <CloseShiftModal isOpen={closeShiftModalOpen} onClose={() => setCloseShiftModalOpen(false)} onConfirm={handleCloseShift} shift={shift} currency={settings.currency} />}
-            {shiftReport && settings && <ShiftReport shift={shiftReport} settings={settings} onClose={() => setShiftReport(null)} />}
-            {invoiceToPrint && settings && <Invoice transaction={invoiceToPrint} settings={settings} onClose={() => setInvoiceToPrint(null)} />}
-            <ProductModal isOpen={productModalOpen} onClose={() => setProductModalOpen(false)} onSave={async (p) => { if(editingProduct) await handleUpdateProduct({...editingProduct, ...p} as Product); else await handleAddProduct(p); setProductModalOpen(false); }} productToEdit={editingProduct} categories={categories} />
-        </Layout>
-    );
+    // Default to Landing Page for root '/' and any other path if not logged in
+    return <LandingPage onGetStarted={() => navigate('/admin')} onViewDemo={() => navigate('/admin')} settings={settings} products={products} />;
 };
 
 export default App;
