@@ -17,18 +17,20 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin, onBack }) => {
   const [error, setError] = useState('');
   const [checkingPermissions, setCheckingPermissions] = useState(false);
 
-  // Restore credentials if they were saved previously
+  // Restore credentials if they were saved previously (Persistent Login Preferences)
   useEffect(() => {
-    const savedPrefs = localStorage.getItem('nexus_login_pref');
-    if (savedPrefs) {
-        try {
-            const { email: savedEmail, password: savedPassword, rememberMe: savedRemember } = JSON.parse(savedPrefs);
-            setEmail(savedEmail || '');
-            setPassword(savedPassword || '');
-            setRememberMe(savedRemember || false);
-        } catch (e) {
-            console.error("Failed to parse saved login preferences");
+    try {
+        const savedPrefs = localStorage.getItem('nexus_login_pref');
+        if (savedPrefs) {
+            const data = JSON.parse(savedPrefs);
+            if (data && data.email) {
+                setEmail(data.email);
+                setPassword(data.password || '');
+                setRememberMe(data.rememberMe || false);
+            }
         }
+    } catch (e) {
+        console.error("Failed to parse saved login preferences", e);
     }
   }, []);
 
@@ -45,7 +47,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin, onBack }) => {
     const account = users.find(acc => acc.email.toLowerCase() === email.toLowerCase() && acc.password === password);
 
     if (account) {
-      // Handle "Remember Me" Persistence for the form itself
+      // Handle "Remember Me" Persistence for credentials (Saved locally regardless of session)
       if (rememberMe) {
           localStorage.setItem('nexus_login_pref', JSON.stringify({ email, password, rememberMe: true }));
       } else {
