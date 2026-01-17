@@ -445,18 +445,34 @@ const TransactionHistoryView = ({ transactions, settings, onPrint }: { transacti
 };
 
 const App = () => {
-    // 1. Session Persistence
+    // 1. Session Persistence (Updated to handle Remember Me vs Session)
     const [currentUser, setCurrentUser] = useState<User | null>(() => {
         try {
-            const saved = localStorage.getItem('nexus_user');
-            return saved ? JSON.parse(saved) : null;
+            // Check Local Storage first (Remember Me)
+            const local = localStorage.getItem('nexus_user');
+            if (local) return JSON.parse(local);
+            
+            // Check Session Storage (Session only)
+            const session = sessionStorage.getItem('nexus_user');
+            return session ? JSON.parse(session) : null;
         } catch(e) { return null; }
     });
 
     // 2. State to track current URL path for routing
     const [path, setPath] = useState(() => window.location.pathname.toLowerCase().replace(/\/$/, '') || '/');
 
-    const [currentView, setCurrentView] = useState<ViewState>('DASHBOARD');
+    // 3. View State Persistence (Persist view state based on user session type)
+    const [currentView, setCurrentView] = useState<ViewState>(() => {
+        try {
+            // Only restore from local storage if user is also in local storage (Remember Me active)
+            const localView = localStorage.getItem('nexus_last_view');
+            if (localView && localStorage.getItem('nexus_user')) return localView as ViewState;
+            
+            const sessionView = sessionStorage.getItem('nexus_last_view');
+            return (sessionView as ViewState) || 'DASHBOARD';
+        } catch { return 'DASHBOARD'; }
+    });
+
     const [products, setProducts] = useState<Product[]>([]);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [shift, setShift] = useState<Shift | null>(null);
@@ -477,7 +493,7 @@ const App = () => {
     const [invoiceToPrint, setInvoiceToPrint] = useState<Transaction | null>(null);
     const { showToast } = useToast();
 
-    // 3. Handle Browser Navigation (Back/Forward) and URL Updates
+    // 4. Handle Browser Navigation (Back/Forward) and URL Updates
     useEffect(() => {
         const handlePopState = () => {
             const current = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
@@ -493,14 +509,20 @@ const App = () => {
         setPath(to.toLowerCase().replace(/\/$/, '') || '/');
     };
 
+    // Save view state when it changes
+    useEffect(() => {
+        if (currentUser) {
+            const isRemembered = !!localStorage.getItem('nexus_user');
+            if (isRemembered) {
+                localStorage.setItem('nexus_last_view', currentView);
+            } else {
+                sessionStorage.setItem('nexus_last_view', currentView);
+            }
+        }
+    }, [currentView, currentUser]);
+
     useEffect(() => {
         const loadData = async () => {
-            // Check session first
-            const storedUser = localStorage.getItem('nexus_user');
-            if (storedUser && !currentUser) {
-                setCurrentUser(JSON.parse(storedUser));
-            }
-
             const loadedSettings = await api.getSettings();
             setSettings(loadedSettings);
             setProducts(await api.getProducts());
@@ -523,14 +545,13 @@ const App = () => {
         loadData();
     }, []); // Run once on mount
 
-    const handleLogin = (user: User) => {
-        localStorage.setItem('nexus_user', JSON.stringify(user));
+    const handleLogin = (user: User, rememberMe: boolean) => {
+        if (rememberMe) {
+            localStorage.setItem('nexus_user', JSON.stringify(user));
+        } else {
+            sessionStorage.setItem('nexus_user', JSON.stringify(user));
+        }
         setCurrentUser(user);
-        
-        // Ensure URL is App-friendly upon login
-        // If they were at /admin, we can stay there or move to /dashboard
-        // Generally good UX to move to root or dashboard path if we had one
-        // navigate('/dashboard'); // Optional: We don't have separate dashboard path logic yet, just view state
         
         if (!shift && user.role !== 'Admin') {
             setShiftModalOpen(true);
@@ -539,6 +560,9 @@ const App = () => {
 
     const handleLogout = () => {
         localStorage.removeItem('nexus_user');
+        localStorage.removeItem('nexus_last_view');
+        sessionStorage.removeItem('nexus_user');
+        sessionStorage.removeItem('nexus_last_view');
         setCurrentUser(null);
         // Force navigate to admin login after logout
         navigate('/admin'); 
@@ -656,8 +680,8 @@ const App = () => {
         showToast(`Cash ${type === 'in' ? 'added' : 'removed'}`, 'success');
     };
 
-    // 4. Routing Decision Logic
-    // If user IS logged in, always show App Layout (regardless of URL for now, or you could redirect / to dashboard)
+    // 5. Routing Decision Logic
+    // If user IS logged in, always show App Layout
     if (currentUser) {
         return (
             <Layout 
