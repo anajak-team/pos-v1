@@ -545,7 +545,7 @@ const App = () => {
     }, []);
 
     const handleLogin = (user: User, rememberMe: boolean) => {
-        // Clear existing to avoid conflicts
+        // Clear existing session to avoid conflicts
         localStorage.removeItem('nexus_user');
         sessionStorage.removeItem('nexus_user');
 
@@ -556,8 +556,7 @@ const App = () => {
         }
         setCurrentUser(user);
         
-        // If coming from login screen, user is likely at /admin
-        // No navigation needed if we are rendering Layout conditionally
+        // If coming from login screen, stay on /admin (which renders Layout)
         
         if (!shift && user.role !== 'Admin') {
             setShiftModalOpen(true);
@@ -565,12 +564,14 @@ const App = () => {
     };
 
     const handleLogout = () => {
+        // Clear Session Data
         localStorage.removeItem('nexus_user');
         localStorage.removeItem('nexus_last_view');
         sessionStorage.removeItem('nexus_user');
         sessionStorage.removeItem('nexus_last_view');
+        
         setCurrentUser(null);
-        // Force navigate to admin login after logout
+        // Force navigate to admin login after logout so user sees the login form (potentially pre-filled)
         navigate('/admin'); 
     };
 
