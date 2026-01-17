@@ -24,7 +24,6 @@ import { useToast } from './components/Toast';
 import { generateProductDescription } from './services/geminiService';
 
 // --- Helper Components (ImageCropper, CameraCapture, BarcodeScanner, ProductModal, TransactionHistoryView) ---
-// Note: These helper components are preserved as they are critical for functionality.
 
 const ImageCropper = ({ imageSrc, onCrop, onCancel }: { imageSrc: string, onCrop: (croppedImage: string) => void, onCancel: () => void }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -206,9 +205,24 @@ const TransactionHistoryView = ({ transactions, settings, onPrint }: { transacti
 const App = () => {
     // 1. Path State - Single source of truth for current URL path
     const [path, setPath] = useState(() => {
+        // Initial path logic
         const p = window.location.pathname.toLowerCase().replace(/\/$/, '');
         return p === '' ? '/' : p;
     });
+
+    const navigate = (to: string) => {
+        window.history.pushState({}, '', to);
+        setPath(to);
+    };
+
+    useEffect(() => {
+        const handlePopState = () => {
+            const current = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
+            setPath(current);
+        };
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, []);
 
     // 2. User State - Persisted session (Remember Me vs Session)
     const [currentUser, setCurrentUser] = useState<User | null>(() => {
@@ -252,22 +266,6 @@ const App = () => {
     const [invoiceToPrint, setInvoiceToPrint] = useState<Transaction | null>(null);
     
     const { showToast } = useToast();
-
-    // Browser Navigation Handler (Back/Forward)
-    useEffect(() => {
-        const handlePopState = () => {
-            const current = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
-            setPath(current);
-        };
-        window.addEventListener('popstate', handlePopState);
-        return () => window.removeEventListener('popstate', handlePopState);
-    }, []);
-
-    // Custom Navigation Helper
-    const navigate = (to: string) => {
-        window.history.pushState(null, '', to);
-        setPath(to.toLowerCase().replace(/\/$/, '') || '/');
-    };
 
     // Save Current View to Storage on Change
     useEffect(() => {
@@ -328,8 +326,7 @@ const App = () => {
     };
 
     const handleLogout = () => {
-        // Clear active session data. 
-        // NOTE: We do NOT clear 'nexus_login_pref' here, preserving the "Remember Me" credentials for the login form.
+        // Clear session data ONLY. Do NOT clear login preferences (email/pass) which are stored separately in LoginView.
         localStorage.removeItem('nexus_user');
         localStorage.removeItem('nexus_last_view');
         sessionStorage.removeItem('nexus_user');
@@ -389,7 +386,8 @@ const App = () => {
     }
 
     // 2. Admin App (Login or Dashboard)
-    if (path === '/admin') {
+    // Checks for both /admin and any sub-routes if we were to add them later
+    if (path.startsWith('/admin')) {
         if (!currentUser) {
             return <LoginView onLogin={handleLogin} onBack={() => navigate('/')} />;
         }
