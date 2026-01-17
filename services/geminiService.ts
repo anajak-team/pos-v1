@@ -1,5 +1,6 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
-import { Transaction, Product } from '../types';
+import { Transaction, Product, Expense } from '../types';
 
 // FIX: Initialize GoogleGenAI with API key directly from environment variables as per guidelines.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -72,3 +73,55 @@ export const suggestUpsell = async (cartItems: string[]): Promise<string> => {
         return "";
     }
 }
+
+export const generateProfitForecast = async (
+  transactions: Transaction[], 
+  expenses: Expense[], 
+  currency: string
+): Promise<string> => {
+  // Prepare simplified data for the model
+  const salesSummary = transactions.slice(0, 50).map(t => ({
+    date: t.date.split('T')[0],
+    amount: t.total
+  }));
+  
+  const expenseSummary = expenses.slice(0, 20).map(e => ({
+    date: e.date.split('T')[0],
+    amount: e.amount,
+    category: e.category
+  }));
+
+  const totalRevenue = transactions.reduce((sum, t) => sum + t.total, 0);
+  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+
+  const prompt = `
+    Act as a financial analyst for a retail store.
+    
+    Context:
+    - Currency: ${currency}
+    - Total Revenue (Recent Period): ${totalRevenue}
+    - Total Expenses (Recent Period): ${totalExpenses}
+    - Recent Daily Sales Samples: ${JSON.stringify(salesSummary)}
+    - Recent Expense Samples: ${JSON.stringify(expenseSummary)}
+    
+    Task:
+    Estimate the Net Profit for the NEXT 30 days based on these trends.
+    
+    Output Requirements:
+    - Format: "Projected Net Profit: [Amount] [Currency]. [Reasoning]"
+    - Keep the reasoning to 1-2 short sentences.
+    - Be conservative in your estimate.
+    - Do not use markdown.
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: MODEL_FLASH,
+      contents: prompt,
+    });
+    return response.text?.trim() || "Insufficient data for forecast.";
+  } catch (error) {
+    console.error("Gemini Forecast Error:", error);
+    return "Forecast unavailable.";
+  }
+};

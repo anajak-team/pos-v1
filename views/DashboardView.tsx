@@ -1,22 +1,27 @@
 
 import React, { useEffect, useState } from 'react';
-import { Transaction, User, Expense, StoreSettings } from '../types';
-import { generateSalesInsight } from '../services/geminiService';
+import { Transaction, User, Expense, StoreSettings, Product } from '../types';
+import { generateSalesInsight, generateProfitForecast } from '../services/geminiService';
 import { getSettings } from '../services/storageService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell, Legend } from 'recharts';
-import { Sparkles, TrendingUp, DollarSign, ShoppingBag, ShieldAlert, PieChart as PieChartIcon, ArrowDownRight, ArrowUpRight } from 'lucide-react';
+import { Sparkles, TrendingUp, DollarSign, ShoppingBag, ShieldAlert, PieChart as PieChartIcon, ArrowDownRight, ArrowUpRight, Wand2, Loader2, Package } from 'lucide-react';
 
 interface DashboardProps {
   transactions: Transaction[];
   isDarkMode: boolean;
   currentUser: User;
   expenses: Expense[];
+  products: Product[];
 }
 
-export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMode, currentUser, expenses }) => {
+export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMode, currentUser, expenses, products }) => {
   const [insight, setInsight] = useState<string>("");
   const [loadingInsight, setLoadingInsight] = useState(false);
   const [settings, setSettings] = useState<StoreSettings | null>(null);
+  
+  // Forecast State
+  const [profitForecast, setProfitForecast] = useState<string | null>(null);
+  const [isForecasting, setIsForecasting] = useState(false);
 
   useEffect(() => {
     getSettings().then(setSettings);
@@ -47,6 +52,12 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMo
   const grossProfit = netRevenue - netCOGS;
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
   const netProfit = grossProfit - totalExpenses;
+
+  // Calculate Potential Profit from Inventory
+  const potentialProfit = products.reduce((sum, p) => {
+      const margin = p.price - (p.cost || 0);
+      return sum + (margin * p.stock);
+  }, 0);
 
   // Expense Breakdown Data
   const expenseByCategory = expenses.reduce((acc, curr) => {
@@ -93,6 +104,14 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMo
       fetchInsight();
     }
   }, [transactions, currentUser.role]);
+
+  const handleForecastProfit = async () => {
+      if (isForecasting) return;
+      setIsForecasting(true);
+      const forecast = await generateProfitForecast(transactions, expenses, settings?.currency || '$');
+      setProfitForecast(forecast);
+      setIsForecasting(false);
+  };
 
   // Theme Constants
   const gridColor = isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)';
@@ -180,7 +199,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMo
       </div>
 
       {/* Core Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-3xl border border-white/30 dark:border-white/10 shadow-lg group">
             <div className="flex items-center gap-4 mb-2">
                 <div className="p-4 bg-green-500/10 text-green-600 dark:text-green-400 rounded-2xl group-hover:scale-110 transition-transform">
@@ -216,6 +235,18 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMo
                 </div>
             </div>
         </div>
+
+        <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-3xl border border-white/30 dark:border-white/10 shadow-lg group">
+            <div className="flex items-center gap-4 mb-2">
+                <div className="p-4 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-2xl group-hover:scale-110 transition-transform">
+                    <Package size={24} />
+                </div>
+                <div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide">Est. Stock Profit</p>
+                    <div className="text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">{renderDualCurrency(potentialProfit)}</div>
+                </div>
+            </div>
+        </div>
       </div>
 
       {/* Profit & Loss Section */}
@@ -240,7 +271,17 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMo
             </div>
 
             {/* Net Profit */}
-            <div className={`bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-3xl border shadow-lg flex flex-col justify-between ${netProfit >= 0 ? 'border-emerald-500/20' : 'border-red-500/20'}`}>
+            <div className={`bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-3xl border shadow-lg flex flex-col justify-between relative overflow-hidden group ${netProfit >= 0 ? 'border-emerald-500/20' : 'border-red-500/20'}`}>
+               <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button 
+                    onClick={handleForecastProfit} 
+                    disabled={isForecasting}
+                    className="p-2 bg-white/50 dark:bg-black/20 rounded-full hover:bg-white dark:hover:bg-black/40 transition-colors text-indigo-600 dark:text-indigo-400 border border-transparent hover:border-indigo-500/30"
+                    title="Estimate Future Profit"
+                  >
+                    {isForecasting ? <Loader2 className="animate-spin" size={16} /> : <Wand2 size={16} />}
+                  </button>
+               </div>
                <p className="text-sm text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wide">Net Profit</p>
                <div>
                   <div className="flex items-center gap-2">
@@ -253,6 +294,12 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMo
                   </div>
                   <p className="text-xs text-slate-400 mt-1">Gross Profit - Expenses</p>
                </div>
+               {profitForecast && (
+                 <div className="mt-3 pt-3 border-t border-slate-200 dark:border-white/5 text-xs text-indigo-600 dark:text-indigo-300 animate-fade-in">
+                    <div className="flex items-center gap-1 font-bold mb-1"><Sparkles size={10}/> AI Projection (30d)</div>
+                    {profitForecast}
+                 </div>
+               )}
             </div>
          </div>
 

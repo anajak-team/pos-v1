@@ -1,17 +1,18 @@
 
 import React, { useState } from 'react';
-import { Store, Mail, Lock, ArrowRight, AlertCircle, Loader2, ShieldCheck, ChevronLeft } from 'lucide-react';
+import { Store, Mail, Lock, ArrowRight, AlertCircle, Loader2, ShieldCheck, ChevronLeft, Check } from 'lucide-react';
 import { User } from '../types';
 import { getUsers } from '../services/storageService';
 
 interface LoginViewProps {
-  onLogin: (user: User) => void;
+  onLogin: (user: User, rememberMe: boolean) => void;
   onBack?: () => void;
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({ onLogin, onBack }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [checkingPermissions, setCheckingPermissions] = useState(false);
@@ -38,7 +39,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin, onBack }) => {
       
       // Success - remove password before passing to app
       const { password: _, ...userProfile } = account;
-      onLogin(userProfile);
+      onLogin(userProfile, rememberMe);
     } else {
       setLoading(false);
       setError('Invalid email or password');
@@ -105,6 +106,23 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin, onBack }) => {
                     onChange={(e) => setPassword(e.target.value)}
                   />
                </div>
+            </div>
+
+            {/* Remember Me Checkbox */}
+            <div className="flex items-center gap-2 pl-1">
+                <div className="relative flex items-center">
+                    <input 
+                        type="checkbox" 
+                        id="rememberMe" 
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        className="peer h-5 w-5 cursor-pointer appearance-none rounded-lg border-2 border-slate-300 dark:border-slate-600 bg-white/50 dark:bg-black/20 checked:border-primary checked:bg-primary transition-all"
+                    />
+                    <Check size={14} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={3} />
+                </div>
+                <label htmlFor="rememberMe" className="text-sm font-medium text-slate-600 dark:text-slate-300 cursor-pointer select-none">
+                    Remember me
+                </label>
             </div>
 
             {error && (
