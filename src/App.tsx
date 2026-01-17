@@ -316,46 +316,98 @@ const BarcodeScanner = ({ onScan, onClose }: { onScan: (code: string) => void, o
 
 const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories }: { isOpen: boolean, onClose: () => void, onSave: (p: Partial<Product>) => void, productToEdit: Partial<Product> | null, categories: string[] }) => {
   const [formData, setFormData] = useState<Partial<Product>>({});
-  
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [cropImage, setCropImage] = useState<string | null>(null);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [isBarcodeScannerOpen, setIsBarcodeScannerOpen] = useState(false);
+  const { showToast } = useToast();
+
   useEffect(() => {
     if (productToEdit) setFormData(productToEdit);
-    else setFormData({ name: '', price: 0, cost: 0, stock: 0, category: categories[0] || 'Other', description: '', barcode: '' });
+    else setFormData({ category: categories[0] || 'Other', name: '', price: 0, cost: 0, stock: 0, description: '', barcode: '', itemsPerCase: 1, image: '' });
   }, [productToEdit, isOpen, categories]);
+
+  const handleGenerateDesc = async () => { if (formData.name) { setIsGenerating(true); const desc = await generateProductDescription(formData.name, formData.category || 'General'); setFormData(prev => ({ ...prev, description: desc })); setIsGenerating(false); } };
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0]; if (file) { if (file.size > 5 * 1024 * 1024) { showToast('Image size should be less than 5MB', 'error'); return; } const reader = new FileReader(); reader.onloadend = () => { setCropImage(reader.result as string); e.target.value = ''; }; reader.readAsDataURL(file); } };
+  const handleCropComplete = (croppedImage: string) => { setFormData(prev => ({ ...prev, image: croppedImage })); setCropImage(null); };
+  const handleRemoveImage = (e: React.MouseEvent) => { e.stopPropagation(); setFormData(prev => ({ ...prev, image: '' })); };
+  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); if (formData.name && formData.price != null) { onSave(formData); } };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-lg flex items-center justify-center p-4">
-      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-3xl shadow-2xl w-full max-w-lg border border-white/20">
-        <div className="p-6 border-b border-white/10 flex justify-between items-center">
-          <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">{productToEdit ? 'Edit Product' : 'New Product'}</h3>
-          <button onClick={onClose}><X size={22} /></button>
-        </div>
-        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-          <input className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20" placeholder="Product Name" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} />
-          <div className="grid grid-cols-2 gap-4">
-             <input type="number" className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20" placeholder="Price" value={formData.price || 0} onChange={e => setFormData({...formData, price: parseFloat(e.target.value)})} />
-             <input type="number" className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20" placeholder="Cost" value={formData.cost || 0} onChange={e => setFormData({...formData, cost: parseFloat(e.target.value)})} />
+    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-lg flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-white/80 dark:bg-slate-900/90 backdrop-blur-2xl rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden border border-white/20 my-auto">
+        <div className="p-6 border-b border-white/10 bg-white/10"><h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">{productToEdit ? 'Edit Product' : 'Add Product'}</h3></div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          <div className={`flex flex-col items-center justify-center p-1 border-2 border-dashed rounded-2xl transition-colors relative h-36 overflow-hidden ${formData.image ? 'border-transparent bg-slate-100 dark:bg-black/40' : 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-black/20'}`}>
+              {formData.image ? (
+                  <div className="relative w-full h-full group">
+                      <img src={formData.image} alt="Preview" className="w-full h-full object-contain rounded-xl" />
+                      <button type="button" onClick={handleRemoveImage} className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-transform hover:scale-110 z-20" title="Remove Image"><X size={14} /></button>
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-xl pointer-events-none"><span className="text-white text-xs font-bold">Image Set</span></div>
+                  </div>
+              ) : (
+                  <div className="flex gap-8 items-center justify-center w-full h-full">
+                      <label className="flex flex-col items-center gap-2 cursor-pointer group p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                          <div className="p-3 bg-blue-500/10 text-blue-600 rounded-full group-hover:scale-110 transition-transform"><ImageIcon size={24} /></div>
+                          <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Upload</span>
+                          <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                      </label>
+                      <div className="w-px h-12 bg-slate-300 dark:bg-slate-700"></div>
+                      <button type="button" onClick={() => setIsCameraOpen(true)} className="flex flex-col items-center gap-2 cursor-pointer group p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                          <div className="p-3 bg-purple-500/10 text-purple-600 rounded-full group-hover:scale-110 transition-transform"><Camera size={24} /></div>
+                          <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Camera</span>
+                      </button>
+                  </div>
+              )}
           </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><div className="space-y-1"><label className="text-xs font-bold text-slate-500 dark:text-slate-400">Name</label><input required type="text" className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 focus:bg-white/80 dark:focus:bg-black/40 outline-none transition-all" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} /></div><div className="space-y-1"><label className="text-xs font-bold text-slate-500 dark:text-slate-400">Category</label><select className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 outline-none" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value })}>{categories.map(c => <option key={c} value={c}>{c}</option>)}</select></div></div>
           <div className="grid grid-cols-2 gap-4">
-             <input type="number" className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20" placeholder="Stock" value={formData.stock || 0} onChange={e => setFormData({...formData, stock: parseInt(e.target.value)})} />
-             <select className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
-                {categories.map(c => <option key={c} value={c}>{c}</option>)}
-             </select>
+            <div className="space-y-1"><label className="text-xs font-bold text-slate-500 dark:text-slate-400">Price</label><input required type="number" step="0.01" className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 outline-none" value={formData.price || ''} onChange={e => setFormData({...formData, price: parseFloat(e.target.value)})} /></div>
+            <div className="space-y-1"><label className="text-xs font-bold text-slate-500 dark:text-slate-400">Cost (COGS)</label><input type="number" step="0.01" className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 outline-none" value={formData.cost || ''} onChange={e => setFormData({...formData, cost: parseFloat(e.target.value)})} placeholder="0.00" /></div>
           </div>
-           <input className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20" placeholder="Barcode" value={formData.barcode || ''} onChange={e => setFormData({...formData, barcode: e.target.value})} />
-           <textarea className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20" placeholder="Description" value={formData.description || ''} onChange={e => setFormData({...formData, description: e.target.value})} />
-        </div>
-        <div className="p-6 border-t border-white/10 flex gap-3">
-           <button onClick={onClose} className="flex-1 py-3 rounded-xl font-bold text-slate-600 hover:bg-white/30">Cancel</button>
-           <button onClick={() => onSave(formData)} className="flex-1 py-3 bg-primary text-white rounded-xl font-bold shadow-lg">Save</button>
-        </div>
+          <div className="grid grid-cols-2 gap-4"><div className="space-y-1"><label className="text-xs font-bold text-slate-500 dark:text-slate-400">Stock</label><input required type="number" className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 outline-none" value={formData.stock || ''} onChange={e => setFormData({...formData, stock: parseInt(e.target.value)})} /></div><div className="space-y-1"><label className="text-xs font-bold text-slate-500 dark:text-slate-400">Items per Case</label><div className="relative"><Box className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16}/><input type="number" min="1" className="w-full pl-9 p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 outline-none" value={formData.itemsPerCase} onChange={e => setFormData({...formData, itemsPerCase: parseInt(e.target.value)})} placeholder="1" /></div></div></div>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-500 dark:text-slate-400">Barcode</label>
+            <div className="relative">
+                <input 
+                    type="text" 
+                    className="w-full pl-3 pr-10 p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 outline-none transition-all" 
+                    value={formData.barcode} 
+                    onChange={e => setFormData({...formData, barcode: e.target.value})} 
+                    placeholder="Scan or type..." 
+                />
+                <button 
+                    type="button" 
+                    onClick={() => setIsBarcodeScannerOpen(true)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-primary hover:bg-blue-500/10 rounded-lg transition-colors"
+                    title="Scan Barcode"
+                >
+                    <ScanBarcode size={20} />
+                </button>
+            </div>
+          </div>
+          <div className="space-y-1"><div className="flex justify-between items-center"><label className="text-xs font-bold text-slate-500 dark:text-slate-400">Description</label><button type="button" onClick={handleGenerateDesc} disabled={isGenerating || !formData.name} className="text-[10px] flex items-center gap-1 text-primary font-bold disabled:opacity-50 hover:underline"><Wand2 size={10}/> AI Auto-Write</button></div><textarea className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 focus:bg-white/80 dark:focus:bg-black/40 outline-none transition-all min-h-[80px] text-sm" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Product details..." /></div>
+          <div className="flex gap-4 pt-2"><button type="button" onClick={onClose} className="flex-1 py-3 rounded-2xl font-bold text-slate-600 hover:bg-white/40 transition-colors">Cancel</button><button type="submit" className="flex-1 py-3 bg-primary text-white rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"><Save size={18}/> {productToEdit ? 'Update' : 'Save'}</button></div>
+        </form>
+        {isCameraOpen && <CameraCapture onCapture={(img) => { setCropImage(img); setIsCameraOpen(false); }} onCancel={() => setIsCameraOpen(false)} />}
+        {isBarcodeScannerOpen && (
+            <BarcodeScanner 
+                onScan={(code) => {
+                    setFormData(prev => ({ ...prev, barcode: code }));
+                    setIsBarcodeScannerOpen(false);
+                    showToast(`Scanned: ${code}`, 'success');
+                }}
+                onClose={() => setIsBarcodeScannerOpen(false)}
+            />
+        )}
+        {cropImage && <ImageCropper imageSrc={cropImage} onCrop={handleCropComplete} onCancel={() => setCropImage(null)} />}
       </div>
     </div>
-  );
+  )
 };
 
-// Transaction History View Component (Inline)
 const TransactionHistoryView = ({ transactions, settings, onPrint }: { transactions: Transaction[], settings: StoreSettings, onPrint: (t: Transaction) => void }) => {
     return (
         <div className="max-w-6xl mx-auto space-y-6">
@@ -392,8 +444,15 @@ const TransactionHistoryView = ({ transactions, settings, onPrint }: { transacti
     )
 };
 
-export const App = () => {
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
+const App = () => {
+    // 1. Session Persistence
+    const [currentUser, setCurrentUser] = useState<User | null>(() => {
+        try {
+            const saved = localStorage.getItem('nexus_user');
+            return saved ? JSON.parse(saved) : null;
+        } catch(e) { return null; }
+    });
+
     const [currentView, setCurrentView] = useState<ViewState>('DASHBOARD');
     const [products, setProducts] = useState<Product[]>([]);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -412,12 +471,57 @@ export const App = () => {
     const [productModalOpen, setProductModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
     const [shiftReport, setShiftReport] = useState<Shift | null>(null);
-    const [landingPageMode, setLandingPageMode] = useState(false);
     const [invoiceToPrint, setInvoiceToPrint] = useState<Transaction | null>(null);
     const { showToast } = useToast();
 
+    // 2. Routing Logic for Landing Page (State initialization)
+    const [landingPageMode, setLandingPageMode] = useState<boolean>(() => {
+        // If user is already logged in, they skip the landing page unless explicitly logged out
+        if (localStorage.getItem('nexus_user')) return false;
+        
+        // Otherwise check the URL
+        const path = window.location.pathname;
+        // If path is '/admin', showing login page (landingPageMode = false)
+        // If path is '/' (or anything else), show landing page (landingPageMode = true)
+        return path !== '/admin';
+    });
+
+    // 3. Navigation Helpers (URL Management)
+    const navigateToLogin = () => {
+        window.history.pushState(null, '', '/admin');
+        setLandingPageMode(false);
+    };
+
+    const navigateToLanding = () => {
+        window.history.pushState(null, '', '/');
+        setLandingPageMode(true);
+    };
+
+    // 4. Handle Browser Navigation (Back/Forward)
+    useEffect(() => {
+        const handlePopState = () => {
+            const path = window.location.pathname;
+            if (path === '/admin') {
+                setLandingPageMode(false);
+            } else if (path === '/') {
+                // Only go to landing page if not logged in
+                if (!localStorage.getItem('nexus_user')) {
+                    setLandingPageMode(true);
+                }
+            }
+        };
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, []);
+
     useEffect(() => {
         const loadData = async () => {
+            // Check session first
+            const storedUser = localStorage.getItem('nexus_user');
+            if (storedUser && !currentUser) {
+                setCurrentUser(JSON.parse(storedUser));
+            }
+
             const loadedSettings = await api.getSettings();
             setSettings(loadedSettings);
             setProducts(await api.getProducts());
@@ -438,13 +542,26 @@ export const App = () => {
             }
         };
         loadData();
-    }, []);
+    }, []); // Run once on mount
 
     const handleLogin = (user: User) => {
+        // Persist session
+        localStorage.setItem('nexus_user', JSON.stringify(user));
         setCurrentUser(user);
+        
+        // Ensure URL is clean/correct upon login (optional, but good practice)
+        // Usually we keep them at /admin or move to /dashboard if we had real routing
+        
         if (!shift && user.role !== 'Admin') { // Admins might not need shift
             setShiftModalOpen(true);
         }
+    };
+
+    const handleLogout = () => {
+        localStorage.removeItem('nexus_user');
+        setCurrentUser(null);
+        // Redirect to login page url (/admin) instead of landing page
+        navigateToLogin(); 
     };
 
     const handleStartShift = async (amount: number) => {
@@ -559,12 +676,12 @@ export const App = () => {
         showToast(`Cash ${type === 'in' ? 'added' : 'removed'}`, 'success');
     };
 
-    if (landingPageMode) {
-        return <LandingPage onGetStarted={() => setLandingPageMode(false)} onViewDemo={() => setLandingPageMode(false)} settings={settings} products={products} />;
+    if (landingPageMode && !currentUser) {
+        return <LandingPage onGetStarted={navigateToLogin} onViewDemo={navigateToLogin} settings={settings} products={products} />;
     }
 
     if (!currentUser) {
-        return <LoginView onLogin={handleLogin} onBack={() => setLandingPageMode(true)} />;
+        return <LoginView onLogin={handleLogin} onBack={navigateToLanding} />;
     }
 
     return (
@@ -573,7 +690,7 @@ export const App = () => {
             onNavigate={setCurrentView} 
             storeName={settings?.storeName || 'POS'} 
             currentUser={currentUser} 
-            onLogout={() => setCurrentUser(null)}
+            onLogout={handleLogout}
             onWalletClick={() => setWalletModalOpen(true)}
         >
             {currentView === 'DASHBOARD' && settings && <DashboardView transactions={transactions} isDarkMode={settings.theme === 'dark'} currentUser={currentUser} expenses={expenses} products={products} />}
@@ -587,7 +704,7 @@ export const App = () => {
             {currentView === 'REPAIRS' && settings && <RepairsView repairs={repairs} customers={customers} onAddRepair={async (r) => { await api.addRepair(r); setRepairs(await api.getRepairs()); }} onUpdateRepair={async (r) => { await api.updateRepair(r); setRepairs(await api.getRepairs()); }} onDeleteRepair={async (id) => { await api.deleteRepair(id); setRepairs(await api.getRepairs()); }} settings={settings} currentUser={currentUser} />}
             {currentView === 'LANDING_BUILDER' && settings && <LandingPageBuilderView settings={settings} onSave={async (s) => { await api.saveSettings(s); setSettings(s); showToast('Layout saved', 'success'); }} onBack={() => setCurrentView('SETTINGS')} />}
             
-            {shiftModalOpen && settings && <ShiftEntryModal currentUser={currentUser} onStartShift={handleStartShift} currency={settings.currency} onLogout={() => setCurrentUser(null)} />}
+            {shiftModalOpen && settings && <ShiftEntryModal currentUser={currentUser} onStartShift={handleStartShift} currency={settings.currency} onLogout={handleLogout} />}
             {walletModalOpen && shift && settings && <WalletModal isOpen={walletModalOpen} onClose={() => setWalletModalOpen(false)} shift={shift} onAddMovement={handleAddWalletMovement} onCloseShift={() => setCloseShiftModalOpen(true)} currency={settings.currency} />}
             {closeShiftModalOpen && shift && settings && <CloseShiftModal isOpen={closeShiftModalOpen} onClose={() => setCloseShiftModalOpen(false)} onConfirm={handleCloseShift} shift={shift} currency={settings.currency} />}
             {shiftReport && settings && <ShiftReport shift={shiftReport} settings={settings} onClose={() => setShiftReport(null)} />}
@@ -596,3 +713,5 @@ export const App = () => {
         </Layout>
     );
 };
+
+export default App;
