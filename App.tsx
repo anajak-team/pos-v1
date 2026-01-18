@@ -1,5 +1,4 @@
 
-// ... imports
 import React, { useState, useEffect, useRef } from 'react';
 import { Layout } from './components/Layout';
 import { LoginView } from './views/LoginView';
@@ -20,11 +19,10 @@ import { CloseShiftModal } from './components/CloseShiftModal';
 import { WalletModal } from './components/WalletModal';
 import { ViewState, Product, Transaction, StoreSettings, PurchaseOrder, User, Shift, Expense, CartItem, Customer, StoredUser, RepairTicket, CashMovement } from './types';
 import * as api from './services/storageService';
-import { FileText, Printer, Wand2, ScanBarcode, Box, Image as ImageIcon, Upload, X, Check, ZoomIn, ZoomOut, Move, Save, Loader2, Minus, Plus, Undo2, Eye, Camera } from 'lucide-react';
+import { FileText, Printer, Wand2, ScanBarcode, Box, Image as ImageIcon, Upload, X, Check, ZoomIn, ZoomOut, Move, Save, Loader2, Minus, Plus, Undo2, Eye, Camera, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useToast } from './components/Toast';
 import { generateProductDescription } from './services/geminiService';
 
-// ... (ImageCropper, CameraCapture remain unchanged)
 const ImageCropper = ({ imageSrc, onCrop, onCancel }: { imageSrc: string, onCrop: (croppedImage: string) => void, onCancel: () => void }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [scale, setScale] = useState(1);
@@ -175,22 +173,24 @@ const CameraCapture = ({ onCapture, onCancel }: { onCapture: (img: string) => vo
 
 const BarcodeScanner = ({ onScan, onClose }: { onScan: (code: string) => void, onClose: () => void }) => {
   const scannerRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [scanSuccess, setScanSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Slight delay to ensure DOM element is rendered
-    const timer = setTimeout(() => {
+    let isMounted = true;
+    const timer = setTimeout(async () => {
         const Html5Qrcode = (window as any).Html5Qrcode;
         if (!Html5Qrcode) {
-            console.error("Scanner library not loaded");
-            onClose();
+            if(isMounted) setError("Scanner component not loaded");
             return;
         }
 
         const elementId = "product-modal-scanner-reader";
         
-        // Cleanup existing instance if any (safety check)
+        // Clean up previous instance
         if (scannerRef.current) {
+            try { await scannerRef.current.stop(); } catch(e) {}
             try { scannerRef.current.clear(); } catch(e) {}
         }
 
@@ -199,24 +199,23 @@ const BarcodeScanner = ({ onScan, onClose }: { onScan: (code: string) => void, o
             scannerRef.current = html5QrCode;
             
             const config = { 
-                fps: 20, // Increased FPS
-                videoConstraints: {
-                    facingMode: "environment",
-                    focusMode: "continuous"
-                },
+                fps: 15,
+                qrbox: { width: 250, height: 250 },
                 aspectRatio: 1.0,
                 disableFlip: false,
-                experimentalFeatures: {
-                    useBarCodeDetectorIfSupported: true
+                videoConstraints: {
+                    facingMode: "environment", // Prioritize back camera
+                    width: { min: 640, ideal: 1280, max: 1920 },
+                    height: { min: 480, ideal: 720, max: 1080 },
+                    focusMode: "continuous"
                 }
             };
             
-            html5QrCode.start(
-                { facingMode: "environment" }, 
+            await html5QrCode.start(
+                { facingMode: "environment" }, // Exactly 1 key for first argument
                 config, 
                 (decodedText: string) => {
-                    // Prevent multiple triggers
-                    if (scannerRef.current && !scanSuccess) {
+                    if (scannerRef.current && !scanSuccess && isMounted) {
                         setScanSuccess(true);
                         // Beep
                         try {
@@ -234,44 +233,65 @@ const BarcodeScanner = ({ onScan, onClose }: { onScan: (code: string) => void, o
                              }
                         } catch(e){}
 
+                        // Slight delay to show success
                         setTimeout(() => {
-                            if (scannerRef.current) {
-                                scannerRef.current.stop().then(() => {
-                                    scannerRef.current.clear();
-                                    onScan(decodedText);
-                                }).catch(() => {
-                                    onScan(decodedText);
-                                });
-                            } else {
-                                onScan(decodedText);
-                            }
+                            if(isMounted) onScan(decodedText);
                         }, 500);
                     }
                 },
                 (errorMessage: string) => {
-                    // ignore errors
+                    // ignore
                 }
-            ).catch((err: any) => {
-                console.error("Error starting scanner", err);
-            });
-        } catch (e) {
-            console.error("Error init scanner", e);
+            );
+        } catch (err: any) {
+            console.error("Error starting scanner", err);
+            if(isMounted) setError("Camera permission denied or unavailable.");
         }
-    }, 100);
+    }, 200);
 
     return () => {
+        isMounted = false;
         clearTimeout(timer);
         if (scannerRef.current) {
-            try {
-                scannerRef.current.stop().then(() => {
-                    scannerRef.current.clear();
-                }).catch(() => {
-                    try { scannerRef.current.clear(); } catch(e){}
-                });
-            } catch(e) {}
+            scannerRef.current.stop().then(() => {
+                try { scannerRef.current.clear(); } catch(e){}
+            }).catch((err: any) => {
+                console.warn("Scanner stop suppressed", err);
+                try { scannerRef.current.clear(); } catch(e){}
+            });
         }
     };
-  }, []); // Empty deps to run once
+  }, []); 
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // ERROR FIX: Must stop camera before starting a file scan
+    if (scannerRef.current) {
+        try {
+            await scannerRef.current.stop();
+        } catch (err) {
+            console.warn("Stop error during file upload", err);
+        }
+    }
+
+    try {
+        const result = await scannerRef.current.scanFile(file, true);
+        if (result) {
+             setScanSuccess(true);
+             setTimeout(() => onScan(result), 500);
+        }
+    } catch (err) {
+        console.error(err);
+        setError("No barcode found in image");
+        setTimeout(() => setError(null), 2000);
+        // Try to restart scanner
+        onClose(); // Just close to be safe and let user retry
+    } finally {
+        e.target.value = '';
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center animate-fade-in">
@@ -281,27 +301,64 @@ const BarcodeScanner = ({ onScan, onClose }: { onScan: (code: string) => void, o
         >
             <X size={24} />
         </button>
-        <div className="relative w-full max-w-sm aspect-square bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/10 mx-6">
-            <div id="product-modal-scanner-reader" className="w-full h-full"></div>
-            {/* Visual Guide Overlay */}
-            <div className="absolute inset-0 pointer-events-none">
-                <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 border-2 rounded-2xl shadow-[0_0_0_1000px_rgba(0,0,0,0.7)] transition-all duration-300 ${scanSuccess ? 'border-green-500 shadow-[0_0_0_1000px_rgba(0,0,0,0.8)]' : 'border-primary/70'}`}>
-                    <div className={`absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 -mt-1 -ml-1 ${scanSuccess ? 'border-green-500' : 'border-primary'}`}></div>
-                    <div className={`absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 -mt-1 -mr-1 ${scanSuccess ? 'border-green-500' : 'border-primary'}`}></div>
-                    <div className={`absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 -mb-1 -ml-1 ${scanSuccess ? 'border-green-500' : 'border-primary'}`}></div>
-                    <div className={`absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 -mb-1 -mr-1 ${scanSuccess ? 'border-green-500' : 'border-primary'}`}></div>
-                </div>
-                {scanSuccess && <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm"><Check size={64} className="text-green-500 animate-scale-in" /></div>}
+        
+        {error ? (
+            <div className="text-white text-center p-6 max-w-sm bg-white/10 rounded-3xl backdrop-blur-md border border-white/10">
+                <AlertTriangle size={48} className="mx-auto mb-4 text-amber-500" />
+                <p className="mb-6 font-medium text-lg">{error}</p>
+                <button onClick={onClose} className="bg-white text-slate-900 px-6 py-3 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors">
+                    Close
+                </button>
             </div>
-        </div>
-        <p className="text-slate-400 mt-8 font-medium text-center px-6">{scanSuccess ? 'Barcode Detected!' : 'Align barcode or QR code within the frame to scan'}</p>
+        ) : (
+            <div className="relative w-full max-w-sm aspect-square bg-black rounded-3xl overflow-hidden shadow-2xl border-2 border-white/20 mx-6">
+                <div id="product-modal-scanner-reader" className="w-full h-full"></div>
+                
+                {/* Centered Scan Box Overlay */}
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                    <div className="w-[250px] h-[250px] relative border border-white/30 rounded-xl">
+                        <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-xl -mt-1 -ml-1"></div>
+                        <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-xl -mt-1 -mr-1"></div>
+                        <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-xl -mb-1 -ml-1"></div>
+                        <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-xl -mb-1 -mr-1"></div>
+                        <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse"></div>
+                    </div>
+                </div>
+
+                {scanSuccess && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-green-500/20 backdrop-blur-sm animate-fade-in">
+                        <CheckCircle2 size={64} className="text-green-500 animate-scale-in drop-shadow-lg" />
+                    </div>
+                )}
+            </div>
+        )}
+        {!error && !scanSuccess && <p className="text-white/60 mt-8 font-medium text-center px-6">Align barcode within frame</p>}
+        
+        {!error && (
+            <>
+                <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-6 z-30">
+                    <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="p-4 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white/30 transition-colors flex flex-col items-center gap-1"
+                    >
+                        <ImageIcon size={24} />
+                        <span className="text-[10px] font-bold">Gallery</span>
+                    </button>
+                </div>
+                <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    accept="image/*" 
+                    onChange={handleImageUpload} 
+                />
+            </>
+        )}
     </div>
   );
 };
 
-// ... (Rest of App.tsx remains unchanged)
 const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories }: { isOpen: boolean, onClose: () => void, onSave: (p: Partial<Product>) => void, productToEdit: Partial<Product> | null, categories: string[] }) => {
-  // ... (unchanged)
   const [formData, setFormData] = useState<Partial<Product>>({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [cropImage, setCropImage] = useState<string | null>(null);
@@ -395,9 +452,90 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories }: { 
   )
 };
 
-// ... (ReturnModal, App, TransactionsHistory remain unchanged)
+const TransactionsHistory = ({ transactions, currency, onPrint, onReturn, onView }: { transactions: Transaction[], currency: string, onPrint: (t: Transaction) => void, onReturn: (t: Transaction) => void, onView: (t: Transaction) => void }) => {
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('all');
+
+  const filtered = transactions.filter(t => {
+    const matchesSearch = (t.customerName || '').toLowerCase().includes(search.toLowerCase()) || t.id.includes(search);
+    const matchesFilter = filter === 'all' || t.type === filter;
+    return matchesSearch && matchesFilter;
+  });
+
+  return (
+    <div className="max-w-6xl mx-auto space-y-6 pb-20">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div>
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Transaction History</h2>
+                <p className="text-slate-600 dark:text-slate-400 text-sm">View and manage past sales</p>
+            </div>
+            <div className="flex gap-2 w-full sm:w-auto">
+                <input 
+                    placeholder="Search by ID or Customer..." 
+                    className="flex-1 sm:w-64 p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 outline-none text-sm"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                />
+                <select 
+                    className="p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 outline-none text-sm font-bold"
+                    value={filter}
+                    onChange={e => setFilter(e.target.value)}
+                >
+                    <option value="all">All</option>
+                    <option value="sale">Sales</option>
+                    <option value="return">Returns</option>
+                </select>
+            </div>
+        </div>
+
+        <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl rounded-2xl shadow-xl border border-white/30 dark:border-white/10 overflow-hidden">
+            <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                    <thead className="bg-white/20 dark:bg-white/5 border-b border-white/10 text-slate-500">
+                        <tr>
+                            <th className="p-4">Date</th>
+                            <th className="p-4">Transaction ID</th>
+                            <th className="p-4">Customer</th>
+                            <th className="p-4">Items</th>
+                            <th className="p-4">Total</th>
+                            <th className="p-4">Method</th>
+                            <th className="p-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/10">
+                        {filtered.map(t => (
+                            <tr key={t.id} className="hover:bg-white/10 transition-colors">
+                                <td className="p-4 whitespace-nowrap text-slate-600 dark:text-slate-400">
+                                    {new Date(t.date).toLocaleDateString()} <span className="text-[10px] opacity-70">{new Date(t.date).toLocaleTimeString()}</span>
+                                </td>
+                                <td className="p-4 font-mono text-xs">{t.id.slice(-8)}</td>
+                                <td className="p-4 font-bold text-slate-800 dark:text-slate-200">{t.customerName || 'Walk-in'}</td>
+                                <td className="p-4 text-slate-600 dark:text-slate-400">{t.items.reduce((acc, i) => acc + i.quantity, 0)} items</td>
+                                <td className={`p-4 font-bold ${t.type === 'return' ? 'text-red-500' : 'text-emerald-600'}`}>
+                                    {t.type === 'return' ? '-' : ''}{currency}{t.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </td>
+                                <td className="p-4 capitalize text-slate-600 dark:text-slate-400">{t.paymentMethod}</td>
+                                <td className="p-4 text-right flex justify-end gap-2">
+                                    <button onClick={() => onView(t)} className="p-2 bg-blue-500/10 text-blue-600 rounded-lg hover:bg-blue-500/20" title="View Details"><Eye size={16}/></button>
+                                    <button onClick={() => onPrint(t)} className="p-2 bg-slate-500/10 text-slate-600 dark:text-slate-400 rounded-lg hover:bg-slate-500/20" title="Print Receipt"><Printer size={16}/></button>
+                                    {t.type === 'sale' && (
+                                        <button onClick={() => onReturn(t)} className="p-2 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-500/20" title="Process Return"><Undo2 size={16}/></button>
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+                {filtered.length === 0 && (
+                    <div className="p-8 text-center text-slate-400">No transactions found</div>
+                )}
+            </div>
+        </div>
+    </div>
+  );
+};
+
 const ReturnModal = ({ isOpen, onClose, transaction, onProcessReturn }: { isOpen: boolean, onClose: () => void, transaction: Transaction | null, onProcessReturn: (originalTx: Transaction, itemsToReturn: CartItem[]) => void }) => {
-    // ... (unchanged)
     const [itemsToReturn, setItemsToReturn] = useState<CartItem[]>([]);
 
     useEffect(() => {
@@ -480,7 +618,6 @@ const ReturnModal = ({ isOpen, onClose, transaction, onProcessReturn }: { isOpen
 };
 
 export const App: React.FC = () => {
-  // ... (App state and handlers)
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [showLogin, setShowLogin] = useState(false);
@@ -515,8 +652,6 @@ export const App: React.FC = () => {
         try {
             const storedUser = localStorage.getItem('nexus_user') || sessionStorage.getItem('nexus_user');
             // If user is NOT logged in, we MUST force fetch real settings for the Landing Page.
-            // If the browser was previously in Demo mode, localStorage flag might be true,
-            // but we don't want the public landing page to show 'Demo Store'.
             const forceProduction = !storedUser;
 
             // Load settings and products initially (needed for landing page)
@@ -548,7 +683,6 @@ export const App: React.FC = () => {
   const loadInitialData = async () => {
     setLoading(true);
     try {
-      // Regular load - let the storage service decide based on Demo mode or not
       const [
         productsData, 
         transactionsData, 
@@ -612,23 +746,21 @@ export const App: React.FC = () => {
     } else {
         sessionStorage.setItem('nexus_user', JSON.stringify(user));
     }
-    localStorage.removeItem('nexus_demo_mode'); // Ensure standard mode
+    localStorage.removeItem('nexus_demo_mode');
     setCurrentUser(user);
   };
 
   const handleLogout = async () => {
     localStorage.removeItem('nexus_user');
     sessionStorage.removeItem('nexus_user');
-    localStorage.removeItem('nexus_demo_mode'); // Clear demo mode
+    localStorage.removeItem('nexus_demo_mode');
     
-    // Clear localized state
     setCurrentUser(null);
     setCurrentShift(null); 
     setShiftReportData(null);
     setShowLogin(false);
     setCurrentView('POS');
     
-    // Clear data states to ensure no sensitive data persists in memory
     setTransactions([]);
     setPurchases([]);
     setExpenses([]);
@@ -636,7 +768,6 @@ export const App: React.FC = () => {
     setCustomers([]);
     setRepairs([]);
     
-    // Ideally refetch public settings/products for the landing page
     try {
        const publicSettings = await api.getSettings(true);
        const publicProducts = await api.getProducts(true);
@@ -687,7 +818,7 @@ export const App: React.FC = () => {
       setCurrentShift(null);
       setIsCloseShiftModalOpen(false);
       setIsWalletModalOpen(false);
-      setShiftReportData(savedShift); // Show report before logout
+      setShiftReportData(savedShift);
       showToast('Shift closed successfully.', 'success');
     } catch (error) {
       showToast('Failed to close shift', 'error');
@@ -723,10 +854,11 @@ export const App: React.FC = () => {
     setShiftReportData(null);
     handleLogout();
   };
+
+  const handleCloseProductModal = () => {
+    setProductModalState({ isOpen: false, product: null });
+  };
   
-  // --- CRUD Handlers ---
-  
-  // Products
   const handleUpdateProduct = async (product: Product) => {
     try {
       const updatedProduct = await api.updateProduct(product);
@@ -779,18 +911,15 @@ export const App: React.FC = () => {
       let updatedCount = 0;
 
       for (const p of newProducts) {
-        // Match by Barcode or Name
         const existingIndex = updatedProducts.findIndex(ex => 
           (p.barcode && ex.barcode === p.barcode) || 
           (p.name && ex.name.toLowerCase() === p.name.toLowerCase())
         );
         
         if (existingIndex >= 0) {
-          // Update existing, keeping ID
           updatedProducts[existingIndex] = { ...updatedProducts[existingIndex], ...p, id: updatedProducts[existingIndex].id };
           updatedCount++;
         } else {
-          // Add new
           updatedProducts.push(p);
           addedCount++;
         }
@@ -805,7 +934,6 @@ export const App: React.FC = () => {
     }
   };
 
-  // Categories
   const handleUpdateCategories = async (newCategories: string[]) => {
     try {
       const updated = await api.saveCategories(newCategories);
@@ -829,7 +957,6 @@ export const App: React.FC = () => {
     }
   };
   
-  // Expense Categories
   const handleUpdateExpenseCategories = async (newCategories: string[]) => {
     try {
       const updated = await api.saveExpenseCategories(newCategories);
@@ -840,7 +967,6 @@ export const App: React.FC = () => {
     }
   };
 
-  // Users
   const handleAddUser = async (user: Omit<StoredUser, 'id'>) => {
     const savedUser = await api.addUser(user);
     setUsers(prev => [...prev, savedUser]);
@@ -854,7 +980,6 @@ export const App: React.FC = () => {
     setUsers(prev => prev.filter(u => u.id !== userId));
   };
   
-  // Customers
   const handleAddCustomer = async (customer: Omit<Customer, 'id'>): Promise<Customer> => {
     const savedCustomer = await api.addCustomer(customer);
     setCustomers(prev => [...prev, savedCustomer]);
@@ -869,7 +994,6 @@ export const App: React.FC = () => {
     setCustomers(prev => prev.filter(c => c.id !== customerId));
   };
 
-  // Repairs
   const handleAddRepair = async (repair: Omit<RepairTicket, 'id' | 'createdAt' | 'updatedAt'>) => {
       try {
           const newRepair = await api.addRepair(repair);
@@ -895,7 +1019,6 @@ export const App: React.FC = () => {
       }
   };
 
-  // Settings
   const handleUpdateSettings = async (newSettings: StoreSettings) => {
     try {
       const updated = await api.saveSettings(newSettings);
@@ -906,11 +1029,9 @@ export const App: React.FC = () => {
     }
   };
 
-  // Expenses
   const handleAddExpense = async (expense: Omit<Expense, 'id'>) => { try { const savedExpense = await api.addExpense(expense); setExpenses([savedExpense, ...expenses]); } catch(error) { showToast('Failed to add expense', 'error'); } };
   const handleDeleteExpense = async (id: string) => { try { await api.deleteExpense(id); setExpenses(expenses.filter(e => e.id !== id)); showToast('Expense deleted', 'info'); } catch(error) { showToast('Failed to delete expense', 'error'); } };
 
-  // Transactions
   const handleTransaction = async (transaction: Transaction) => {
     const newTransaction: Transaction = { ...transaction, id: transaction.id || `trx-${Date.now()}`, shiftId: currentShift?.id };
     try {
@@ -935,193 +1056,228 @@ export const App: React.FC = () => {
 
       if (currentShift) { const updatedShift = { ...currentShift }; if (transaction.paymentMethod === 'cash') updatedShift.cashSales += transaction.total; else if (transaction.paymentMethod === 'card') updatedShift.cardSales += transaction.total; else if (transaction.paymentMethod === 'digital') updatedShift.digitalSales += transaction.total; setCurrentShift(updatedShift); await api.saveShift(updatedShift); }
       if (transaction.customerId) await api.updateCustomerStats(transaction.customerId, transaction.total);
-      showToast(`Sale completed: ${settings?.currency || '$'}${transaction.total.toFixed(2)}`, 'success');
-      if (savedTransaction.paymentMethod === 'cash' && settings?.autoOpenDrawer) { handlePrintReceipt(savedTransaction); }
-    } catch(error: any) { 
-        console.error(error);
-        const msg = error?.message || 'Failed to save transaction';
-        showToast(msg, 'error'); 
-    }
-  };
-
-  const handleReturnTransaction = async (originalTx: Transaction, itemsToReturn: CartItem[]) => {
-    const totalRefund = itemsToReturn.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const taxRefund = (totalRefund / (1 + (settings?.taxRate || 0)/100)) * ((settings?.taxRate || 0)/100);
-    const returnTransactionData: Omit<Transaction, 'id'> = { date: new Date().toISOString(), items: itemsToReturn.map(i => ({...i, cost: i.cost || 0})), total: totalRefund, tax: taxRefund, paymentMethod: originalTx.paymentMethod, type: 'return', originalTransactionId: originalTx.id, shiftId: currentShift?.id };
-    try {
-      const savedReturn = await api.saveTransaction(returnTransactionData as Transaction);
-      setTransactions([savedReturn, ...transactions]);
       
-      const changedProducts: Product[] = [];
-      const updatedProducts = products.map(p => { 
-          const returnedItem = itemsToReturn.find(i => i.id === p.id); 
-          if (returnedItem) {
-              const updated = { ...p, stock: p.stock + returnedItem.quantity };
-              changedProducts.push(updated);
-              return updated;
-          }
-          return p; 
-      });
-      setProducts(updatedProducts);
-      
-      if (changedProducts.length > 0) {
-          await api.saveProducts(changedProducts);
-      }
-
-      if (currentShift) { const updatedShift = { ...currentShift }; if (returnTransactionData.paymentMethod === 'cash') updatedShift.cashSales -= totalRefund; else if (returnTransactionData.paymentMethod === 'card') updatedShift.cardSales -= totalRefund; else if (returnTransactionData.paymentMethod === 'digital') updatedShift.digitalSales -= totalRefund; setCurrentShift(updatedShift); await api.saveShift(updatedShift); }
-      showToast(`Return processed for ${settings?.currency}${totalRefund.toFixed(2)}`, 'success');
-      setTransactionToReturn(null);
-    } catch(err) { showToast('Failed to process return.', 'error'); }
-  };
-
-  const handleCreatePurchaseOrder = async (order: Omit<PurchaseOrder, 'id'>) => { try { const newOrder = await api.savePurchaseOrder(order as PurchaseOrder); setPurchases([newOrder, ...purchases]); } catch(e) { showToast('Failed to save order', 'error')}};
-  
-  const handleReceiveOrder = async (orderId: string) => {
-    const order = purchases.find(o => o.id === orderId);
-    if (!order || order.status === 'Received') return;
-
-    try {
-      // 1. Update Order Status
-      const updatedOrder = { ...order, status: 'Received' as const };
-      await api.savePurchaseOrder(updatedOrder);
-      
-      // 2. Update Inventory (Stock & Weighted Average Cost)
-      const updatedProducts = [...products];
-      
-      for (const item of order.items) {
-        const productIndex = updatedProducts.findIndex(p => p.id === item.productId);
-        if (productIndex !== -1) {
-          const product = updatedProducts[productIndex];
-          
-          // Calculate new stock
-          const newStock = (product.stock || 0) + item.quantity;
-          
-          // Calculate new weighted average cost
-          const currentTotalValue = (product.stock || 0) * (product.cost || 0);
-          const incomingValue = item.quantity * item.unitCost;
-          const newCost = newStock > 0 ? (currentTotalValue + incomingValue) / newStock : (product.cost || 0);
-
-          const updatedProduct = { 
-            ...product, 
-            stock: newStock,
-            cost: parseFloat(newCost.toFixed(2))
-          };
-
-          // Save product to DB
-          await api.updateProduct(updatedProduct);
-          
-          // Update local products array
-          updatedProducts[productIndex] = updatedProduct;
-        }
-      }
-
-      // 3. Update State
-      setPurchases(prev => prev.map(o => o.id === orderId ? updatedOrder : o));
-      setProducts(updatedProducts);
-      
-      showToast(`Order received. Stock updated.`, 'success');
+      showToast('Transaction completed', 'success');
     } catch (error) {
-      console.error(error);
-      showToast('Failed to receive order', 'error');
+      showToast('Transaction failed', 'error');
     }
   };
 
-  const handlePrintReceipt = (transaction: Transaction) => setTransactionToPrint(transaction);
-  const handleViewReceipt = (transaction: Transaction) => setTransactionToView(transaction);
-  const handleOpenProductModal = (product: Product | null) => setProductModalState({ isOpen: true, product });
-  const handleCloseProductModal = () => setProductModalState({ isOpen: false, product: null });
-  const handleOpenReturnModal = (transaction: Transaction) => setTransactionToReturn(transaction);
-  
-  if (loading) return <div className="flex h-screen w-full items-center justify-center bg-slate-100 dark:bg-slate-900"><Loader2 className="animate-spin text-primary" size={48} /></div>;
-  if (!currentUser && !showLogin) return <LandingPage onGetStarted={() => setShowLogin(true)} onViewDemo={handleViewDemo} settings={settings} products={products} />;
-  if (!currentUser && showLogin) return <LoginView onLogin={handleLogin} onBack={() => setShowLogin(false)} />;
-  if (!settings) return <div>Error loading settings. Please refresh.</div>; 
-  if (!currentShift && !shiftReportData) return <ShiftEntryModal currentUser={currentUser} onStartShift={handleStartShift} currency={settings.currency} onLogout={handleLogout} />;
+  const handleReturn = async (originalTx: Transaction, itemsToReturn: CartItem[]) => {
+      const refundAmount = itemsToReturn.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      
+      // 1. Create return transaction
+      const returnTx: Transaction = {
+          id: `ret-${Date.now()}`,
+          date: new Date().toISOString(),
+          items: itemsToReturn,
+          total: refundAmount,
+          tax: 0, // Simplified tax handling for returns
+          paymentMethod: originalTx.paymentMethod,
+          type: 'return',
+          originalTransactionId: originalTx.id,
+          customerId: originalTx.customerId,
+          customerName: originalTx.customerName,
+          shiftId: currentShift?.id
+      };
 
-  const renderView = () => {
-    switch (currentView) {
-      case 'DASHBOARD': return <DashboardView transactions={transactions} isDarkMode={settings.theme === 'dark'} currentUser={currentUser!} expenses={expenses} products={products} />;
-      case 'POS': return <PosView products={products} onCompleteTransaction={handleTransaction} onPrint={handlePrintReceipt} settings={settings} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} currentUser={currentUser!} onOpenProductModal={handleOpenProductModal} categories={categories} customers={customers} onAddCustomer={handleAddCustomer} />;
-      case 'REPAIRS': return <RepairsView repairs={repairs} customers={customers} onAddRepair={handleAddRepair} onUpdateRepair={handleUpdateRepair} onDeleteRepair={handleDeleteRepair} settings={settings} currentUser={currentUser!} />;
-      case 'INVENTORY': return <InventoryView products={products} onDeleteProduct={handleDeleteProduct} onUpdateProduct={handleUpdateProduct} onImportProducts={handleImportProducts} settings={settings} currentUser={currentUser!} onOpenProductModal={handleOpenProductModal} />;
-      case 'PURCHASES': return <PurchaseView orders={purchases} products={products} settings={settings} onCreateOrder={handleCreatePurchaseOrder} onReceiveOrder={handleReceiveOrder} currentUser={currentUser!} />;
-      case 'EXPENSES': return <ExpensesView expenses={expenses} categories={expenseCategories} onAddExpense={handleAddExpense} onDeleteExpense={handleDeleteExpense} onUpdateCategories={handleUpdateExpenseCategories} settings={settings} currentUser={currentUser!} />;
-      case 'REPORTS': return <ReportsView transactions={transactions} expenses={expenses} settings={settings} currentUser={currentUser!} />;
-      case 'TRANSACTIONS': return <TransactionsHistory transactions={transactions} currency={settings.currency} onPrint={handlePrintReceipt} onReturn={handleOpenReturnModal} onView={handleViewReceipt} />;
-      case 'SETTINGS': return <SettingsView settings={settings} onSave={handleUpdateSettings} transactions={transactions} currentUser={currentUser!} categories={categories} onUpdateCategories={handleUpdateCategories} onRenameCategory={handleRenameCategory} users={users} customers={customers} onAddUser={handleAddUser} onUpdateUser={handleUpdateUser} onDeleteUser={handleDeleteUser} onAddCustomer={handleAddCustomer} onUpdateCustomer={handleUpdateCustomer} onDeleteCustomer={handleDeleteCustomer} onNavigate={setCurrentView} />;
-      case 'LANDING_BUILDER': return <LandingPageBuilderView settings={settings} onSave={handleUpdateSettings} onBack={() => setCurrentView('SETTINGS')} />;
-      default: return <PosView products={products} onCompleteTransaction={handleTransaction} settings={settings} onPrint={handlePrintReceipt} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} currentUser={currentUser!} onOpenProductModal={handleOpenProductModal} categories={categories} customers={customers} onAddCustomer={handleAddCustomer} />;
-    }
+      try {
+          const savedReturn = await api.saveTransaction(returnTx);
+          setTransactions([savedReturn, ...transactions]);
+
+          // 2. Restock items
+          const changedProducts: Product[] = [];
+          const updatedProducts = products.map(p => {
+              const returned = itemsToReturn.find(i => i.id === p.id);
+              if (returned) {
+                  const updated = { ...p, stock: p.stock + returned.quantity };
+                  changedProducts.push(updated);
+                  return updated;
+              }
+              return p;
+          });
+          setProducts(updatedProducts);
+          if (changedProducts.length > 0) await api.saveProducts(changedProducts);
+
+          // 3. Update customer stats (deduct points/spend)
+          if (originalTx.customerId) {
+              await api.updateCustomerStats(originalTx.customerId, -refundAmount); // Negative spend
+          }
+
+          setTransactionToReturn(null);
+          showToast('Return processed successfully', 'success');
+      } catch (err) {
+          showToast('Failed to process return', 'error');
+      }
   };
+
+  if (loading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-slate-50 dark:bg-slate-900">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-slate-500 font-bold animate-pulse">Loading Store Data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    if (showLogin) {
+      return <LoginView onLogin={handleLogin} onBack={() => setShowLogin(false)} />;
+    }
+    return <LandingPage onGetStarted={() => setShowLogin(true)} onViewDemo={handleViewDemo} settings={settings} products={products} />;
+  }
+
+  if (currentView === 'LANDING_BUILDER' && settings) {
+      return (
+          <div className={`min-h-screen bg-[#f8fafc] dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300`}>
+              <LandingPageBuilderView settings={settings} onSave={handleUpdateSettings} onBack={() => setCurrentView('SETTINGS')} />
+          </div>
+      );
+  }
 
   return (
-    <>
-      {shiftReportData ? (
-        <ShiftReport shift={shiftReportData} settings={settings} onClose={handleCloseShiftReport} />
-      ) : (
-        <>
-            <div className="print:hidden h-full text-secondary dark:text-slate-300 transition-colors duration-200">
-                <Layout currentView={currentView} onNavigate={setCurrentView} storeName={settings.storeName} onLogout={handleLogout} currentUser={currentUser} onWalletClick={() => setIsWalletModalOpen(true)}>
-                {renderView()}
-                </Layout>
-            </div>
-            <Invoice transaction={transactionToPrint} settings={settings} />
-            {transactionToView && <Invoice transaction={transactionToView} settings={settings} onClose={() => setTransactionToView(null)} />}
-            <ProductModal isOpen={productModalState.isOpen} productToEdit={productModalState.product} onSave={handleSaveProductFromModal} onClose={handleCloseProductModal} categories={categories} />
-            <CloseShiftModal isOpen={isCloseShiftModalOpen} onClose={() => setIsCloseShiftModalOpen(false)} onConfirm={handleConfirmCloseShift} shift={currentShift || undefined} currency={settings.currency} />
-            {currentShift && (
-                <WalletModal 
-                    isOpen={isWalletModalOpen} 
-                    onClose={() => setIsWalletModalOpen(false)} 
-                    shift={currentShift} 
-                    onAddMovement={handleCashMovement} 
-                    onCloseShift={() => setIsCloseShiftModalOpen(true)}
-                    currency={settings.currency}
-                />
-            )}
-            <ReturnModal isOpen={!!transactionToReturn} onClose={() => setTransactionToReturn(null)} transaction={transactionToReturn} onProcessReturn={handleReturnTransaction} />
-        </>
+    <div className={`min-h-screen bg-[#f8fafc] dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300 ${settings?.theme === 'dark' ? 'dark' : ''}`}>
+      {/* Background Ambience */}
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+          <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-blue-500/10 rounded-full blur-[120px] animate-blob"></div>
+          <div className="absolute top-[20%] -right-[10%] w-[40%] h-[40%] bg-purple-500/10 rounded-full blur-[100px] animate-blob" style={{ animationDelay: '2s' }}></div>
+          <div className="absolute -bottom-[10%] left-[20%] w-[30%] h-[30%] bg-emerald-500/10 rounded-full blur-[80px] animate-blob" style={{ animationDelay: '4s' }}></div>
+      </div>
+
+      <Layout 
+        currentView={currentView} 
+        onNavigate={setCurrentView} 
+        storeName={settings?.storeName || 'Store'}
+        onLogout={handleLogout}
+        currentUser={currentUser}
+        onWalletClick={() => setIsWalletModalOpen(true)}
+      >
+        {currentView === 'DASHBOARD' && <DashboardView transactions={transactions} isDarkMode={settings?.theme === 'dark'} currentUser={currentUser} expenses={expenses} products={products} />}
+        {currentView === 'POS' && <PosView 
+            products={products} 
+            onCompleteTransaction={handleTransaction} 
+            onPrint={setTransactionToPrint}
+            settings={settings!}
+            onAddProduct={handleAddProduct}
+            onUpdateProduct={handleUpdateProduct}
+            currentUser={currentUser}
+            onOpenProductModal={(p) => setProductModalState({isOpen: true, product: p})}
+            categories={categories}
+            customers={customers}
+            onAddCustomer={handleAddCustomer}
+        />}
+        {currentView === 'INVENTORY' && <InventoryView 
+            products={products} 
+            onDeleteProduct={handleDeleteProduct} 
+            onUpdateProduct={handleUpdateProduct} 
+            onImportProducts={handleImportProducts}
+            settings={settings!}
+            currentUser={currentUser}
+            onOpenProductModal={(p) => setProductModalState({isOpen: true, product: p})}
+        />}
+        {currentView === 'TRANSACTIONS' && <TransactionsHistory 
+            transactions={transactions} 
+            currency={settings?.currency || '$'} 
+            onPrint={setTransactionToPrint} 
+            onReturn={setTransactionToReturn}
+            onView={setTransactionToView}
+        />}
+        {currentView === 'PURCHASES' && <PurchaseView orders={purchases} products={products} settings={settings!} onCreateOrder={(order) => { setPurchases([order, ...purchases]); api.savePurchaseOrder(order); }} onReceiveOrder={(id) => { 
+            const order = purchases.find(o => o.id === id);
+            if (order) {
+                const updatedOrder = { ...order, status: 'Received' as const };
+                setPurchases(purchases.map(o => o.id === id ? updatedOrder : o));
+                api.savePurchaseOrder(updatedOrder);
+                // Update stock
+                const changedProducts: Product[] = [];
+                const updatedProducts = products.map(p => {
+                    const item = order.items.find(i => i.productId === p.id);
+                    if (item) {
+                        const updated = { ...p, stock: p.stock + item.quantity, cost: item.unitCost }; // Update Cost too
+                        changedProducts.push(updated);
+                        return updated;
+                    }
+                    return p;
+                });
+                setProducts(updatedProducts);
+                if(changedProducts.length > 0) api.saveProducts(changedProducts);
+                showToast('Order received and stock updated', 'success');
+            }
+        }} currentUser={currentUser} />}
+        {currentView === 'EXPENSES' && <ExpensesView expenses={expenses} categories={expenseCategories} onAddExpense={handleAddExpense} onDeleteExpense={handleDeleteExpense} onUpdateCategories={handleUpdateExpenseCategories} settings={settings!} currentUser={currentUser} />}
+        {currentView === 'REPORTS' && <ReportsView transactions={transactions} expenses={expenses} settings={settings!} currentUser={currentUser} />}
+        {currentView === 'REPAIRS' && <RepairsView repairs={repairs} customers={customers} onAddRepair={handleAddRepair} onUpdateRepair={handleUpdateRepair} onDeleteRepair={handleDeleteRepair} settings={settings!} currentUser={currentUser} />}
+        {currentView === 'SETTINGS' && <SettingsView 
+            settings={settings!} 
+            onSave={handleUpdateSettings} 
+            transactions={transactions}
+            currentUser={currentUser}
+            categories={categories}
+            onUpdateCategories={handleUpdateCategories}
+            onRenameCategory={handleRenameCategory}
+            users={users}
+            onAddUser={handleAddUser}
+            onUpdateUser={handleUpdateUser}
+            onDeleteUser={handleDeleteUser}
+            customers={customers}
+            onAddCustomer={handleAddCustomer}
+            onUpdateCustomer={handleUpdateCustomer}
+            onDeleteCustomer={handleDeleteCustomer}
+            onNavigate={setCurrentView}
+        />}
+      </Layout>
+
+      {/* Global Modals */}
+      <ProductModal 
+        isOpen={productModalState.isOpen} 
+        onClose={handleCloseProductModal} 
+        onSave={handleSaveProductFromModal} 
+        productToEdit={productModalState.product} 
+        categories={categories} 
+      />
+      
+      <Invoice transaction={transactionToPrint} settings={settings!} onClose={() => setTransactionToPrint(null)} />
+      
+      {/* View Transaction Invoice Modal */}
+      {transactionToView && (
+          <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-white rounded-lg shadow-xl overflow-hidden max-h-[90vh] overflow-y-auto">
+                  <div className="flex justify-end p-2 sticky top-0 bg-white z-10 border-b">
+                      <button onClick={() => setTransactionToView(null)} className="p-2 hover:bg-gray-100 rounded-full"><X size={20}/></button>
+                  </div>
+                  <Invoice transaction={transactionToView} settings={settings!} />
+              </div>
+          </div>
       )}
-    </>
+
+      <ReturnModal isOpen={!!transactionToReturn} onClose={() => setTransactionToReturn(null)} transaction={transactionToReturn} onProcessReturn={handleReturn} />
+
+      {!currentShift && currentUser && !loading && (
+        <ShiftEntryModal currentUser={currentUser} onStartShift={handleStartShift} currency={settings?.currency || '$'} onLogout={handleLogout} />
+      )}
+
+      {shiftReportData && (
+        <ShiftReport shift={shiftReportData} settings={settings!} onClose={handleCloseShiftReport} />
+      )}
+
+      <CloseShiftModal 
+        isOpen={isCloseShiftModalOpen} 
+        onClose={() => setIsCloseShiftModalOpen(false)} 
+        onConfirm={handleConfirmCloseShift}
+        shift={currentShift || undefined}
+        currency={settings?.currency || '$'}
+      />
+
+      <WalletModal 
+        isOpen={isWalletModalOpen}
+        onClose={() => setIsWalletModalOpen(false)}
+        shift={currentShift!}
+        onAddMovement={handleCashMovement}
+        onCloseShift={() => setIsCloseShiftModalOpen(true)}
+        currency={settings?.currency || '$'}
+      />
+    </div>
   );
 };
-
-const TransactionsHistory = ({ transactions, currency, onPrint, onReturn, onView }: { transactions: Transaction[], currency: string, onPrint: (t: Transaction) => void, onReturn: (t: Transaction) => void, onView: (t: Transaction) => void }) => (
-  <div className="max-w-4xl mx-auto">
-     <div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 drop-shadow-sm">Transaction History</h2></div>
-     <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-2xl rounded-3xl shadow-lg border border-white/20 dark:border-white/10 overflow-hidden">
-        {transactions.length === 0 ? (<div className="p-10 text-center text-slate-500 dark:text-slate-400">No transactions yet</div>) : (<div className="divide-y divide-slate-200/50 dark:divide-slate-700/50">{transactions.map(t => {
-          const isReturn = t.type === 'return';
-          return (
-          <div key={t.id} className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors ${isReturn ? 'bg-red-500/5' : 'hover:bg-white/30 dark:hover:bg-slate-700/30'}`}>
-            <div className="flex items-center gap-4">
-              <div className={`p-3 rounded-full shadow-sm shrink-0 ${isReturn ? 'bg-red-500/10 text-red-500' : 'bg-white/50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300'}`}>
-                {isReturn ? <Undo2 size={20}/> : <FileText size={20} />}
-              </div>
-              <div className="min-w-0">
-                <div className="font-semibold text-slate-900 dark:text-slate-100 truncate flex items-center gap-2">
-                  Order #{t.id.slice(-6)}
-                  {isReturn && <span className="text-xs font-bold text-red-500 bg-red-500/10 px-2 py-0.5 rounded-full">RETURN</span>}
-                </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{new Date(t.date).toLocaleString()} • {t.paymentMethod.toUpperCase()}</div>
-                {t.customerName && <div className="text-xs font-bold text-teal-600 dark:text-teal-400 mt-0.5">{t.customerName}</div>}
-              </div>
-            </div>
-            <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto pl-14 sm:pl-0">
-              <div className="text-right">
-                <div className={`font-bold ${isReturn ? 'text-red-500' : 'text-slate-900 dark:text-slate-100'}`}>
-                  {isReturn ? '-' : ''}{currency}{t.total.toFixed(2)}
-                </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">{t.items.length} items</div>
-              </div>
-              <div className="flex gap-1">
-                {t.type === 'sale' && <button onClick={() => onReturn(t)} className="p-2 text-slate-500 dark:text-slate-400 hover:text-amber-500 hover:bg-amber-500/10 rounded-xl transition-colors" title="Process Return"><Undo2 size={20} /></button>}
-                <button onClick={() => onView(t)} className="p-2 text-slate-500 dark:text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 rounded-xl transition-colors" title="View Receipt"><Eye size={20} /></button>
-                <button onClick={() => onPrint(t)} className="p-2 text-slate-500 dark:text-slate-400 hover:text-primary hover:bg-white/50 dark:hover:bg-white/10 rounded-xl transition-colors" title="Print Receipt"><Printer size={20} /></button>
-              </div>
-            </div>
-          </div>
-        )})}</div>)}
-     </div>
-  </div>
-);

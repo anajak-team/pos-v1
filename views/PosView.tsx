@@ -3,13 +3,12 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom';
 import { Product, CartItem, StoreSettings, User, Transaction, Customer } from '../types';
 import { ProductCard } from '../components/ProductCard';
-import { Search, Trash2, Plus, Minus, CreditCard, Banknote, Smartphone, ShoppingCart, ArrowRight, X, Package, Sparkles, ScanBarcode, Loader2, CheckCircle2, Printer, AlertTriangle, ShoppingBasket, Tag, Crown } from 'lucide-react';
+import { Search, Trash2, Plus, Minus, CreditCard, Banknote, Smartphone, ShoppingCart, ArrowRight, X, Package, Sparkles, ScanBarcode, Loader2, CheckCircle2, Printer, AlertTriangle, ShoppingBasket, Tag, Crown, Image as ImageIcon } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { useAlert } from '../components/Alert';
 import { suggestUpsell } from '../services/geminiService';
 import { getCart, saveCart } from '../services/storageService';
 
-// ... (CartItemRow remains unchanged)
 interface CartItemRowProps {
   item: CartItem;
   currency: string;
@@ -350,7 +349,6 @@ const CartPanel: React.FC<CartPanelProps> = (props) => {
   );
 };
 
-// ... (Rest of PosView remains unchanged)
 interface PosViewProps {
   products: Product[];
   onCompleteTransaction: (transaction: Transaction) => void;
@@ -401,6 +399,7 @@ export const PosView: React.FC<PosViewProps> = ({
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [quickAddForm, setQuickAddForm] = useState<Partial<Product>>({ name: '', price: 0, category: 'Other', stock: 10 });
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const scannerInstanceRef = useRef<any>(null);
 
@@ -668,7 +667,7 @@ export const PosView: React.FC<PosViewProps> = ({
       const osc = ctx.createOscillator();
       
       if (type === 'beep') { osc.type = 'sine'; osc.frequency.setValueAtTime(800, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.08); gainNode.gain.setValueAtTime(0.05, ctx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08); osc.connect(gainNode); osc.start(); osc.stop(ctx.currentTime + 0.1); } 
-      else if (type === 'error') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.2); gainNode.gain.setValueAtTime(0.05, ctx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2); osc.connect(gainNode); osc.start(); osc.stop(ctx.currentTime + 0.25); } 
+      else if (type === 'error') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.2); gainNode.gain.setValueAtTime(0.05, ctx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2); osc.connect(gainNode); osc.start(); osc.stop(ctx.currentTime + (0.25)); } 
       else if (type === 'success') { [523.25, 659.25, 783.99].forEach((freq, i) => { const osc2 = ctx.createOscillator(); osc2.type = 'sine'; osc2.frequency.setValueAtTime(freq, ctx.currentTime + (i * 0.1)); const noteGain = ctx.createGain(); noteGain.connect(ctx.destination); noteGain.gain.setValueAtTime(0.05, ctx.currentTime + (i * 0.1)); noteGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (i * 0.1) + 0.4); osc2.connect(noteGain); osc2.start(ctx.currentTime + (i * 0.1)); osc2.stop(ctx.currentTime + (i * 0.1) + 0.4); }); }
     } catch (e) { console.error(e); }
   };
@@ -692,7 +691,8 @@ export const PosView: React.FC<PosViewProps> = ({
           addToCart(product); 
           setLastScannedMsg(`Added: ${product.name}`);
           setScanSuccess(true);
-          setTimeout(() => setScanSuccess(false), 1000); 
+          // Auto-hide success message
+          setTimeout(() => setScanSuccess(false), 1500); 
           setTimeout(() => setLastScannedMsg(null), 2000); 
       } else { 
           playSystemSound('error'); 
@@ -702,57 +702,105 @@ export const PosView: React.FC<PosViewProps> = ({
       } 
   }, [products, unrecognizedBarcode]);
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // ERROR FIX: Must stop camera before starting a file scan
+    if (scannerInstanceRef.current) {
+        try {
+            await scannerInstanceRef.current.stop();
+        } catch (err) {
+            console.warn("Stop error during file upload", err);
+        }
+    }
+
+    try {
+        const result = await scannerInstanceRef.current.scanFile(file, true);
+        if (result) {
+             handleScan(result);
+        }
+    } catch (err) {
+        console.error("Error scanning file", err);
+        showToast("No barcode found in image", "error");
+    } finally {
+        e.target.value = ''; // Reset input
+        // Re-start scanner if still open
+        if (isScannerOpen) {
+            startScanner();
+        }
+    }
+  };
+
   useEffect(() => {
-    let html5QrCode: any;
-    
+    let isMounted = true;
     if (isScannerOpen) {
-        const timer = setTimeout(() => {
+        const initScanner = async () => {
+            await new Promise(r => setTimeout(r, 200)); // Small delay for UI render
             const Html5Qrcode = (window as any).Html5Qrcode;
             if (!Html5Qrcode) {
-                setScannerError("Scanner library not loaded. Please refresh.");
+                if (isMounted) setScannerError("Scanner component not loaded.");
                 return;
             }
 
+            // Cleanup previous instance
+            if (scannerInstanceRef.current) {
+                try {
+                    await scannerInstanceRef.current.stop();
+                } catch(e) {}
+                try {
+                    scannerInstanceRef.current.clear();
+                } catch(e) {}
+            }
+
             try {
-                html5QrCode = new Html5Qrcode("reader");
+                const html5QrCode = new Html5Qrcode("reader");
                 scannerInstanceRef.current = html5QrCode;
 
                 const config = { 
-                    fps: 15, 
-                    // Removed qrbox for full frame scanning to fix mobile issues
+                    fps: 15,
+                    qrbox: { width: 250, height: 250 },
                     aspectRatio: 1.0,
                     disableFlip: false,
-                    experimentalFeatures: {
-                        useBarCodeDetectorIfSupported: true
+                    videoConstraints: {
+                        facingMode: "environment", // BACK CAMERA
+                        width: { min: 640, ideal: 1280, max: 1920 },
+                        height: { min: 480, ideal: 720, max: 1080 },
+                        focusMode: "continuous"
                     }
                 };
                 
-                html5QrCode.start(
+                // ERROR FIX: First argument MUST be exactly { facingMode: "environment" }
+                await html5QrCode.start(
                     { facingMode: "environment" }, 
                     config, 
                     (decodedText: string) => {
-                        handleScan(decodedText);
+                        if (isMounted) handleScan(decodedText);
                     },
-                    (errorMessage: string) => { }
-                ).catch((err: any) => {
-                    setScannerError("Camera permission denied or error.");
-                });
-            } catch (e) {
-                setScannerError("Failed to initialize scanner.");
+                    (errorMessage: string) => {
+                        // ignore errors
+                    }
+                );
+            } catch (err) {
+                if (isMounted) {
+                    console.error("Scanner start error:", err);
+                    setScannerError("Camera access failed. Please ensure back camera is available.");
+                }
             }
-        }, 300);
+        };
+
+        initScanner();
 
         return () => {
-            clearTimeout(timer);
+            isMounted = false;
             if (scannerInstanceRef.current) {
-                try {
-                    scannerInstanceRef.current.stop().then(() => {
-                        scannerInstanceRef.current.clear();
-                        scannerInstanceRef.current = null;
-                    }).catch((err: any) => {
-                        try { scannerInstanceRef.current.clear(); } catch (e) {}
-                    });
-                } catch(e) {}
+                // ERROR FIX: Use try-catch and check if scanning before stopping
+                scannerInstanceRef.current.stop().then(() => {
+                    try { scannerInstanceRef.current.clear(); } catch(e){}
+                }).catch((err: any) => {
+                    console.warn("Scanner stop suppressed", err);
+                    try { scannerInstanceRef.current.clear(); } catch(e){}
+                });
             }
         };
     }
@@ -785,7 +833,8 @@ export const PosView: React.FC<PosViewProps> = ({
     }
   };
 
-  const handleCreateCustomer = async () => { 
+  const handleCreateCustomer = async (e: React.MouseEvent) => {
+    e.preventDefault();
     if(newCustomer.name && newCustomer.phone) { 
       const customerData: Omit<Customer, 'id'> = { 
         name: newCustomer.name, 
@@ -849,7 +898,7 @@ export const PosView: React.FC<PosViewProps> = ({
            </div>
            
            {/* Category Scrolling */}
-           <div className="flex gap-2 overflow-x-auto pb-2">
+           <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
               {['All', ...categories].map(cat => (
                 <button
                   key={cat}
@@ -920,9 +969,148 @@ export const PosView: React.FC<PosViewProps> = ({
       </div>
 
       {/* Modals */}
-      {isScannerOpen && (<div className="fixed inset-0 z-[70] bg-black/90 flex flex-col animate-fade-in"><div className="absolute top-4 right-4 z-20"><button onClick={stopScanner} className="bg-white/20 backdrop-blur-md p-3 rounded-full text-white hover:bg-white/30"><X size={24} /></button></div><div className="flex-1 relative flex items-center justify-center">{scannerError ? (<div className="text-white text-center p-6 max-w-sm"><AlertTriangle size={48} className="mx-auto mb-4 text-yellow-500" /><p className="mb-4 font-medium">{scannerError}</p><button onClick={stopScanner} className="bg-white text-black px-4 py-2 rounded-xl text-sm font-bold">Close Scanner</button></div>) : (<div className="relative w-full max-w-md aspect-square overflow-hidden rounded-3xl border-2 border-white/30 shadow-2xl mx-4"><div id="reader" className="w-full h-full bg-black rounded-3xl overflow-hidden"></div><div className="absolute inset-0 p-8 pointer-events-none"><div className={`w-full h-full border-2 rounded-3xl relative transition-all duration-300 ${scanSuccess ? 'border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.5)]' : 'border-white/50'}`}><div className={`absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 rounded-tl-xl transition-colors duration-300 ${scanSuccess ? 'border-green-500' : 'border-primary'}`}></div><div className={`absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 rounded-tr-xl transition-colors duration-300 ${scanSuccess ? 'border-green-500' : 'border-primary'}`}></div><div className={`absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 rounded-bl-xl transition-colors duration-300 ${scanSuccess ? 'border-green-500' : 'border-primary'}`}></div><div className={`absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 rounded-br-xl transition-colors duration-300 ${scanSuccess ? 'border-green-500' : 'border-primary'}`}></div></div></div><p className="absolute bottom-8 left-0 right-0 text-center text-white/80 font-medium text-sm bg-black/40 py-2 backdrop-blur-sm">Align barcode within frame</p>{lastScannedMsg && (<div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in"><div className="bg-white/90 text-green-600 px-6 py-4 rounded-2xl flex flex-col items-center shadow-2xl animate-scale-in"><CheckCircle2 size={48} className="mb-2" /><span className="font-bold text-lg text-center">{lastScannedMsg}</span></div></div>)}</div>)}</div></div>)}
-      {isQuickAddOpen && (<div className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-md flex items-center justify-center p-4"><div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl p-6 rounded-3xl shadow-2xl w-full max-w-md border border-white/20"><h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Unrecognized Item</h3><p className="text-sm text-slate-500 mb-4">Barcode: <span className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">{unrecognizedBarcode}</span></p><form onSubmit={handleQuickAddSubmit} className="space-y-4"><div><label className="text-xs font-bold text-slate-500 uppercase">Name</label><input required className="w-full p-3 bg-white/50 dark:bg-black/20 border border-white/20 rounded-xl outline-none" value={quickAddForm.name} onChange={e => setQuickAddForm({...quickAddForm, name: e.target.value})} /></div><div className="grid grid-cols-2 gap-3"><div><label className="text-xs font-bold text-slate-500 uppercase">Price</label><input required type="number" step="0.01" className="w-full p-3 bg-white/50 dark:bg-black/20 border border-white/20 rounded-xl outline-none" value={quickAddForm.price} onChange={e => setQuickAddForm({...quickAddForm, price: parseFloat(e.target.value)})} /></div><div><label className="text-xs font-bold text-slate-500 uppercase">Category</label><select className="w-full p-3 bg-white/50 dark:bg-black/20 border border-white/20 rounded-xl outline-none" value={quickAddForm.category} onChange={e => setQuickAddForm({...quickAddForm, category: e.target.value })}>{categories.map(c => <option key={c} value={c}>{c}</option>)}</select></div></div><div className="flex gap-3 pt-2"><button type="button" onClick={() => setIsQuickAddOpen(false)} className="flex-1 py-3 rounded-xl bg-slate-200 dark:bg-slate-800 font-bold">Cancel</button><button type="submit" className="flex-1 py-3 rounded-xl bg-primary text-white font-bold shadow-lg">Add & Cart</button></div></form></div></div>)}
-      {isCustomerModalOpen && (<div className="fixed inset-0 z-[80] bg-black/40 backdrop-blur-md flex items-center justify-center p-4"><div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-[2rem] shadow-2xl w-full max-w-lg border border-white/20 overflow-hidden flex flex-col max-h-[90vh]"><div className="p-5 border-b border-white/10 flex justify-between items-center"><h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Select Customer</h3><button onClick={() => setIsCustomerModalOpen(false)} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full"><X size={20}/></button></div><div className="p-5 flex-1 overflow-y-auto"><div className="mb-6"><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18}/><input placeholder="Search customers..." className="w-full pl-10 p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20 outline-none" value={customerSearch} onChange={e => setCustomerSearch(e.target.value)} /></div>{customerSearch && (<div className="mt-2 space-y-2 max-h-40 overflow-y-auto">{(customers || []).filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()) || c.phone.includes(customerSearch)).map(c => (<button key={c.id} onClick={() => { setSelectedCustomer(c); setIsCustomerModalOpen(false); }} className="w-full p-3 flex justify-between items-center bg-white/40 dark:bg-white/5 hover:bg-primary/10 rounded-xl border border-transparent hover:border-primary/30 transition-all text-left"><div><div className="font-bold text-slate-800 dark:text-slate-100">{c.name}</div><div className="text-xs text-slate-500">{c.phone}</div></div><ArrowRight size={16} className="text-slate-400"/></button>))}{filteredCustomers.length === 0 && <div className="text-center text-slate-400 text-sm p-2">No matches</div>}</div>)}</div><div className="border-t border-white/10 pt-6"><h4 className="text-sm font-bold text-slate-500 uppercase mb-3">New Customer</h4><div className="space-y-3"><input placeholder="Full Name" className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20" value={newCustomer.name} onChange={e => setNewCustomer({...newCustomer, name: e.target.value})} /><div className="grid grid-cols-2 gap-3"><input placeholder="Phone" className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20" value={newCustomer.phone} onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} /><input placeholder="Email" className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20" value={newCustomer.email} onChange={e => setNewCustomer({...newCustomer, email: e.target.value})} /></div><button onClick={handleCreateCustomer} disabled={!newCustomer.name || !newCustomer.phone} className="w-full py-3 bg-primary text-white rounded-xl font-bold shadow-lg disabled:opacity-50">Create</button></div></div></div></div></div>)}
+      {isScannerOpen && (
+        <div className="fixed inset-0 z-[70] bg-black/90 flex flex-col animate-fade-in">
+            <div className="absolute top-4 right-4 z-20">
+                <button onClick={stopScanner} className="bg-white/20 backdrop-blur-md p-3 rounded-full text-white hover:bg-white/30 transition-colors">
+                    <X size={24} />
+                </button>
+            </div>
+            <div className="flex-1 relative flex flex-col items-center justify-center p-4">
+                {scannerError ? (
+                    <div className="text-white text-center p-6 max-w-sm bg-white/10 rounded-3xl backdrop-blur-md border border-white/10">
+                        <AlertTriangle size={48} className="mx-auto mb-4 text-amber-500" />
+                        <p className="mb-6 font-medium text-lg">{scannerError}</p>
+                        <button onClick={stopScanner} className="bg-white text-slate-900 px-6 py-3 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors">
+                            Close Scanner
+                        </button>
+                    </div>
+                ) : (
+                    <>
+                        <div className="relative w-full max-w-sm aspect-square bg-black rounded-3xl overflow-hidden shadow-2xl border-2 border-white/20">
+                            <div id="reader" className="w-full h-full"></div>
+                            
+                            {/* Centered Scan Box Overlay */}
+                            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                                <div className="w-[250px] h-[250px] relative border border-white/30 rounded-xl">
+                                    <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-xl -mt-1 -ml-1"></div>
+                                    <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-xl -mt-1 -mr-1"></div>
+                                    <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-xl -mb-1 -ml-1"></div>
+                                    <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-xl -mb-1 -mr-1"></div>
+                                    <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse"></div>
+                                </div>
+                            </div>
+
+                            {/* Success Overlay */}
+                            {scanSuccess && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-green-500/20 backdrop-blur-sm z-10 animate-fade-in">
+                                    <div className="bg-white text-green-600 px-6 py-4 rounded-2xl flex flex-col items-center shadow-2xl animate-scale-in">
+                                        <CheckCircle2 size={48} className="mb-2" />
+                                        <span className="font-bold text-lg text-center">{lastScannedMsg || "Scanned!"}</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        <p className="text-white/60 mt-6 text-center font-medium text-sm">
+                            Point camera at a barcode to scan
+                        </p>
+                        
+                        <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-6 z-30">
+                            <button 
+                                onClick={() => fileInputRef.current?.click()}
+                                className="p-4 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white/30 transition-colors flex flex-col items-center gap-1"
+                            >
+                                <ImageIcon size={24} />
+                                <span className="text-[10px] font-bold">Gallery</span>
+                            </button>
+                        </div>
+                        <input 
+                            type="file" 
+                            ref={fileInputRef} 
+                            className="hidden" 
+                            accept="image/*" 
+                            onChange={handleImageUpload} 
+                        />
+                    </>
+                )}
+            </div>
+        </div>
+      )}
+      
+      {isQuickAddOpen && (
+        <div className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl p-6 rounded-3xl shadow-2xl w-full max-w-md border border-white/20">
+                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Unrecognized Item</h3>
+                <p className="text-sm text-slate-500 mb-4">Barcode: <span className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">{unrecognizedBarcode}</span></p>
+                <form onSubmit={handleQuickAddSubmit} className="space-y-4">
+                    <div>
+                        <label className="text-xs font-bold text-slate-500 uppercase">Name</label>
+                        <input required className="w-full p-3 bg-white/50 dark:bg-black/20 border border-white/20 rounded-xl outline-none" value={quickAddForm.name} onChange={e => setQuickAddForm({...quickAddForm, name: e.target.value})} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="text-xs font-bold text-slate-500 uppercase">Price</label>
+                            <input required type="number" step="0.01" className="w-full p-3 bg-white/50 dark:bg-black/20 border border-white/20 rounded-xl outline-none" value={quickAddForm.price} onChange={e => setQuickAddForm({...quickAddForm, price: parseFloat(e.target.value)})} />
+                        </div>
+                        <div>
+                            <label className="text-xs font-bold text-slate-500 uppercase">Category</label>
+                            <select className="w-full p-3 bg-white/50 dark:bg-black/20 border border-white/20 rounded-xl outline-none" value={quickAddForm.category} onChange={e => setQuickAddForm({...quickAddForm, category: e.target.value })}>
+                                {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                        </div>
+                    </div>
+                    <div className="flex gap-3 pt-2">
+                        <button type="button" onClick={() => setIsQuickAddOpen(false)} className="flex-1 py-3 rounded-xl bg-slate-200 dark:bg-slate-800 font-bold">Cancel</button>
+                        <button type="submit" className="flex-1 py-3 rounded-xl bg-primary text-white font-bold shadow-lg">Add & Cart</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+      )}
+      
+      {isCustomerModalOpen && (
+        <div className="fixed inset-0 z-[80] bg-black/40 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-[2rem] shadow-2xl w-full max-w-lg border border-white/20 overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="p-5 border-b border-white/10 flex justify-between items-center">
+                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Select Customer</h3>
+                    <button onClick={() => setIsCustomerModalOpen(false)} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full"><X size={20}/></button>
+                </div>
+                <div className="p-5 flex-1 overflow-y-auto">
+                    <div className="mb-6">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18}/>
+                            <input placeholder="Search customers..." className="w-full pl-10 p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20 outline-none" value={customerSearch} onChange={e => setCustomerSearch(e.target.value)} />
+                        </div>
+                        {customerSearch && (
+                            <div className="mt-2 space-y-2 max-h-40 overflow-y-auto">
+                                {(customers || []).filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()) || c.phone.includes(customerSearch)).map(c => (
+                                    <button key={c.id} onClick={() => { setSelectedCustomer(c); setIsCustomerModalOpen(false); }} className="w-full p-3 flex justify-between items-center bg-white/40 dark:bg-white/5 hover:bg-primary/10 rounded-xl border border-transparent hover:border-primary/30 transition-all text-left">
+                                        <div>
+                                            <div className="font-bold text-slate-800 dark:text-slate-100">{c.name}</div>
+                                            <div className="text-xs text-slate-500">{c.phone}</div>
+                                        </div>
+                                        <ArrowRight size={16} className="text-slate-400"/>
+                                    </button>
+                                ))}
+                                {filteredCustomers.length === 0 && <div className="text-center text-slate-400 text-sm p-2">No matches</div>}
+                            </div>
+                        )}
+                    </div>
+                    <div className="border-t border-white/10 pt-6">
+                        <h4 className="text-sm font-bold text-slate-500 uppercase mb-3">New Customer</h4>
+                        <div className="space-y-3">
+                            <input placeholder="Full Name" className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20" value={newCustomer.name} onChange={e => setNewCustomer({...newCustomer, name: e.target.value})} />
+                            <div className="grid grid-cols-2 gap-3">
+                                <input placeholder="Phone" className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20" value={newCustomer.phone} onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} />
+                                <input placeholder="Email" className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20" value={newCustomer.email} onChange={e => setNewCustomer({...newCustomer, email: e.target.value})} />
+                            </div>
+                            <button onClick={handleCreateCustomer} disabled={!newCustomer.name || !newCustomer.phone} className="w-full py-3 bg-primary text-white rounded-xl font-bold shadow-lg disabled:opacity-50">Create</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   );
 };
