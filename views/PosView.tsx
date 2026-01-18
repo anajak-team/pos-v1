@@ -287,7 +287,7 @@ const CartPanel: React.FC<CartPanelProps> = (props) => {
                         )}
                         {totalPaid >= total && (
                             <div className="mt-2 flex flex-col p-3 bg-green-500/10 rounded-lg border border-green-500/20">
-                                <div className="flex justify-between items-center text-green-700 dark:text-green-300 text-sm font-bold">
+                                <div className="flex justify-between items-center text-green-700 dark:text-green-400 text-sm font-bold">
                                     <span>Change Due:</span>
                                     <span>{settings.currency}{change.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 </div>
@@ -658,12 +658,12 @@ export const PosView: React.FC<PosViewProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
     
-    // Stop camera before starting file scan
+    // CRITICAL FIX: Explicitly stop camera before starting file scan to avoid "ongoing camera scan"
     if (scannerInstanceRef.current) {
         try {
             await scannerInstanceRef.current.stop();
         } catch (err) {
-            console.warn("Stop error during file upload", err);
+            console.warn("Stop failure during upload", err);
         }
     }
 
@@ -678,7 +678,7 @@ export const PosView: React.FC<PosViewProps> = ({
     } finally {
         e.target.value = '';
         if (isScannerOpen) {
-            // Re-init camera after file scan logic
+            // Re-open if needed or keep it off
             setIsScannerOpen(false);
             setTimeout(() => setIsScannerOpen(true), 300);
         }
@@ -706,12 +706,15 @@ export const PosView: React.FC<PosViewProps> = ({
                 scannerInstanceRef.current = html5QrCode;
 
                 const config = { 
-                    fps: 15,
-                    qrbox: { width: 250, height: 250 },
+                    fps: 20,
+                    qrbox: (viewWidth: number, viewHeight: number) => {
+                        // Wide rectangle for barcodes
+                        return { width: Math.min(viewWidth * 0.8, 300), height: Math.min(viewHeight * 0.5, 180) };
+                    },
                     aspectRatio: 1.0,
                     disableFlip: false,
                     videoConstraints: {
-                        facingMode: "environment",
+                        facingMode: "environment", // BACK CAMERA
                         width: { min: 640, ideal: 1280, max: 1920 },
                         height: { min: 480, ideal: 720, max: 1080 },
                         focusMode: "continuous"
@@ -719,7 +722,7 @@ export const PosView: React.FC<PosViewProps> = ({
                 };
                 
                 await html5QrCode.start(
-                    { facingMode: "environment" }, 
+                    { facingMode: "environment" }, // STRICTLY 1 KEY
                     config, 
                     (decodedText: string) => {
                         if (isMounted) handleScan(decodedText);
@@ -729,7 +732,7 @@ export const PosView: React.FC<PosViewProps> = ({
             } catch (err) {
                 if (isMounted) {
                     console.error("Scanner start error:", err);
-                    setScannerError("Camera access failed. Please ensure back camera is available.");
+                    setScannerError("Camera access failed. Check permissions.");
                 }
             }
         };
@@ -742,7 +745,7 @@ export const PosView: React.FC<PosViewProps> = ({
                 scannerInstanceRef.current.stop().then(() => {
                     try { scannerInstanceRef.current.clear(); } catch(e){}
                 }).catch((err: any) => {
-                    console.warn("Scanner stop suppressed", err);
+                    console.warn("Scanner cleanup warning", err);
                     try { scannerInstanceRef.current.clear(); } catch(e){}
                 });
             }
@@ -903,58 +906,86 @@ export const PosView: React.FC<PosViewProps> = ({
       </div>
 
       {isScannerOpen && (
-        <div className="fixed inset-0 z-[70] bg-black/90 flex flex-col animate-fade-in">
-            <div className="absolute top-4 right-4 z-20">
-                <button onClick={stopScanner} className="bg-white/20 backdrop-blur-md p-3 rounded-full text-white hover:bg-white/30 transition-colors">
+        <div className="fixed inset-0 z-[110] bg-black flex flex-col animate-fade-in">
+            {/* Header with Exit */}
+            <div className="absolute top-6 right-6 z-20">
+                <button onClick={stopScanner} className="bg-white/20 backdrop-blur-md p-3 rounded-full text-white hover:bg-white/30 transition-colors shadow-lg border border-white/20">
                     <X size={24} />
                 </button>
             </div>
-            <div className="flex-1 relative flex flex-col items-center justify-center p-4">
+
+            {/* Scanning Viewport */}
+            <div className="flex-1 relative flex items-center justify-center bg-black overflow-hidden">
                 {scannerError ? (
-                    <div className="text-white text-center p-6 max-w-sm bg-white/10 rounded-3xl backdrop-blur-md border border-white/10">
+                    <div className="text-white text-center p-8 max-w-sm bg-white/10 rounded-3xl backdrop-blur-md border border-white/10 mx-6">
                         <AlertTriangle size={48} className="mx-auto mb-4 text-amber-500" />
-                        <p className="mb-6 font-medium text-lg">{scannerError}</p>
-                        <button onClick={stopScanner} className="bg-white text-slate-900 px-6 py-3 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors">
-                            Close Scanner
+                        <p className="mb-6 font-medium text-lg leading-relaxed">{scannerError}</p>
+                        <button onClick={stopScanner} className="bg-white text-slate-900 w-full py-4 rounded-2xl font-bold hover:bg-slate-200 transition-colors shadow-xl">
+                            Close
                         </button>
                     </div>
                 ) : (
                     <>
-                        <div className="relative w-full max-w-sm aspect-square bg-black rounded-3xl overflow-hidden shadow-2xl border-2 border-white/20">
+                        <div className="relative w-full h-full">
                             <div id="reader" className="w-full h-full"></div>
                             
+                            {/* Visual Overlay - Matches Screenshot Layout */}
                             <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                                <div className="w-[250px] h-[250px] relative border border-white/30 rounded-xl">
-                                    <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-xl -mt-1 -ml-1"></div>
-                                    <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-xl -mt-1 -mr-1"></div>
-                                    <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-xl -mb-1 -ml-1"></div>
-                                    <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-xl -mb-1 -mr-1"></div>
-                                    <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse"></div>
+                                {/* Frame Container */}
+                                <div className="relative w-[300px] h-[180px]">
+                                    {/* Blue Outer Corners */}
+                                    <div className="absolute -top-3 -left-3 w-12 h-12 border-t-[6px] border-l-[6px] border-primary rounded-tl-2xl"></div>
+                                    <div className="absolute -top-3 -right-3 w-12 h-12 border-t-[6px] border-r-[6px] border-primary rounded-tr-2xl"></div>
+                                    <div className="absolute -bottom-3 -left-3 w-12 h-12 border-b-[6px] border-l-[6px] border-primary rounded-bl-2xl"></div>
+                                    <div className="absolute -bottom-3 -right-3 w-12 h-12 border-b-[6px] border-r-[6px] border-primary rounded-br-2xl"></div>
+                                    
+                                    {/* White Inner Box with T-markers */}
+                                    <div className="absolute inset-0 border-[3px] border-white/40 rounded-lg flex items-center justify-between">
+                                        {/* Left T-marker */}
+                                        <div className="flex items-center -ml-[3px]">
+                                            <div className="w-[3px] h-32 bg-white rounded-full"></div>
+                                            <div className="w-8 h-[3px] bg-white -ml-[3px] rounded-r-full"></div>
+                                        </div>
+                                        
+                                        {/* Right T-marker */}
+                                        <div className="flex items-center -mr-[3px]">
+                                            <div className="w-8 h-[3px] bg-white -mr-[3px] rounded-l-full"></div>
+                                            <div className="w-[3px] h-32 bg-white rounded-full"></div>
+                                        </div>
+                                    </div>
+
+                                    {/* Laser Line */}
+                                    <div className="absolute top-1/2 left-8 right-8 h-1 bg-red-500 shadow-[0_0_15px_rgba(239,68,68,1)] animate-pulse -translate-y-1/2 z-10 rounded-full"></div>
                                 </div>
                             </div>
 
+                            {/* Success Flash */}
                             {scanSuccess && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-green-500/20 backdrop-blur-sm z-10 animate-fade-in">
-                                    <div className="bg-white text-green-600 px-6 py-4 rounded-2xl flex flex-col items-center shadow-2xl animate-scale-in">
-                                        <CheckCircle2 size={48} className="mb-2" />
-                                        <span className="font-bold text-lg text-center">{lastScannedMsg || "Scanned!"}</span>
+                                <div className="absolute inset-0 flex items-center justify-center bg-green-500/20 backdrop-blur-sm z-30 animate-fade-in">
+                                    <div className="bg-white text-green-600 px-8 py-5 rounded-3xl flex flex-col items-center shadow-2xl animate-scale-in">
+                                        <CheckCircle2 size={56} className="mb-2" />
+                                        <span className="font-bold text-xl text-center">{lastScannedMsg || "Scanned!"}</span>
                                     </div>
                                 </div>
                             )}
                         </div>
-                        <p className="text-white/60 mt-6 text-center font-medium text-sm">
-                            Point camera at a barcode to scan
-                        </p>
                         
-                        <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-6 z-30">
-                            <button 
-                                onClick={() => fileInputRef.current?.click()}
-                                className="p-4 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white/30 transition-colors flex flex-col items-center gap-1"
-                            >
-                                <ImageIcon size={24} />
-                                <span className="text-[10px] font-bold">Gallery</span>
-                            </button>
+                        {/* Footer Controls */}
+                        <div className="absolute bottom-12 left-0 right-0 flex flex-col items-center gap-6 z-20">
+                            <p className="text-white/80 text-center font-bold tracking-wide drop-shadow-md px-6">
+                                Point camera at a barcode to scan
+                            </p>
+                            
+                            <div className="flex items-center gap-12">
+                                <button 
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="p-5 bg-white/20 backdrop-blur-lg rounded-full text-white hover:bg-white/30 transition-all shadow-xl border border-white/20 active:scale-95 group"
+                                >
+                                    <ImageIcon size={32} className="group-hover:scale-110 transition-transform" />
+                                </button>
+                            </div>
                         </div>
+                        
                         <input 
                             type="file" 
                             ref={fileInputRef} 
@@ -969,30 +1000,41 @@ export const PosView: React.FC<PosViewProps> = ({
       )}
       
       {isQuickAddOpen && (
-        <div className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-            <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl p-6 rounded-3xl shadow-2xl w-full max-w-md border border-white/20">
-                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Unrecognized Item</h3>
-                <p className="text-sm text-slate-500 mb-4">Barcode: <span className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">{unrecognizedBarcode}</span></p>
-                <form onSubmit={handleQuickAddSubmit} className="space-y-4">
-                    <div>
-                        <label className="text-xs font-bold text-slate-500 uppercase">Name</label>
-                        <input required className="w-full p-3 bg-white/50 dark:bg-black/20 border border-white/20 rounded-xl outline-none" value={quickAddForm.name} onChange={e => setQuickAddForm({...quickAddForm, name: e.target.value})} />
+        <div className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-2xl w-full max-w-md border border-white/20">
+                <div className="mb-6">
+                    <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">Unrecognized Item</h3>
+                    <div className="flex items-center gap-2 p-3 bg-slate-100 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-white/5">
+                        <ScanBarcode size={20} className="text-primary" />
+                        <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{unrecognizedBarcode}</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className="text-xs font-bold text-slate-500 uppercase">Price</label>
-                            <input required type="number" step="0.01" className="w-full p-3 bg-white/50 dark:bg-black/20 border border-white/20 rounded-xl outline-none" value={quickAddForm.price} onChange={e => setQuickAddForm({...quickAddForm, price: parseFloat(e.target.value)})} />
+                </div>
+                
+                <form onSubmit={handleQuickAddSubmit} className="space-y-5">
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Product Name</label>
+                        <input required autoFocus className="w-full p-4 bg-white/50 dark:bg-black/30 border border-slate-200 dark:border-white/10 rounded-2xl outline-none focus:border-primary transition-all font-medium" value={quickAddForm.name} onChange={e => setQuickAddForm({...quickAddForm, name: e.target.value})} placeholder="e.g., Cold Brew Coffee" />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Price</label>
+                            <div className="relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">{settings.currency}</span>
+                                <input required type="number" step="0.01" className="w-full pl-10 p-4 bg-white/50 dark:bg-black/30 border border-slate-200 dark:border-white/10 rounded-2xl outline-none focus:border-primary transition-all font-bold" value={quickAddForm.price || ''} onChange={e => setQuickAddForm({...quickAddForm, price: parseFloat(e.target.value)})} placeholder="0.00" />
+                            </div>
                         </div>
-                        <div>
-                            <label className="text-xs font-bold text-slate-500 uppercase">Category</label>
-                            <select className="w-full p-3 bg-white/50 dark:bg-black/20 border border-white/20 rounded-xl outline-none" value={quickAddForm.category} onChange={e => setQuickAddForm({...quickAddForm, category: e.target.value })}>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Category</label>
+                            <select className="w-full p-4 bg-white/50 dark:bg-black/30 border border-slate-200 dark:border-white/10 rounded-2xl outline-none focus:border-primary transition-all font-bold appearance-none" value={quickAddForm.category} onChange={e => setQuickAddForm({...quickAddForm, category: e.target.value })}>
                                 {categories.map(c => <option key={c} value={c}>{c}</option>)}
                             </select>
                         </div>
                     </div>
-                    <div className="flex gap-3 pt-2">
-                        <button type="button" onClick={() => setIsQuickAddOpen(false)} className="flex-1 py-3 rounded-xl bg-slate-200 dark:bg-slate-800 font-bold">Cancel</button>
-                        <button type="submit" className="flex-1 py-3 rounded-xl bg-primary text-white font-bold shadow-lg">Add & Cart</button>
+                    
+                    <div className="flex gap-3 pt-4">
+                        <button type="button" onClick={() => setIsQuickAddOpen(false)} className="flex-1 py-4 rounded-2xl font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">Cancel</button>
+                        <button type="submit" className="flex-1 py-4 rounded-2xl bg-primary text-white font-bold shadow-xl shadow-blue-500/30 hover:bg-blue-600 active:scale-95 transition-all">Add to Cart</button>
                     </div>
                 </form>
             </div>
@@ -1000,42 +1042,51 @@ export const PosView: React.FC<PosViewProps> = ({
       )}
       
       {isCustomerModalOpen && (
-        <div className="fixed inset-0 z-[80] bg-black/40 backdrop-blur-md flex items-center justify-center p-4">
-            <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-[2rem] shadow-2xl w-full max-w-lg border border-white/20 overflow-hidden flex flex-col max-h-[90vh]">
-                <div className="p-5 border-b border-white/10 flex justify-between items-center">
+        <div className="fixed inset-0 z-[120] bg-black/40 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-[2.5rem] shadow-2xl w-full max-w-lg border border-white/20 overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/10">
                     <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Select Customer</h3>
                     <button onClick={() => setIsCustomerModalOpen(false)} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full"><X size={20}/></button>
                 </div>
-                <div className="p-5 flex-1 overflow-y-auto">
-                    <div className="mb-6">
+                <div className="p-6 flex-1 overflow-y-auto space-y-8 no-scrollbar">
+                    <div className="space-y-4">
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18}/>
-                            <input placeholder="Search customers..." className="w-full pl-10 p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20 outline-none" value={customerSearch} onChange={e => setCustomerSearch(e.target.value)} />
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18}/>
+                            <input placeholder="Search customers by name or phone..." className="w-full pl-12 p-4 rounded-2xl bg-white/50 dark:bg-black/30 border border-slate-200 dark:border-white/10 outline-none focus:border-primary transition-all font-medium shadow-inner" value={customerSearch} onChange={e => setCustomerSearch(e.target.value)} />
                         </div>
                         {customerSearch && (
-                            <div className="mt-2 space-y-2 max-h-40 overflow-y-auto">
-                                {(customers || []).filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()) || c.phone.includes(customerSearch)).map(c => (
-                                    <button key={c.id} onClick={() => { setSelectedCustomer(c); setIsCustomerModalOpen(false); }} className="w-full p-3 flex justify-between items-center bg-white/40 dark:bg-white/5 hover:bg-primary/10 rounded-xl border border-transparent hover:border-primary/30 transition-all text-left">
-                                        <div>
-                                            <div className="font-bold text-slate-800 dark:text-slate-100">{c.name}</div>
-                                            <div className="text-xs text-slate-500">{c.phone}</div>
+                            <div className="space-y-2 max-h-52 overflow-y-auto no-scrollbar animate-fade-in">
+                                {filteredCustomers.map(c => (
+                                    <button key={c.id} onClick={() => { setSelectedCustomer(c); setIsCustomerModalOpen(false); }} className="w-full p-4 flex justify-between items-center bg-white dark:bg-white/5 hover:bg-primary/10 rounded-2xl border border-slate-100 dark:border-white/5 hover:border-primary/30 transition-all text-left group shadow-sm active:scale-[0.99]">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/10 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold group-hover:bg-primary/20 group-hover:text-primary transition-colors">
+                                                {c.name.charAt(0)}
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-slate-800 dark:text-slate-100">{c.name}</div>
+                                                <div className="text-xs text-slate-500 font-medium">{c.phone}</div>
+                                            </div>
                                         </div>
-                                        <ArrowRight size={16} className="text-slate-400"/>
+                                        <ArrowRight size={18} className="text-slate-300 group-hover:text-primary group-hover:translate-x-1 transition-all"/>
                                     </button>
                                 ))}
-                                {filteredCustomers.length === 0 && <div className="text-center text-slate-400 text-sm p-2">No matches</div>}
+                                {filteredCustomers.length === 0 && <div className="text-center text-slate-400 text-sm py-8 font-medium">No customers found matching "{customerSearch}"</div>}
                             </div>
                         )}
                     </div>
-                    <div className="border-t border-white/10 pt-6">
-                        <h4 className="text-sm font-bold text-slate-500 uppercase mb-3">New Customer</h4>
-                        <div className="space-y-3">
-                            <input placeholder="Full Name" className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20" value={newCustomer.name} onChange={e => setNewCustomer({...newCustomer, name: e.target.value})} />
-                            <div className="grid grid-cols-2 gap-3">
-                                <input placeholder="Phone" className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20" value={newCustomer.phone} onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} />
-                                <input placeholder="Email" className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20" value={newCustomer.email} onChange={e => setNewCustomer({...newCustomer, email: e.target.value})} />
+
+                    <div className="border-t border-slate-100 dark:border-white/5 pt-8">
+                        <div className="flex items-center gap-2 mb-6">
+                            <Plus size={18} className="text-primary"/>
+                            <h4 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Register New Customer</h4>
+                        </div>
+                        <div className="space-y-4">
+                            <input placeholder="Full Name" className="w-full p-4 rounded-2xl bg-white/50 dark:bg-black/30 border border-slate-200 dark:border-white/10 outline-none focus:border-primary" value={newCustomer.name} onChange={e => setNewCustomer({...newCustomer, name: e.target.value})} />
+                            <div className="grid grid-cols-2 gap-4">
+                                <input placeholder="Phone" type="tel" className="w-full p-4 rounded-2xl bg-white/50 dark:bg-black/30 border border-slate-200 dark:border-white/10 outline-none focus:border-primary" value={newCustomer.phone} onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} />
+                                <input placeholder="Email" type="email" className="w-full p-4 rounded-2xl bg-white/50 dark:bg-black/30 border border-slate-200 dark:border-white/10 outline-none focus:border-primary" value={newCustomer.email} onChange={e => setNewCustomer({...newCustomer, email: e.target.value})} />
                             </div>
-                            <button onClick={handleCreateCustomer} disabled={!newCustomer.name || !newCustomer.phone} className="w-full py-3 bg-primary text-white rounded-xl font-bold shadow-lg disabled:opacity-50">Create</button>
+                            <button onClick={handleCreateCustomer} disabled={!newCustomer.name || !newCustomer.phone} className="w-full py-4 bg-primary text-white rounded-2xl font-bold shadow-xl shadow-blue-500/30 hover:bg-blue-600 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2">Create & Select</button>
                         </div>
                     </div>
                 </div>
