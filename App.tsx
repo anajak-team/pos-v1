@@ -199,8 +199,10 @@ const BarcodeScanner = ({ onScan, onClose }: { onScan: (code: string) => void, o
             scannerRef.current = html5QrCode;
             
             const config = { 
-                fps: 15,
-                qrbox: { width: 250, height: 250 },
+                fps: 20,
+                qrbox: (viewWidth: number, viewHeight: number) => {
+                    return { width: Math.min(viewWidth * 0.8, 300), height: Math.min(viewHeight * 0.5, 180) };
+                },
                 aspectRatio: 1.0,
                 disableFlip: false,
                 videoConstraints: {
@@ -311,48 +313,67 @@ const BarcodeScanner = ({ onScan, onClose }: { onScan: (code: string) => void, o
                 </button>
             </div>
         ) : (
-            <div className="relative w-full max-w-sm aspect-square bg-black rounded-3xl overflow-hidden shadow-2xl border-2 border-white/20 mx-6">
+            <div className="relative w-full h-full">
                 <div id="product-modal-scanner-reader" className="w-full h-full"></div>
                 
-                {/* Centered Scan Box Overlay */}
+                {/* Visual Overlay - Professional Viewfinder */}
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                    <div className="w-[250px] h-[250px] relative border border-white/30 rounded-xl">
-                        <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-xl -mt-1 -ml-1"></div>
-                        <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-xl -mt-1 -mr-1"></div>
-                        <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-xl -mb-1 -ml-1"></div>
-                        <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-xl -mb-1 -mr-1"></div>
-                        <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse"></div>
+                    {/* Frame Container */}
+                    <div className="relative w-[300px] h-[180px]">
+                        {/* Blue Outer Corners */}
+                        <div className="absolute -top-3 -left-3 w-12 h-12 border-t-[6px] border-l-[6px] border-primary rounded-tl-2xl"></div>
+                        <div className="absolute -top-3 -right-3 w-12 h-12 border-t-[6px] border-r-[6px] border-primary rounded-tr-2xl"></div>
+                        <div className="absolute -bottom-3 -left-3 w-12 h-12 border-b-[6px] border-l-[6px] border-primary rounded-bl-2xl"></div>
+                        <div className="absolute -bottom-3 -right-3 w-12 h-12 border-b-[6px] border-r-[6px] border-primary rounded-br-2xl"></div>
+                        
+                        {/* White Inner Bracket Markers */}
+                        <div className="absolute inset-0 flex items-center justify-between px-2">
+                            {/* Left Bracket */}
+                            <div className="h-16 w-4 border-t-4 border-b-4 border-l-4 border-white/80 rounded-l-lg opacity-80"></div>
+                            {/* Right Bracket */}
+                            <div className="h-16 w-4 border-t-4 border-b-4 border-r-4 border-white/80 rounded-r-lg opacity-80"></div>
+                        </div>
+
+                        {/* Red Laser Line */}
+                        <div className="absolute top-1/2 left-6 right-6 h-[2px] bg-red-500 shadow-[0_0_15px_rgba(239,68,68,1)] animate-pulse -translate-y-1/2 z-10 rounded-full"></div>
                     </div>
                 </div>
 
                 {scanSuccess && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-green-500/20 backdrop-blur-sm animate-fade-in">
-                        <CheckCircle2 size={64} className="text-green-500 animate-scale-in drop-shadow-lg" />
+                    <div className="absolute inset-0 flex items-center justify-center bg-green-500/20 backdrop-blur-sm animate-fade-in z-30">
+                        <div className="bg-white text-green-600 px-8 py-5 rounded-3xl flex flex-col items-center shadow-2xl animate-scale-in">
+                            <CheckCircle2 size={56} className="mb-2" />
+                            <span className="font-bold text-xl text-center">Scanned!</span>
+                        </div>
                     </div>
                 )}
+                
+                {/* Footer Controls */}
+                <div className="absolute bottom-12 left-0 right-0 flex flex-col items-center gap-6 z-20">
+                    <p className="text-white/80 text-center font-bold tracking-wide drop-shadow-md px-6">
+                        Point camera at a barcode to scan
+                    </p>
+                    
+                    <div className="flex items-center gap-12">
+                        <button 
+                            onClick={() => fileInputRef.current?.click()}
+                            className="p-5 bg-white/20 backdrop-blur-lg rounded-full text-white hover:bg-white/30 transition-all shadow-xl border border-white/20 active:scale-95 group"
+                        >
+                            <ImageIcon size={32} className="group-hover:scale-110 transition-transform" />
+                        </button>
+                    </div>
+                </div>
             </div>
         )}
-        {!error && !scanSuccess && <p className="text-white/60 mt-8 font-medium text-center px-6">Align barcode within frame</p>}
         
         {!error && (
-            <>
-                <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-6 z-30">
-                    <button 
-                        onClick={() => fileInputRef.current?.click()}
-                        className="p-4 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white/30 transition-colors flex flex-col items-center gap-1"
-                    >
-                        <ImageIcon size={24} />
-                        <span className="text-[10px] font-bold">Gallery</span>
-                    </button>
-                </div>
-                <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    className="hidden" 
-                    accept="image/*" 
-                    onChange={handleImageUpload} 
-                />
-            </>
+            <input 
+                type="file" 
+                ref={fileInputRef} 
+                className="hidden" 
+                accept="image/*" 
+                onChange={handleImageUpload} 
+            />
         )}
     </div>
   );
