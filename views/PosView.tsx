@@ -658,12 +658,12 @@ export const PosView: React.FC<PosViewProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
     
-    // CRITICAL FIX: Explicitly stop camera before starting file scan to avoid "ongoing camera scan"
+    // Explicitly stop camera before starting file scan
     if (scannerInstanceRef.current) {
         try {
             await scannerInstanceRef.current.stop();
         } catch (err) {
-            console.warn("Stop failure during upload", err);
+            console.warn("Stop error during file upload", err);
         }
     }
 
@@ -708,7 +708,6 @@ export const PosView: React.FC<PosViewProps> = ({
                 const config = { 
                     fps: 20,
                     qrbox: (viewWidth: number, viewHeight: number) => {
-                        // Wide rectangle for barcodes
                         return { width: Math.min(viewWidth * 0.8, 300), height: Math.min(viewHeight * 0.5, 180) };
                     },
                     aspectRatio: 1.0,
@@ -721,8 +720,9 @@ export const PosView: React.FC<PosViewProps> = ({
                     }
                 };
                 
+                // Strictly 1 key for first argument
                 await html5QrCode.start(
-                    { facingMode: "environment" }, // STRICTLY 1 KEY
+                    { facingMode: "environment" }, 
                     config, 
                     (decodedText: string) => {
                         if (isMounted) handleScan(decodedText);
@@ -805,13 +805,43 @@ export const PosView: React.FC<PosViewProps> = ({
   const filteredCustomers = (customers || []).filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()) || c.phone.includes(customerSearch));
 
   const cartPanelProps: CartPanelProps = {
-    cart, settings, subtotal, discountAmount, tax, total, change, changeSecondary,
-    clearCart, setShowCheckout, selectedCustomer, setSelectedCustomer,
-    setIsCustomerModalOpen, currentUser, updateQuantity, removeFromCart,
-    exitingItems, upsell, completed, discount, setDiscount, discountType,
-    setDiscountType, showDiscountInput, setShowDiscountInput, paymentMethod,
-    setPaymentMethod, cashReceived, setCashReceived, cashReceivedSecondary, setCashReceivedSecondary, processing, handleCheckout,
-    lastTransaction, onPrint, cartEndRef, totalPaid
+    cart,
+    settings,
+    subtotal,
+    discountAmount,
+    tax,
+    total,
+    change,
+    changeSecondary,
+    clearCart,
+    setShowCheckout,
+    selectedCustomer,
+    setSelectedCustomer,
+    setIsCustomerModalOpen,
+    currentUser,
+    updateQuantity,
+    removeFromCart,
+    exitingItems,
+    upsell,
+    completed,
+    discount,
+    setDiscount,
+    discountType,
+    setDiscountType,
+    showDiscountInput,
+    setShowDiscountInput,
+    paymentMethod,
+    setPaymentMethod,
+    cashReceived,
+    setCashReceived,
+    cashReceivedSecondary,
+    setCashReceivedSecondary,
+    processing,
+    handleCheckout,
+    lastTransaction,
+    onPrint,
+    cartEndRef,
+    totalPaid
   };
 
   return (
@@ -929,7 +959,7 @@ export const PosView: React.FC<PosViewProps> = ({
                         <div className="relative w-full h-full">
                             <div id="reader" className="w-full h-full"></div>
                             
-                            {/* Visual Overlay - Matches Screenshot Layout */}
+                            {/* Visual Overlay - Professional Viewfinder */}
                             <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                                 {/* Frame Container */}
                                 <div className="relative w-[300px] h-[180px]">
@@ -939,23 +969,16 @@ export const PosView: React.FC<PosViewProps> = ({
                                     <div className="absolute -bottom-3 -left-3 w-12 h-12 border-b-[6px] border-l-[6px] border-primary rounded-bl-2xl"></div>
                                     <div className="absolute -bottom-3 -right-3 w-12 h-12 border-b-[6px] border-r-[6px] border-primary rounded-br-2xl"></div>
                                     
-                                    {/* White Inner Box with T-markers */}
-                                    <div className="absolute inset-0 border-[3px] border-white/40 rounded-lg flex items-center justify-between">
-                                        {/* Left T-marker */}
-                                        <div className="flex items-center -ml-[3px]">
-                                            <div className="w-[3px] h-32 bg-white rounded-full"></div>
-                                            <div className="w-8 h-[3px] bg-white -ml-[3px] rounded-r-full"></div>
-                                        </div>
-                                        
-                                        {/* Right T-marker */}
-                                        <div className="flex items-center -mr-[3px]">
-                                            <div className="w-8 h-[3px] bg-white -mr-[3px] rounded-l-full"></div>
-                                            <div className="w-[3px] h-32 bg-white rounded-full"></div>
-                                        </div>
+                                    {/* White Inner Bracket Markers */}
+                                    <div className="absolute inset-0 flex items-center justify-between px-2">
+                                        {/* Left Bracket */}
+                                        <div className="h-16 w-4 border-t-4 border-b-4 border-l-4 border-white/80 rounded-l-lg opacity-80"></div>
+                                        {/* Right Bracket */}
+                                        <div className="h-16 w-4 border-t-4 border-b-4 border-r-4 border-white/80 rounded-r-lg opacity-80"></div>
                                     </div>
 
-                                    {/* Laser Line */}
-                                    <div className="absolute top-1/2 left-8 right-8 h-1 bg-red-500 shadow-[0_0_15px_rgba(239,68,68,1)] animate-pulse -translate-y-1/2 z-10 rounded-full"></div>
+                                    {/* Red Laser Line */}
+                                    <div className="absolute top-1/2 left-6 right-6 h-[2px] bg-red-500 shadow-[0_0_15px_rgba(239,68,68,1)] animate-pulse -translate-y-1/2 z-10 rounded-full"></div>
                                 </div>
                             </div>
 
