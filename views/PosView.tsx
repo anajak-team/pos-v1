@@ -114,7 +114,6 @@ const CartPanel: React.FC<CartPanelProps> = (props) => {
 
   return (
     <div className={`flex flex-col h-full bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl ${isMobile ? 'rounded-t-3xl border-t border-white/20' : 'rounded-3xl border border-white/20 dark:border-white/10 shadow-2xl'}`}>
-         {/* Cart Header */}
          <div className="p-5 border-b border-white/10 bg-white/10 dark:bg-black/10 flex justify-between items-center shrink-0">
             <div className="flex items-center gap-2">
                <div className="bg-primary/10 text-primary p-2 rounded-xl">
@@ -128,7 +127,6 @@ const CartPanel: React.FC<CartPanelProps> = (props) => {
             </div>
          </div>
 
-         {/* Customer Selection */}
          <div className="px-5 py-3 bg-white/40 dark:bg-black/20 border-b border-white/10">
             {selectedCustomer ? (
                 <div className="flex items-center justify-between p-2 bg-white/50 dark:bg-white/5 rounded-xl border border-white/20">
@@ -155,7 +153,6 @@ const CartPanel: React.FC<CartPanelProps> = (props) => {
             )}
          </div>
 
-         {/* Cart Items */}
          <div className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar touch-pan-y">
             {cart.length === 0 ? (
                <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4 opacity-60">
@@ -180,7 +177,6 @@ const CartPanel: React.FC<CartPanelProps> = (props) => {
             )}
          </div>
 
-         {/* Upsell AI */}
          {upsell && !completed && (
             <div className="px-4 pb-2 shrink-0 animate-fade-in">
                <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-xl p-3 flex items-start gap-3">
@@ -193,18 +189,15 @@ const CartPanel: React.FC<CartPanelProps> = (props) => {
             </div>
          )}
 
-         {/* Checkout Panel */}
          <div className="p-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-t border-white/20 dark:border-white/10 shrink-0 space-y-4">
             {!completed ? (
                 <>
-                    {/* Totals */}
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between text-slate-500 dark:text-slate-400">
                           <span>Subtotal</span>
                           <span>{settings.currency}{subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                       
-                      {/* Discount Section */}
                       <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
                         <button onClick={() => setShowDiscountInput(!showDiscountInput)} className="text-primary font-bold text-xs flex items-center gap-1">
                           <Tag size={12}/> {discountAmount > 0 ? 'Edit Discount' : 'Add Discount'}
@@ -248,7 +241,6 @@ const CartPanel: React.FC<CartPanelProps> = (props) => {
                       </div>
                     </div>
 
-                    {/* Payment Method */}
                     <div className="grid grid-cols-3 gap-2">
                     <button onClick={() => setPaymentMethod('cash')} className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all ${paymentMethod === 'cash' ? 'bg-green-500/10 border-green-500/50 text-green-700 dark:text-green-400' : 'bg-slate-100 dark:bg-white/5 border-transparent text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10'}`}>
                         <Banknote size={20} className="mb-1" />
@@ -264,7 +256,6 @@ const CartPanel: React.FC<CartPanelProps> = (props) => {
                     </button>
                     </div>
 
-                    {/* Cash Input */}
                     {paymentMethod === 'cash' && (
                     <div className="animate-fade-in space-y-2">
                         <div className="flex gap-2">
@@ -296,7 +287,7 @@ const CartPanel: React.FC<CartPanelProps> = (props) => {
                         )}
                         {totalPaid >= total && (
                             <div className="mt-2 flex flex-col p-3 bg-green-500/10 rounded-lg border border-green-500/20">
-                                <div className="flex justify-between items-center text-green-700 dark:text-green-400 text-sm font-bold">
+                                <div className="flex justify-between items-center text-green-700 dark:text-green-300 text-sm font-bold">
                                     <span>Change Due:</span>
                                     <span>{settings.currency}{change.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 </div>
@@ -310,7 +301,6 @@ const CartPanel: React.FC<CartPanelProps> = (props) => {
                     </div>
                     )}
 
-                    {/* Checkout Button */}
                     <button 
                     onClick={handleCheckout}
                     disabled={cart.length === 0 || (paymentMethod === 'cash' && (totalPaid < total - 0.01)) || processing}
@@ -383,14 +373,10 @@ export const PosView: React.FC<PosViewProps> = ({
   const [cashReceived, setCashReceived] = useState('');
   const [cashReceivedSecondary, setCashReceivedSecondary] = useState('');
   const [upsell, setUpsell] = useState<string>('');
-  const [showCheckout, setShowCheckout] = useState(false); // Mobile/Tablet modal toggle
-  
-  // Discount State
+  const [showCheckout, setShowCheckout] = useState(false);
   const [discount, setDiscount] = useState('');
   const [discountType, setDiscountType] = useState<'fixed' | 'percentage'>('fixed');
   const [showDiscountInput, setShowDiscountInput] = useState(false);
-
-  // Scanner & Quick Add State
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scanSuccess, setScanSuccess] = useState(false);
   const [scannerError, setScannerError] = useState<string | null>(null);
@@ -400,41 +386,30 @@ export const PosView: React.FC<PosViewProps> = ({
   const [quickAddForm, setQuickAddForm] = useState<Partial<Product>>({ name: '', price: 0, category: 'Other', stock: 10 });
   const searchInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
   const scannerInstanceRef = useRef<any>(null);
-
-  // Customer State
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
   const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', email: '' });
-
-  // Checkout State
   const [processing, setProcessing] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [lastTransaction, setLastTransaction] = useState<Transaction | null>(null);
-
   const { showToast } = useToast();
   const { showConfirm } = useAlert();
   const cartEndRef = useRef<HTMLDivElement>(null);
   const prevCartItemsRef = useRef<string[]>([]);
-  
-  // Animation state for removing items
   const [exitingItems, setExitingItems] = useState<Set<string>>(new Set());
 
-  // Scroll to bottom of cart when items added
   useEffect(() => {
     if (cart.length > prevCartItemsRef.current.length) {
         cartEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [cart.length]);
 
-  // Sync cart to local storage
   useEffect(() => {
     saveCart(cart.filter(i => i.quantity > 0));
   }, [cart]);
 
-  // Sync cart with product updates
   useEffect(() => {
     setCart(currentCart => {
       return currentCart.map(cartItem => {
@@ -444,11 +419,9 @@ export const PosView: React.FC<PosViewProps> = ({
     });
   }, [products]);
 
-  // AI Upsell Logic
   useEffect(() => {
     const currentItemNames = cart.map(c => c.name);
     const hasChanged = JSON.stringify(currentItemNames) !== JSON.stringify(prevCartItemsRef.current);
-    
     if (hasChanged && cart.length > 0 && cart.length % 3 === 0) {
        const fetchUpsell = async () => {
           const suggestion = await suggestUpsell(currentItemNames);
@@ -461,7 +434,6 @@ export const PosView: React.FC<PosViewProps> = ({
     prevCartItemsRef.current = currentItemNames;
   }, [cart]);
 
-  // Auto-focus search input when scanner closes
   useEffect(() => {
     if (!isScannerOpen && !isQuickAddOpen && !isCustomerModalOpen && !showCheckout) {
         const timer = setTimeout(() => {
@@ -488,11 +460,9 @@ export const PosView: React.FC<PosViewProps> = ({
       return;
     }
     playSystemSound('beep');
-    
     if (exitingItems.has(product.id)) {
         setExitingItems(prev => { const next = new Set(prev); next.delete(product.id); return next; });
     }
-
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
@@ -513,7 +483,7 @@ export const PosView: React.FC<PosViewProps> = ({
     setCart(prev => prev.map(item => {
       if (item.id === id) {
         const newQty = item.quantity + delta;
-        if (newQty < 1) return item; // Handled by remove
+        if (newQty < 1) return item; 
         const product = products.find(p => p.id === id);
         if (product && newQty > product.stock) {
             showToast('Not enough stock', 'error');
@@ -549,17 +519,14 @@ export const PosView: React.FC<PosViewProps> = ({
     if (searchInputRef.current) searchInputRef.current.focus();
   };
 
-  // Barcode Scanner / Search Handler
   const handleSearchKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Enter') {
           e.preventDefault();
           const term = search.trim();
           if (!term) return;
-
           const barcodeMatch = products.find(p => p.barcode === term);
           const nameMatch = products.find(p => p.name.toLowerCase() === term.toLowerCase());
           const productToAdd = barcodeMatch || nameMatch;
-
           if (productToAdd) {
               addToCart(productToAdd);
               setSearch(''); 
@@ -579,7 +546,6 @@ export const PosView: React.FC<PosViewProps> = ({
                               confirmText: 'Add Product',
                               variant: 'info'
                           });
-                          
                           if (confirmed) {
                               setUnrecognizedBarcode(term);
                               setIsQuickAddOpen(true);
@@ -593,9 +559,7 @@ export const PosView: React.FC<PosViewProps> = ({
       }
   };
 
-  // Calculations
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  
   let discountAmount = 0;
   const discountValue = parseFloat(discount);
   if (!isNaN(discountValue) && discountValue > 0) {
@@ -606,34 +570,27 @@ export const PosView: React.FC<PosViewProps> = ({
     }
   }
   discountAmount = Math.min(subtotal, discountAmount);
-  
   const discountedSubtotal = subtotal - discountAmount;
   const tax = discountedSubtotal * (settings.taxRate / 100);
   const total = discountedSubtotal + tax;
-  
   const exchangeRate = settings.exchangeRate || 1;
   const paidPrimary = parseFloat(cashReceived) || 0;
   const paidSecondary = parseFloat(cashReceivedSecondary) || 0;
-  // Convert secondary currency to primary currency value
   const secondaryInPrimary = paidSecondary / exchangeRate;
   const totalPaid = paidPrimary + secondaryInPrimary;
-  
   const change = paymentMethod === 'cash' ? Math.max(0, totalPaid - total) : 0;
   const changeSecondary = change * exchangeRate;
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
-    
     if (paymentMethod === 'cash') {
-        if (totalPaid < total - 0.01) { // 0.01 tolerance for floating point
+        if (totalPaid < total - 0.01) { 
             showToast('Insufficient cash received', 'error');
             return;
         }
     }
-
     setProcessing(true);
     await new Promise(resolve => setTimeout(resolve, 1500)); 
-
     const transactionData: Transaction = {
         id: Date.now().toString(),
         date: new Date().toISOString(),
@@ -646,11 +603,9 @@ export const PosView: React.FC<PosViewProps> = ({
         customerName: selectedCustomer?.name,
         type: 'sale',
     };
-
     onCompleteTransaction(transactionData);
     setLastTransaction(transactionData);
     playSystemSound('success');
-    
     setCart([]);
     setProcessing(false);
     setCompleted(true);
@@ -665,7 +620,6 @@ export const PosView: React.FC<PosViewProps> = ({
       const gainNode = ctx.createGain();
       gainNode.connect(ctx.destination);
       const osc = ctx.createOscillator();
-      
       if (type === 'beep') { osc.type = 'sine'; osc.frequency.setValueAtTime(800, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.08); gainNode.gain.setValueAtTime(0.05, ctx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08); osc.connect(gainNode); osc.start(); osc.stop(ctx.currentTime + 0.1); } 
       else if (type === 'error') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.2); gainNode.gain.setValueAtTime(0.05, ctx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2); osc.connect(gainNode); osc.start(); osc.stop(ctx.currentTime + (0.25)); } 
       else if (type === 'success') { [523.25, 659.25, 783.99].forEach((freq, i) => { const osc2 = ctx.createOscillator(); osc2.type = 'sine'; osc2.frequency.setValueAtTime(freq, ctx.currentTime + (i * 0.1)); const noteGain = ctx.createGain(); noteGain.connect(ctx.destination); noteGain.gain.setValueAtTime(0.05, ctx.currentTime + (i * 0.1)); noteGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (i * 0.1) + 0.4); osc2.connect(noteGain); osc2.start(ctx.currentTime + (i * 0.1)); osc2.stop(ctx.currentTime + (i * 0.1) + 0.4); }); }
@@ -685,13 +639,11 @@ export const PosView: React.FC<PosViewProps> = ({
 
   const handleScan = useCallback((code: string) => { 
       if(code === unrecognizedBarcode) return;
-
       const product = products.find(p => p.barcode === code); 
       if (product) { 
           addToCart(product); 
           setLastScannedMsg(`Added: ${product.name}`);
           setScanSuccess(true);
-          // Auto-hide success message
           setTimeout(() => setScanSuccess(false), 1500); 
           setTimeout(() => setLastScannedMsg(null), 2000); 
       } else { 
@@ -705,8 +657,8 @@ export const PosView: React.FC<PosViewProps> = ({
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // ERROR FIX: Must stop camera before starting a file scan
+    
+    // Stop camera before starting file scan
     if (scannerInstanceRef.current) {
         try {
             await scannerInstanceRef.current.stop();
@@ -724,10 +676,11 @@ export const PosView: React.FC<PosViewProps> = ({
         console.error("Error scanning file", err);
         showToast("No barcode found in image", "error");
     } finally {
-        e.target.value = ''; // Reset input
-        // Re-start scanner if still open
+        e.target.value = '';
         if (isScannerOpen) {
-            startScanner();
+            // Re-init camera after file scan logic
+            setIsScannerOpen(false);
+            setTimeout(() => setIsScannerOpen(true), 300);
         }
     }
   };
@@ -736,21 +689,16 @@ export const PosView: React.FC<PosViewProps> = ({
     let isMounted = true;
     if (isScannerOpen) {
         const initScanner = async () => {
-            await new Promise(r => setTimeout(r, 200)); // Small delay for UI render
+            await new Promise(r => setTimeout(r, 200)); 
             const Html5Qrcode = (window as any).Html5Qrcode;
             if (!Html5Qrcode) {
                 if (isMounted) setScannerError("Scanner component not loaded.");
                 return;
             }
 
-            // Cleanup previous instance
             if (scannerInstanceRef.current) {
-                try {
-                    await scannerInstanceRef.current.stop();
-                } catch(e) {}
-                try {
-                    scannerInstanceRef.current.clear();
-                } catch(e) {}
+                try { await scannerInstanceRef.current.stop(); } catch(e) {}
+                try { scannerInstanceRef.current.clear(); } catch(e) {}
             }
 
             try {
@@ -763,23 +711,20 @@ export const PosView: React.FC<PosViewProps> = ({
                     aspectRatio: 1.0,
                     disableFlip: false,
                     videoConstraints: {
-                        facingMode: "environment", // BACK CAMERA
+                        facingMode: "environment",
                         width: { min: 640, ideal: 1280, max: 1920 },
                         height: { min: 480, ideal: 720, max: 1080 },
                         focusMode: "continuous"
                     }
                 };
                 
-                // ERROR FIX: First argument MUST be exactly { facingMode: "environment" }
                 await html5QrCode.start(
                     { facingMode: "environment" }, 
                     config, 
                     (decodedText: string) => {
                         if (isMounted) handleScan(decodedText);
                     },
-                    (errorMessage: string) => {
-                        // ignore errors
-                    }
+                    (errorMessage: string) => {}
                 );
             } catch (err) {
                 if (isMounted) {
@@ -794,7 +739,6 @@ export const PosView: React.FC<PosViewProps> = ({
         return () => {
             isMounted = false;
             if (scannerInstanceRef.current) {
-                // ERROR FIX: Use try-catch and check if scanning before stopping
                 scannerInstanceRef.current.stop().then(() => {
                     try { scannerInstanceRef.current.clear(); } catch(e){}
                 }).catch((err: any) => {
@@ -805,7 +749,6 @@ export const PosView: React.FC<PosViewProps> = ({
         };
     }
   }, [isScannerOpen, handleScan]);
-
 
   const handleQuickAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -858,7 +801,6 @@ export const PosView: React.FC<PosViewProps> = ({
   };
   const filteredCustomers = (customers || []).filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()) || c.phone.includes(customerSearch));
 
-  // Prepare props for CartPanel
   const cartPanelProps: CartPanelProps = {
     cart, settings, subtotal, discountAmount, tax, total, change, changeSecondary,
     clearCart, setShowCheckout, selectedCustomer, setSelectedCustomer,
@@ -871,10 +813,7 @@ export const PosView: React.FC<PosViewProps> = ({
 
   return (
     <div className="flex flex-col lg:flex-row h-full gap-4 relative">
-      
-      {/* Products Area */}
       <div className="flex-1 flex flex-col min-w-0 h-full">
-        {/* Header */}
         <div className="mb-4 space-y-3 shrink-0">
            <div className="flex flex-col md:flex-row gap-3">
                <div className="relative flex-1">
@@ -897,7 +836,6 @@ export const PosView: React.FC<PosViewProps> = ({
                </div>
            </div>
            
-           {/* Category Scrolling */}
            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
               {['All', ...categories].map(cat => (
                 <button
@@ -915,7 +853,6 @@ export const PosView: React.FC<PosViewProps> = ({
            </div>
         </div>
 
-        {/* Product Grid - Adaptive Columns */}
         <div className="flex-1 overflow-y-auto pr-2 no-scrollbar">
            {filteredProducts.length === 0 ? (
              <div className="h-64 flex flex-col items-center justify-center text-slate-400">
@@ -938,7 +875,6 @@ export const PosView: React.FC<PosViewProps> = ({
         </div>
       </div>
 
-      {/* Cart Toggle FAB - Mobile Only */}
       {!showCheckout && cart.length > 0 && (
         <button 
           onClick={() => setShowCheckout(true)} 
@@ -952,7 +888,6 @@ export const PosView: React.FC<PosViewProps> = ({
         </button>
       )}
 
-      {/* Mobile Cart Portal */}
       {showCheckout && createPortal(
         <>
             <div className="fixed inset-0 bg-black/40 z-[100] backdrop-blur-sm animate-fade-in" onClick={() => setShowCheckout(false)} />
@@ -963,12 +898,10 @@ export const PosView: React.FC<PosViewProps> = ({
         document.body
       )}
 
-      {/* Desktop Cart Sidebar */}
       <div className="hidden lg:flex flex-col h-full shrink-0 overflow-hidden w-[380px] xl:w-[420px]">
          <CartPanel {...cartPanelProps} />
       </div>
 
-      {/* Modals */}
       {isScannerOpen && (
         <div className="fixed inset-0 z-[70] bg-black/90 flex flex-col animate-fade-in">
             <div className="absolute top-4 right-4 z-20">
@@ -990,7 +923,6 @@ export const PosView: React.FC<PosViewProps> = ({
                         <div className="relative w-full max-w-sm aspect-square bg-black rounded-3xl overflow-hidden shadow-2xl border-2 border-white/20">
                             <div id="reader" className="w-full h-full"></div>
                             
-                            {/* Centered Scan Box Overlay */}
                             <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                                 <div className="w-[250px] h-[250px] relative border border-white/30 rounded-xl">
                                     <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-xl -mt-1 -ml-1"></div>
@@ -1001,7 +933,6 @@ export const PosView: React.FC<PosViewProps> = ({
                                 </div>
                             </div>
 
-                            {/* Success Overlay */}
                             {scanSuccess && (
                                 <div className="absolute inset-0 flex items-center justify-center bg-green-500/20 backdrop-blur-sm z-10 animate-fade-in">
                                     <div className="bg-white text-green-600 px-6 py-4 rounded-2xl flex flex-col items-center shadow-2xl animate-scale-in">
