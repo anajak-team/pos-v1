@@ -156,14 +156,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin, onBack }) => {
             </button>
           </form>
         </div>
-        
-        {/* Footer hint */}
-        <div className="p-4 bg-white/20 dark:bg-black/20 border-t border-white/10 text-center backdrop-blur-md">
-           <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
-              <p className="font-bold mb-1">Default Admin:</p>
-              <p><span className="font-mono bg-white/40 dark:bg-white/10 px-1.5 py-0.5 rounded text-slate-800 dark:text-slate-200">admin@anajak.com</span> / <span className="font-mono bg-white/40 dark:bg-white/10 px-1.5 py-0.5 rounded text-slate-800 dark:text-slate-200">password</span></p>
-           </div>
-        </div>
       </div>
     </div>
   );
