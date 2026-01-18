@@ -1,4 +1,4 @@
-// ... (imports remain unchanged)
+
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Product, CartItem, StoreSettings, User, Transaction, Customer } from '../types';
@@ -9,7 +9,7 @@ import { useAlert } from '../components/Alert';
 import { suggestUpsell } from '../services/geminiService';
 import { getCart, saveCart } from '../services/storageService';
 
-// ... (CartItemRow and CartPanel components remain unchanged)
+// ... (CartItemRow remains unchanged)
 interface CartItemRowProps {
   item: CartItem;
   currency: string;
@@ -378,7 +378,6 @@ export const PosView: React.FC<PosViewProps> = ({
   customers,
   onAddCustomer
 }) => {
-  // ... (PosView state and handlers unchanged up to useEffect for scanner)
   const [cart, setCart] = useState<CartItem[]>(() => getCart());
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -386,10 +385,14 @@ export const PosView: React.FC<PosViewProps> = ({
   const [cashReceived, setCashReceived] = useState('');
   const [cashReceivedSecondary, setCashReceivedSecondary] = useState('');
   const [upsell, setUpsell] = useState<string>('');
-  const [showCheckout, setShowCheckout] = useState(false);
+  const [showCheckout, setShowCheckout] = useState(false); // Mobile/Tablet modal toggle
+  
+  // Discount State
   const [discount, setDiscount] = useState('');
   const [discountType, setDiscountType] = useState<'fixed' | 'percentage'>('fixed');
   const [showDiscountInput, setShowDiscountInput] = useState(false);
+
+  // Scanner & Quick Add State
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scanSuccess, setScanSuccess] = useState(false);
   const [scannerError, setScannerError] = useState<string | null>(null);
@@ -398,31 +401,41 @@ export const PosView: React.FC<PosViewProps> = ({
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [quickAddForm, setQuickAddForm] = useState<Partial<Product>>({ name: '', price: 0, category: 'Other', stock: 10 });
   const searchInputRef = useRef<HTMLInputElement>(null);
+  
   const scannerInstanceRef = useRef<any>(null);
+
+  // Customer State
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
   const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', email: '' });
+
+  // Checkout State
   const [processing, setProcessing] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [lastTransaction, setLastTransaction] = useState<Transaction | null>(null);
+
   const { showToast } = useToast();
   const { showConfirm } = useAlert();
   const cartEndRef = useRef<HTMLDivElement>(null);
   const prevCartItemsRef = useRef<string[]>([]);
+  
+  // Animation state for removing items
   const [exitingItems, setExitingItems] = useState<Set<string>>(new Set());
 
-  // ... (Logic for cart sync, upsell, etc. unchanged)
+  // Scroll to bottom of cart when items added
   useEffect(() => {
     if (cart.length > prevCartItemsRef.current.length) {
         cartEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [cart.length]);
 
+  // Sync cart to local storage
   useEffect(() => {
     saveCart(cart.filter(i => i.quantity > 0));
   }, [cart]);
 
+  // Sync cart with product updates
   useEffect(() => {
     setCart(currentCart => {
       return currentCart.map(cartItem => {
@@ -432,9 +445,11 @@ export const PosView: React.FC<PosViewProps> = ({
     });
   }, [products]);
 
+  // AI Upsell Logic
   useEffect(() => {
     const currentItemNames = cart.map(c => c.name);
     const hasChanged = JSON.stringify(currentItemNames) !== JSON.stringify(prevCartItemsRef.current);
+    
     if (hasChanged && cart.length > 0 && cart.length % 3 === 0) {
        const fetchUpsell = async () => {
           const suggestion = await suggestUpsell(currentItemNames);
@@ -447,6 +462,7 @@ export const PosView: React.FC<PosViewProps> = ({
     prevCartItemsRef.current = currentItemNames;
   }, [cart]);
 
+  // Auto-focus search input when scanner closes
   useEffect(() => {
     if (!isScannerOpen && !isQuickAddOpen && !isCustomerModalOpen && !showCheckout) {
         const timer = setTimeout(() => {
@@ -466,8 +482,6 @@ export const PosView: React.FC<PosViewProps> = ({
     });
   }, [products, search, selectedCategory, settings.hideOutOfStockProducts]);
 
-  const filteredCustomers = (customers || []).filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()) || c.phone.includes(customerSearch));
-
   const addToCart = (product: Product) => {
     if (product.stock <= 0) {
       showToast('Item is out of stock', 'error');
@@ -475,9 +489,11 @@ export const PosView: React.FC<PosViewProps> = ({
       return;
     }
     playSystemSound('beep');
+    
     if (exitingItems.has(product.id)) {
         setExitingItems(prev => { const next = new Set(prev); next.delete(product.id); return next; });
     }
+
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
@@ -494,12 +510,11 @@ export const PosView: React.FC<PosViewProps> = ({
     }
   };
 
-  // ... (Other cart functions like updateQuantity, removeFromCart, clearCart, playSystemSound unchanged)
   const updateQuantity = (id: string, delta: number) => {
     setCart(prev => prev.map(item => {
       if (item.id === id) {
         const newQty = item.quantity + delta;
-        if (newQty < 1) return item; 
+        if (newQty < 1) return item; // Handled by remove
         const product = products.find(p => p.id === id);
         if (product && newQty > product.stock) {
             showToast('Not enough stock', 'error');
@@ -535,14 +550,17 @@ export const PosView: React.FC<PosViewProps> = ({
     if (searchInputRef.current) searchInputRef.current.focus();
   };
 
+  // Barcode Scanner / Search Handler
   const handleSearchKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Enter') {
           e.preventDefault();
           const term = search.trim();
           if (!term) return;
+
           const barcodeMatch = products.find(p => p.barcode === term);
           const nameMatch = products.find(p => p.name.toLowerCase() === term.toLowerCase());
           const productToAdd = barcodeMatch || nameMatch;
+
           if (productToAdd) {
               addToCart(productToAdd);
               setSearch(''); 
@@ -562,6 +580,7 @@ export const PosView: React.FC<PosViewProps> = ({
                               confirmText: 'Add Product',
                               variant: 'info'
                           });
+                          
                           if (confirmed) {
                               setUnrecognizedBarcode(term);
                               setIsQuickAddOpen(true);
@@ -575,7 +594,9 @@ export const PosView: React.FC<PosViewProps> = ({
       }
   };
 
+  // Calculations
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  
   let discountAmount = 0;
   const discountValue = parseFloat(discount);
   if (!isNaN(discountValue) && discountValue > 0) {
@@ -586,27 +607,34 @@ export const PosView: React.FC<PosViewProps> = ({
     }
   }
   discountAmount = Math.min(subtotal, discountAmount);
+  
   const discountedSubtotal = subtotal - discountAmount;
   const tax = discountedSubtotal * (settings.taxRate / 100);
   const total = discountedSubtotal + tax;
+  
   const exchangeRate = settings.exchangeRate || 1;
   const paidPrimary = parseFloat(cashReceived) || 0;
   const paidSecondary = parseFloat(cashReceivedSecondary) || 0;
+  // Convert secondary currency to primary currency value
   const secondaryInPrimary = paidSecondary / exchangeRate;
   const totalPaid = paidPrimary + secondaryInPrimary;
+  
   const change = paymentMethod === 'cash' ? Math.max(0, totalPaid - total) : 0;
   const changeSecondary = change * exchangeRate;
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
+    
     if (paymentMethod === 'cash') {
-        if (totalPaid < total - 0.01) { 
+        if (totalPaid < total - 0.01) { // 0.01 tolerance for floating point
             showToast('Insufficient cash received', 'error');
             return;
         }
     }
+
     setProcessing(true);
     await new Promise(resolve => setTimeout(resolve, 1500)); 
+
     const transactionData: Transaction = {
         id: Date.now().toString(),
         date: new Date().toISOString(),
@@ -619,9 +647,11 @@ export const PosView: React.FC<PosViewProps> = ({
         customerName: selectedCustomer?.name,
         type: 'sale',
     };
+
     onCompleteTransaction(transactionData);
     setLastTransaction(transactionData);
     playSystemSound('success');
+    
     setCart([]);
     setProcessing(false);
     setCompleted(true);
@@ -636,6 +666,7 @@ export const PosView: React.FC<PosViewProps> = ({
       const gainNode = ctx.createGain();
       gainNode.connect(ctx.destination);
       const osc = ctx.createOscillator();
+      
       if (type === 'beep') { osc.type = 'sine'; osc.frequency.setValueAtTime(800, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.08); gainNode.gain.setValueAtTime(0.05, ctx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08); osc.connect(gainNode); osc.start(); osc.stop(ctx.currentTime + 0.1); } 
       else if (type === 'error') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.2); gainNode.gain.setValueAtTime(0.05, ctx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2); osc.connect(gainNode); osc.start(); osc.stop(ctx.currentTime + 0.25); } 
       else if (type === 'success') { [523.25, 659.25, 783.99].forEach((freq, i) => { const osc2 = ctx.createOscillator(); osc2.type = 'sine'; osc2.frequency.setValueAtTime(freq, ctx.currentTime + (i * 0.1)); const noteGain = ctx.createGain(); noteGain.connect(ctx.destination); noteGain.gain.setValueAtTime(0.05, ctx.currentTime + (i * 0.1)); noteGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (i * 0.1) + 0.4); osc2.connect(noteGain); osc2.start(ctx.currentTime + (i * 0.1)); osc2.stop(ctx.currentTime + (i * 0.1) + 0.4); }); }
@@ -655,6 +686,7 @@ export const PosView: React.FC<PosViewProps> = ({
 
   const handleScan = useCallback((code: string) => { 
       if(code === unrecognizedBarcode) return;
+
       const product = products.find(p => p.barcode === code); 
       if (product) { 
           addToCart(product); 
@@ -676,48 +708,23 @@ export const PosView: React.FC<PosViewProps> = ({
     if (isScannerOpen) {
         const timer = setTimeout(() => {
             const Html5Qrcode = (window as any).Html5Qrcode;
-            const Html5QrcodeSupportedFormats = (window as any).Html5QrcodeSupportedFormats;
-
             if (!Html5Qrcode) {
                 setScannerError("Scanner library not loaded. Please refresh.");
                 return;
             }
 
             try {
-                // Ensure supported formats include common 1D barcodes
-                const formatsToSupport = [
-                    Html5QrcodeSupportedFormats.QR_CODE,
-                    Html5QrcodeSupportedFormats.UPC_A,
-                    Html5QrcodeSupportedFormats.UPC_E,
-                    Html5QrcodeSupportedFormats.UPC_EAN_EXTENSION,
-                    Html5QrcodeSupportedFormats.EAN_13,
-                    Html5QrcodeSupportedFormats.EAN_8,
-                    Html5QrcodeSupportedFormats.CODE_128,
-                    Html5QrcodeSupportedFormats.CODE_39,
-                    Html5QrcodeSupportedFormats.CODE_93,
-                    Html5QrcodeSupportedFormats.CODABAR,
-                    Html5QrcodeSupportedFormats.ITF,
-                    Html5QrcodeSupportedFormats.RSS_14,
-                    Html5QrcodeSupportedFormats.RSS_EXPANDED,
-                    Html5QrcodeSupportedFormats.PDF_417,
-                    Html5QrcodeSupportedFormats.AZTEC,
-                    Html5QrcodeSupportedFormats.DATA_MATRIX,
-                ];
-
-                html5QrCode = new Html5Qrcode("reader", {
-                    formatsToSupport: formatsToSupport,
-                    verbose: false,
-                    experimentalFeatures: {
-                        useBarCodeDetectorIfSupported: true
-                    }
-                });
+                html5QrCode = new Html5Qrcode("reader");
                 scannerInstanceRef.current = html5QrCode;
 
                 const config = { 
                     fps: 15, 
                     // Removed qrbox for full frame scanning to fix mobile issues
                     aspectRatio: 1.0,
-                    disableFlip: false
+                    disableFlip: false,
+                    experimentalFeatures: {
+                        useBarCodeDetectorIfSupported: true
+                    }
                 };
                 
                 html5QrCode.start(
@@ -750,6 +757,7 @@ export const PosView: React.FC<PosViewProps> = ({
         };
     }
   }, [isScannerOpen, handleScan]);
+
 
   const handleQuickAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -799,8 +807,9 @@ export const PosView: React.FC<PosViewProps> = ({
       }
     } 
   };
-  // ... (Remainder of component rendering matches previous file content)
-  // ...
+  const filteredCustomers = (customers || []).filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()) || c.phone.includes(customerSearch));
+
+  // Prepare props for CartPanel
   const cartPanelProps: CartPanelProps = {
     cart, settings, subtotal, discountAmount, tax, total, change, changeSecondary,
     clearCart, setShowCheckout, selectedCustomer, setSelectedCustomer,
@@ -913,7 +922,7 @@ export const PosView: React.FC<PosViewProps> = ({
       {/* Modals */}
       {isScannerOpen && (<div className="fixed inset-0 z-[70] bg-black/90 flex flex-col animate-fade-in"><div className="absolute top-4 right-4 z-20"><button onClick={stopScanner} className="bg-white/20 backdrop-blur-md p-3 rounded-full text-white hover:bg-white/30"><X size={24} /></button></div><div className="flex-1 relative flex items-center justify-center">{scannerError ? (<div className="text-white text-center p-6 max-w-sm"><AlertTriangle size={48} className="mx-auto mb-4 text-yellow-500" /><p className="mb-4 font-medium">{scannerError}</p><button onClick={stopScanner} className="bg-white text-black px-4 py-2 rounded-xl text-sm font-bold">Close Scanner</button></div>) : (<div className="relative w-full max-w-md aspect-square overflow-hidden rounded-3xl border-2 border-white/30 shadow-2xl mx-4"><div id="reader" className="w-full h-full bg-black rounded-3xl overflow-hidden"></div><div className="absolute inset-0 p-8 pointer-events-none"><div className={`w-full h-full border-2 rounded-3xl relative transition-all duration-300 ${scanSuccess ? 'border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.5)]' : 'border-white/50'}`}><div className={`absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 rounded-tl-xl transition-colors duration-300 ${scanSuccess ? 'border-green-500' : 'border-primary'}`}></div><div className={`absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 rounded-tr-xl transition-colors duration-300 ${scanSuccess ? 'border-green-500' : 'border-primary'}`}></div><div className={`absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 rounded-bl-xl transition-colors duration-300 ${scanSuccess ? 'border-green-500' : 'border-primary'}`}></div><div className={`absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 rounded-br-xl transition-colors duration-300 ${scanSuccess ? 'border-green-500' : 'border-primary'}`}></div></div></div><p className="absolute bottom-8 left-0 right-0 text-center text-white/80 font-medium text-sm bg-black/40 py-2 backdrop-blur-sm">Align barcode within frame</p>{lastScannedMsg && (<div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in"><div className="bg-white/90 text-green-600 px-6 py-4 rounded-2xl flex flex-col items-center shadow-2xl animate-scale-in"><CheckCircle2 size={48} className="mb-2" /><span className="font-bold text-lg text-center">{lastScannedMsg}</span></div></div>)}</div>)}</div></div>)}
       {isQuickAddOpen && (<div className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-md flex items-center justify-center p-4"><div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl p-6 rounded-3xl shadow-2xl w-full max-w-md border border-white/20"><h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Unrecognized Item</h3><p className="text-sm text-slate-500 mb-4">Barcode: <span className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">{unrecognizedBarcode}</span></p><form onSubmit={handleQuickAddSubmit} className="space-y-4"><div><label className="text-xs font-bold text-slate-500 uppercase">Name</label><input required className="w-full p-3 bg-white/50 dark:bg-black/20 border border-white/20 rounded-xl outline-none" value={quickAddForm.name} onChange={e => setQuickAddForm({...quickAddForm, name: e.target.value})} /></div><div className="grid grid-cols-2 gap-3"><div><label className="text-xs font-bold text-slate-500 uppercase">Price</label><input required type="number" step="0.01" className="w-full p-3 bg-white/50 dark:bg-black/20 border border-white/20 rounded-xl outline-none" value={quickAddForm.price} onChange={e => setQuickAddForm({...quickAddForm, price: parseFloat(e.target.value)})} /></div><div><label className="text-xs font-bold text-slate-500 uppercase">Category</label><select className="w-full p-3 bg-white/50 dark:bg-black/20 border border-white/20 rounded-xl outline-none" value={quickAddForm.category} onChange={e => setQuickAddForm({...quickAddForm, category: e.target.value })}>{categories.map(c => <option key={c} value={c}>{c}</option>)}</select></div></div><div className="flex gap-3 pt-2"><button type="button" onClick={() => setIsQuickAddOpen(false)} className="flex-1 py-3 rounded-xl bg-slate-200 dark:bg-slate-800 font-bold">Cancel</button><button type="submit" className="flex-1 py-3 rounded-xl bg-primary text-white font-bold shadow-lg">Add & Cart</button></div></form></div></div>)}
-      {isCustomerModalOpen && (<div className="fixed inset-0 z-[80] bg-black/40 backdrop-blur-md flex items-center justify-center p-4"><div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-[2rem] shadow-2xl w-full max-w-lg border border-white/20 overflow-hidden flex flex-col max-h-[90vh]"><div className="p-5 border-b border-white/10 flex justify-between items-center"><h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Select Customer</h3><button onClick={() => setIsCustomerModalOpen(false)} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full"><X size={20}/></button></div><div className="p-5 flex-1 overflow-y-auto"><div className="mb-6"><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18}/><input placeholder="Search customers..." className="w-full pl-10 p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20 outline-none" value={customerSearch} onChange={e => setCustomerSearch(e.target.value)} /></div>{customerSearch && (<div className="mt-2 space-y-2 max-h-40 overflow-y-auto">{filteredCustomers.map(c => (<button key={c.id} onClick={() => { setSelectedCustomer(c); setIsCustomerModalOpen(false); }} className="w-full p-3 flex justify-between items-center bg-white/40 dark:bg-white/5 hover:bg-primary/10 rounded-xl border border-transparent hover:border-primary/30 transition-all text-left"><div><div className="font-bold text-slate-800 dark:text-slate-100">{c.name}</div><div className="text-xs text-slate-500">{c.phone}</div></div><ArrowRight size={16} className="text-slate-400"/></button>))}{filteredCustomers.length === 0 && <div className="text-center text-slate-400 text-sm p-2">No matches</div>}</div>)}</div><div className="border-t border-white/10 pt-6"><h4 className="text-sm font-bold text-slate-500 uppercase mb-3">New Customer</h4><div className="space-y-3"><input placeholder="Full Name" className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20" value={newCustomer.name} onChange={e => setNewCustomer({...newCustomer, name: e.target.value})} /><div className="grid grid-cols-2 gap-3"><input placeholder="Phone" className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20" value={newCustomer.phone} onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} /><input placeholder="Email" className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20" value={newCustomer.email} onChange={e => setNewCustomer({...newCustomer, email: e.target.value})} /></div><button onClick={handleCreateCustomer} disabled={!newCustomer.name || !newCustomer.phone} className="w-full py-3 bg-primary text-white rounded-xl font-bold shadow-lg disabled:opacity-50">Create</button></div></div></div></div></div>)}
+      {isCustomerModalOpen && (<div className="fixed inset-0 z-[80] bg-black/40 backdrop-blur-md flex items-center justify-center p-4"><div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-[2rem] shadow-2xl w-full max-w-lg border border-white/20 overflow-hidden flex flex-col max-h-[90vh]"><div className="p-5 border-b border-white/10 flex justify-between items-center"><h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Select Customer</h3><button onClick={() => setIsCustomerModalOpen(false)} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full"><X size={20}/></button></div><div className="p-5 flex-1 overflow-y-auto"><div className="mb-6"><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18}/><input placeholder="Search customers..." className="w-full pl-10 p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20 outline-none" value={customerSearch} onChange={e => setCustomerSearch(e.target.value)} /></div>{customerSearch && (<div className="mt-2 space-y-2 max-h-40 overflow-y-auto">{(customers || []).filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()) || c.phone.includes(customerSearch)).map(c => (<button key={c.id} onClick={() => { setSelectedCustomer(c); setIsCustomerModalOpen(false); }} className="w-full p-3 flex justify-between items-center bg-white/40 dark:bg-white/5 hover:bg-primary/10 rounded-xl border border-transparent hover:border-primary/30 transition-all text-left"><div><div className="font-bold text-slate-800 dark:text-slate-100">{c.name}</div><div className="text-xs text-slate-500">{c.phone}</div></div><ArrowRight size={16} className="text-slate-400"/></button>))}{filteredCustomers.length === 0 && <div className="text-center text-slate-400 text-sm p-2">No matches</div>}</div>)}</div><div className="border-t border-white/10 pt-6"><h4 className="text-sm font-bold text-slate-500 uppercase mb-3">New Customer</h4><div className="space-y-3"><input placeholder="Full Name" className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20" value={newCustomer.name} onChange={e => setNewCustomer({...newCustomer, name: e.target.value})} /><div className="grid grid-cols-2 gap-3"><input placeholder="Phone" className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20" value={newCustomer.phone} onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} /><input placeholder="Email" className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/20" value={newCustomer.email} onChange={e => setNewCustomer({...newCustomer, email: e.target.value})} /></div><button onClick={handleCreateCustomer} disabled={!newCustomer.name || !newCustomer.phone} className="w-full py-3 bg-primary text-white rounded-xl font-bold shadow-lg disabled:opacity-50">Create</button></div></div></div></div></div>)}
     </div>
   );
 };
