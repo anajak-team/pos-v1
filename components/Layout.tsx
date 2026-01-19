@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { ViewState, User } from '../types';
-import { LayoutDashboard, ShoppingCart, Package, History, Settings, Truck, LogOut, Wallet, Receipt, BarChart3, Wrench, MoreHorizontal, X } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Package, History, Settings, Truck, LogOut, Wallet, Receipt, BarChart3, Wrench, MoreHorizontal, X, Moon, Sun, Globe } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,22 +11,83 @@ interface LayoutProps {
   onLogout: () => void;
   currentUser: User;
   onWalletClick: () => void;
+  isDarkMode: boolean;
+  onToggleTheme: () => void;
+  currentLanguage: string;
+  onToggleLanguage: () => void;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigate, storeName, onLogout, currentUser, onWalletClick }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigate, storeName, onLogout, currentUser, onWalletClick, isDarkMode, onToggleTheme, currentLanguage, onToggleLanguage }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const t = (key: string) => {
+    const translations: Record<string, Record<string, string>> = {
+      en: {
+        DASHBOARD: 'Dashboard',
+        POS: 'Register',
+        TRANSACTIONS: 'History',
+        INVENTORY: 'Products',
+        REPAIRS: 'Repairs',
+        PURCHASES: 'Purchases',
+        EXPENSES: 'Expenses',
+        REPORTS: 'Reports',
+        SETTINGS: 'Settings',
+        MORE: 'More',
+        SHIFT_OPEN: 'Shift Open',
+        LOGOUT: 'Logout'
+      },
+      km: {
+        DASHBOARD: 'ផ្ទាំងគ្រប់គ្រង',
+        POS: 'ការលក់',
+        TRANSACTIONS: 'ប្រវត្តិ',
+        INVENTORY: 'ទំនិញ',
+        REPAIRS: 'ជួសជុល',
+        PURCHASES: 'ការទិញចូល',
+        EXPENSES: 'ចំណាយ',
+        REPORTS: 'របាយការណ៍',
+        SETTINGS: 'ការកំណត់',
+        MORE: 'បន្ថែម',
+        SHIFT_OPEN: 'បើកវេន',
+        LOGOUT: 'ចាកចេញ'
+      },
+      zh: {
+        DASHBOARD: '仪表板',
+        POS: '收银台',
+        TRANSACTIONS: '历史记录',
+        INVENTORY: '库存',
+        REPAIRS: '维修',
+        PURCHASES: '采购',
+        EXPENSES: '费用',
+        REPORTS: '报表',
+        SETTINGS: '设置',
+        MORE: '更多',
+        SHIFT_OPEN: '开班',
+        LOGOUT: '退出'
+      }
+    };
+    return translations[currentLanguage]?.[key] || translations['en'][key];
+  };
+
+  const getLanguageFlag = (lang: string) => {
+    switch (lang) {
+      case 'en': return '🇺🇸';
+      case 'km': return '🇰🇭';
+      case 'zh': return '🇨🇳';
+      default: return '🇺🇸';
+    }
+  };
 
   // Reordered for Priority: Top 4 go to bottom bar, rest go to "More" menu
   const navItems = [
-    { id: 'DASHBOARD', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'POS', label: 'Register', icon: ShoppingCart },
-    { id: 'TRANSACTIONS', label: 'History', icon: History },
-    { id: 'INVENTORY', label: 'Products', icon: Package },
+    { id: 'DASHBOARD', label: t('DASHBOARD'), icon: LayoutDashboard },
+    { id: 'POS', label: t('POS'), icon: ShoppingCart },
+    { id: 'TRANSACTIONS', label: t('TRANSACTIONS'), icon: History },
+    { id: 'INVENTORY', label: t('INVENTORY'), icon: Package },
     // Secondary Items
-    { id: 'REPAIRS', label: 'Repairs', icon: Wrench },
-    { id: 'PURCHASES', label: 'Purchases', icon: Truck },
-    { id: 'EXPENSES', label: 'Expenses', icon: Receipt },
-    { id: 'REPORTS', label: 'Reports', icon: BarChart3 },
+    { id: 'REPAIRS', label: t('REPAIRS'), icon: Wrench },
+    { id: 'PURCHASES', label: t('PURCHASES'), icon: Truck },
+    { id: 'EXPENSES', label: t('EXPENSES'), icon: Receipt },
+    { id: 'REPORTS', label: t('REPORTS'), icon: BarChart3 },
   ];
 
   const primaryNavItems = navItems.slice(0, 4);
@@ -68,20 +130,36 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
 
         <div className="p-3 border-t border-white/20 dark:border-white/5 space-y-3 bg-white/10 dark:bg-black/20 backdrop-blur-md">
           {/* User Profile */}
-          <div className="flex items-center gap-2 px-1">
-             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 text-white flex items-center justify-center font-bold text-xs shadow-md">
-                {currentUser.avatar || currentUser.name.charAt(0)}
-             </div>
-             <div className="flex-1 min-w-0">
-                <div className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{currentUser.name}</div>
-                <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.6)]"></span>
-                  Shift Open
+          <div className="flex items-center gap-2 px-1 justify-between">
+             <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 text-white flex items-center justify-center font-bold text-xs shadow-md">
+                    {currentUser.avatar || currentUser.name.charAt(0)}
+                </div>
+                <div className="min-w-0">
+                    <div className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{currentUser.name}</div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.6)]"></span>
+                    {t('SHIFT_OPEN')}
+                    </div>
                 </div>
              </div>
+             <button 
+                onClick={onToggleLanguage}
+                className="p-1.5 rounded-lg bg-white/20 dark:bg-white/5 hover:bg-white/30 transition-colors border border-white/10 w-8 h-8 flex items-center justify-center shadow-sm"
+                title="Switch Language"
+             >
+                <span className="text-lg leading-none">{getLanguageFlag(currentLanguage)}</span>
+             </button>
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-2">
+            <button 
+              onClick={onToggleTheme}
+              className="col-span-1 flex flex-col items-center justify-center p-2 rounded-lg bg-white/20 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-white/30 transition-colors border border-white/10"
+              title="Toggle Theme"
+            >
+              {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
             <button 
               onClick={onWalletClick}
               className="col-span-1 flex flex-col items-center justify-center p-2 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition-colors border border-amber-500/20"
@@ -96,14 +174,14 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
                   ? 'bg-white/50 dark:bg-white/10 text-slate-900 dark:text-slate-100 border-white/40' 
                   : 'bg-white/20 dark:bg-white/5 text-slate-500 dark:text-slate-400 border-white/10 hover:bg-white/30'
               }`}
-              title="Settings"
+              title={t('SETTINGS')}
             >
               <Settings size={16} />
             </button>
             <button 
               onClick={onLogout}
               className="col-span-1 flex flex-col items-center justify-center p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors border border-red-500/20"
-              title="Logout"
+              title={t('LOGOUT')}
             >
               <LogOut size={16} />
             </button>
@@ -122,6 +200,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
              <span className="font-bold text-sm text-slate-800 dark:text-slate-100 truncate drop-shadow-sm">{storeName}</span>
            </div>
            <div className="flex items-center gap-1.5">
+             <button onClick={onToggleLanguage} className="p-1.5 bg-white/30 dark:bg-white/10 hover:bg-white/40 rounded-lg transition-colors border border-white/20 w-8 h-8 flex items-center justify-center shadow-sm">
+               <span className="text-lg leading-none">{getLanguageFlag(currentLanguage)}</span>
+             </button>
+             <button onClick={onToggleTheme} className="p-1.5 text-slate-600 dark:text-slate-300 bg-white/30 dark:bg-white/10 hover:bg-white/40 rounded-lg transition-colors border border-white/20">
+               {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
+             </button>
              <button onClick={onWalletClick} className="p-1.5 text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 rounded-lg transition-colors border border-amber-500/10">
                 <Wallet size={16} />
              </button>
@@ -149,7 +233,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
                 onClick={e => e.stopPropagation()}
             >
                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-bold text-slate-800 dark:text-slate-100">More Options</h3>
+                    <h3 className="font-bold text-slate-800 dark:text-slate-100">{t('MORE')}</h3>
                     <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 rounded-full bg-slate-100 dark:bg-white/10 text-slate-500">
                         <X size={18} />
                     </button>
@@ -210,7 +294,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
                 <div className={`p-1.5 rounded-xl mb-0.5 transition-all duration-300 ${isSecondaryActive || isMobileMenuOpen ? 'bg-white/80 dark:bg-white/10 shadow-sm translate-y-[-2px]' : ''}`}>
                    <MoreHorizontal size={20} strokeWidth={2.5} />
                 </div>
-                <span className={`text-[9px] font-bold leading-none ${isSecondaryActive || isMobileMenuOpen ? 'opacity-100' : 'opacity-70'}`}>More</span>
+                <span className={`text-[9px] font-bold leading-none ${isSecondaryActive || isMobileMenuOpen ? 'opacity-100' : 'opacity-70'}`}>{t('MORE')}</span>
             </button>
           </div>
         </div>

@@ -96,6 +96,7 @@ export interface StoreSettings {
   receiptFooter: string;
   enableSound: boolean;
   theme: 'light' | 'dark';
+  primaryColor?: string; // Format: "R G B" e.g., "37 99 235"
   printers: PrinterConfig[];
   autoOpenDrawer?: boolean;
   enableLoyalty: boolean;
@@ -103,6 +104,7 @@ export interface StoreSettings {
   hideOutOfStockProducts?: boolean;
   showStockLevels?: boolean;
   landingPage: LandingPageConfig;
+  language?: 'en' | 'km' | 'zh';
 }
 
 export interface User {

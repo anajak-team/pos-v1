@@ -749,10 +749,16 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     if (settings) {
+      // Apply theme mode
       if (settings.theme === 'dark') document.documentElement.classList.add('dark');
       else document.documentElement.classList.remove('dark');
+      
+      // Apply primary color
+      if (settings.primaryColor) {
+          document.documentElement.style.setProperty('--color-primary', settings.primaryColor);
+      }
     }
-  }, [settings?.theme]);
+  }, [settings?.theme, settings?.primaryColor]);
 
   useEffect(() => {
     if (transactionToPrint) {
@@ -1132,6 +1138,35 @@ export const App: React.FC = () => {
       }
   };
 
+  const handleToggleTheme = async () => {
+    if (!settings) return;
+    const newTheme: 'light' | 'dark' = settings.theme === 'light' ? 'dark' : 'light';
+    const newSettings: StoreSettings = { ...settings, theme: newTheme };
+    setSettings(newSettings);
+    try {
+        await api.saveSettings(newSettings);
+    } catch (e) {
+        console.error("Failed to save theme preference");
+    }
+  };
+
+  const AVAILABLE_LANGUAGES: ('en' | 'km' | 'zh')[] = ['en', 'km', 'zh'];
+
+  const handleToggleLanguage = async () => {
+    if (!settings) return;
+    const currentIndex = AVAILABLE_LANGUAGES.indexOf(settings.language as any);
+    const nextIndex = (currentIndex + 1) % AVAILABLE_LANGUAGES.length;
+    const newLang = AVAILABLE_LANGUAGES[nextIndex];
+    
+    const newSettings = { ...settings, language: newLang };
+    setSettings(newSettings);
+    try {
+        await api.saveSettings(newSettings);
+    } catch (e) {
+        console.error("Failed to save language preference");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-slate-50 dark:bg-slate-900">
@@ -1160,11 +1195,11 @@ export const App: React.FC = () => {
 
   return (
     <div className={`min-h-screen bg-[#f8fafc] dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300 ${settings?.theme === 'dark' ? 'dark' : ''}`}>
-      {/* Background Ambience */}
+      {/* Background Ambience - RGB Style */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-          <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-blue-500/10 rounded-full blur-[120px] animate-blob"></div>
-          <div className="absolute top-[20%] -right-[10%] w-[40%] h-[40%] bg-purple-500/10 rounded-full blur-[100px] animate-blob" style={{ animationDelay: '2s' }}></div>
-          <div className="absolute -bottom-[10%] left-[20%] w-[30%] h-[30%] bg-emerald-500/10 rounded-full blur-[80px] animate-blob" style={{ animationDelay: '4s' }}></div>
+          <div className="absolute top-[10%] left-[-10%] w-[150%] h-[60%] bg-blue-500/10 rounded-[100%] blur-[130px] animate-blob mix-blend-screen"></div>
+          <div className="absolute top-[30%] right-[-20%] w-[120%] h-[50%] bg-red-500/10 rounded-[100%] blur-[120px] animate-blob mix-blend-screen" style={{ animationDelay: '3s' }}></div>
+          <div className="absolute bottom-[-10%] left-[20%] w-[140%] h-[50%] bg-green-500/10 rounded-[100%] blur-[110px] animate-blob mix-blend-screen" style={{ animationDelay: '6s' }}></div>
       </div>
 
       <Layout 
@@ -1174,6 +1209,10 @@ export const App: React.FC = () => {
         onLogout={handleLogout}
         currentUser={currentUser}
         onWalletClick={() => setIsWalletModalOpen(true)}
+        isDarkMode={settings?.theme === 'dark'}
+        onToggleTheme={handleToggleTheme}
+        currentLanguage={settings?.language || 'en'}
+        onToggleLanguage={handleToggleLanguage}
       >
         {currentView === 'DASHBOARD' && <DashboardView transactions={transactions} isDarkMode={settings?.theme === 'dark'} currentUser={currentUser} expenses={expenses} products={products} />}
         {currentView === 'POS' && <PosView 
