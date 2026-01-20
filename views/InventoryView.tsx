@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Product, StoreSettings, User } from '../types';
-import { Plus, Trash2, RefreshCw, Search, AlertTriangle, Bell, Lock, Box, Edit, ScanBarcode, DollarSign, Download, Upload, Printer, X, QrCode } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Search, AlertTriangle, Bell, Lock, Box, Edit, ScanBarcode, DollarSign, Download, Upload, Printer, X, QrCode, Type, Minimize } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { useAlert } from '../components/Alert';
 import QRCode from 'qrcode';
@@ -17,7 +17,7 @@ interface InventoryViewProps {
   onOpenProductModal: (product: Product | null) => void;
 }
 
-const PrintableLabel = ({ product, settings, mode }: { product: Product, settings: StoreSettings, mode: 'barcode' | 'qrcode' }) => {
+const PrintableLabel = ({ product, settings, mode, showInfo = true }: { product: Product, settings: StoreSettings, mode: 'barcode' | 'qrcode', showInfo?: boolean }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
@@ -32,10 +32,10 @@ const PrintableLabel = ({ product, settings, mode }: { product: Product, setting
                 JsBarcode(canvasRef.current, codeValue, {
                     format: "CODE128",
                     lineColor: "#000",
-                    width: 1.5,
-                    height: 35,
+                    width: showInfo ? 1.5 : 2,
+                    height: showInfo ? 35 : 55,
                     displayValue: true,
-                    fontSize: 9,
+                    fontSize: showInfo ? 9 : 14,
                     margin: 0,
                     textMargin: 0
                 });
@@ -45,22 +45,26 @@ const PrintableLabel = ({ product, settings, mode }: { product: Product, setting
         } else {
             const qrValue = product.barcode || product.id;
             QRCode.toCanvas(canvasRef.current, qrValue, { 
-                width: 80,
+                width: showInfo ? 80 : 100,
                 margin: 0,
                 errorCorrectionLevel: 'M'
             }, (error) => {
                 if (error) console.error("QR generation failed", error);
             });
         }
-    }, [mode, product]);
+    }, [mode, product, showInfo]);
 
     return (
-        <div className="bg-white text-black p-1 w-[50mm] h-[30mm] shadow-sm rounded-sm flex flex-col items-center justify-center text-center leading-tight overflow-hidden border border-gray-200 print:border-none print:shadow-none break-inside-avoid page-break-inside-avoid relative">
-            <p className="text-[8px] font-bold uppercase tracking-wider mb-0.5 w-full truncate px-1">{settings.storeName}</p>
-            <p className="font-bold text-[9px] line-clamp-2 leading-tight mb-0.5 px-1 w-full break-words">{product.name}</p>
-            <p className="font-extrabold text-xs leading-none my-0.5">{settings.currency}{product.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+        <div className="bg-white text-black p-1 w-[50mm] h-[30mm] shadow-sm rounded-sm flex flex-col items-center justify-center text-center leading-tight overflow-hidden border border-gray-200 print:border-x-0 print:border-t-0 print:border-b-4 print:border-black print:shadow-none break-inside-avoid page-break-inside-avoid relative box-border">
+            {showInfo && (
+                <>
+                    <p className="text-[8px] font-bold uppercase tracking-wider mb-0.5 w-full truncate px-1">{settings.storeName}</p>
+                    <p className="font-bold text-[9px] line-clamp-2 leading-tight mb-0.5 px-1 w-full break-words">{product.name}</p>
+                    <p className="font-extrabold text-xs leading-none my-0.5">{settings.currency}{product.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                </>
+            )}
             
-            <div className="mt-0.5 flex-1 flex items-center justify-center w-full overflow-hidden">
+            <div className={`mt-0.5 flex-1 flex items-center justify-center w-full overflow-hidden ${!showInfo ? 'h-full' : ''}`}>
                  <canvas ref={canvasRef} className="max-w-full max-h-full"></canvas>
             </div>
         </div>
@@ -69,24 +73,42 @@ const PrintableLabel = ({ product, settings, mode }: { product: Product, setting
 
 const ProductLabelPrint = ({ product, settings, onClose }: { product: Product, settings: StoreSettings, onClose: () => void }) => {
     const [mode, setMode] = useState<'barcode' | 'qrcode'>('barcode');
+    const [showInfo, setShowInfo] = useState(true);
 
     return (
         <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:bg-white print:block animate-fade-in">
             <div className="relative flex flex-col items-center w-full max-w-sm print:w-full print:block print:static">
                 <div className="flex flex-col items-center gap-4 mb-8 shrink-0 print:hidden">
-                    <div className="flex gap-2 p-1 bg-white/20 backdrop-blur-md rounded-xl border border-white/20">
-                        <button 
-                            onClick={() => setMode('barcode')}
-                            className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${mode === 'barcode' ? 'bg-white text-primary shadow-sm' : 'text-white hover:bg-white/10'}`}
-                        >
-                            <ScanBarcode size={16} /> Barcode
-                        </button>
-                        <button 
-                            onClick={() => setMode('qrcode')}
-                            className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${mode === 'qrcode' ? 'bg-white text-primary shadow-sm' : 'text-white hover:bg-white/10'}`}
-                        >
-                            <QrCode size={16} /> QR Code
-                        </button>
+                    <div className="flex flex-col gap-2 p-2 bg-white/20 backdrop-blur-md rounded-2xl border border-white/20 w-full">
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={() => setMode('barcode')}
+                                className={`flex-1 px-4 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${mode === 'barcode' ? 'bg-white text-primary shadow-sm' : 'text-white hover:bg-white/10'}`}
+                            >
+                                <ScanBarcode size={16} /> Barcode
+                            </button>
+                            <button 
+                                onClick={() => setMode('qrcode')}
+                                className={`flex-1 px-4 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${mode === 'qrcode' ? 'bg-white text-primary shadow-sm' : 'text-white hover:bg-white/10'}`}
+                            >
+                                <QrCode size={16} /> QR Code
+                            </button>
+                        </div>
+                        <div className="h-px bg-white/10 w-full my-1"></div>
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={() => setShowInfo(true)}
+                                className={`flex-1 px-4 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${showInfo ? 'bg-white text-primary shadow-sm' : 'text-white hover:bg-white/10'}`}
+                            >
+                                <Type size={16} /> Full Label
+                            </button>
+                            <button 
+                                onClick={() => setShowInfo(false)}
+                                className={`flex-1 px-4 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${!showInfo ? 'bg-white text-primary shadow-sm' : 'text-white hover:bg-white/10'}`}
+                            >
+                                <Minimize size={16} /> Only Code
+                            </button>
+                        </div>
                     </div>
                     
                     <div className="flex gap-2">
@@ -100,8 +122,8 @@ const ProductLabelPrint = ({ product, settings, onClose }: { product: Product, s
                 </div>
                 
                 {/* Preview Wrapper */}
-                <div className="shadow-2xl print:shadow-none">
-                    <PrintableLabel product={product} settings={settings} mode={mode} />
+                <div className="shadow-2xl print:shadow-none bg-white p-1 rounded-sm">
+                    <PrintableLabel product={product} settings={settings} mode={mode} showInfo={showInfo} />
                 </div>
                 <p className="text-white/80 text-sm mt-6 print:hidden font-medium bg-black/20 px-4 py-1 rounded-full backdrop-blur-md">Preview (50mm x 30mm)</p>
             </div>
@@ -111,6 +133,7 @@ const ProductLabelPrint = ({ product, settings, onClose }: { product: Product, s
 
 const BulkLabelPrint = ({ products, settings, onClose }: { products: Product[], settings: StoreSettings, onClose: () => void }) => {
     const [mode, setMode] = useState<'barcode' | 'qrcode'>('barcode');
+    const [showInfo, setShowInfo] = useState(true);
 
     return (
         <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:bg-white print:block animate-fade-in">
@@ -136,6 +159,16 @@ const BulkLabelPrint = ({ products, settings, onClose }: { products: Product[], 
                                 <QrCode size={14} /> QR Code
                             </button>
                         </div>
+                        
+                        <div className="flex gap-1 p-1 bg-black/40 rounded-xl border border-white/10">
+                            <button onClick={() => setShowInfo(true)} className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all ${showInfo ? 'bg-white text-primary shadow-sm' : 'text-slate-400 hover:text-white'}`}>
+                                <Type size={14} /> Full
+                            </button>
+                            <button onClick={() => setShowInfo(false)} className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all ${!showInfo ? 'bg-white text-primary shadow-sm' : 'text-slate-400 hover:text-white'}`}>
+                                <Minimize size={14} /> Code
+                            </button>
+                        </div>
+
                         <div className="h-8 w-px bg-white/10"></div>
                         <button onClick={() => window.print()} className="bg-primary text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg hover:bg-blue-600 transition-colors text-sm">
                             <Printer size={16} /> Print All
@@ -151,7 +184,7 @@ const BulkLabelPrint = ({ products, settings, onClose }: { products: Product[], 
                     <div className="flex flex-wrap gap-1 justify-center print:justify-start print:gap-0 print:block">
                         {products.map(p => (
                             <div key={p.id} className="m-1 inline-block print:m-0 print:float-left print:mb-1 break-inside-avoid">
-                                <PrintableLabel product={p} settings={settings} mode={mode} />
+                                <PrintableLabel product={p} settings={settings} mode={mode} showInfo={showInfo} />
                             </div>
                         ))}
                     </div>
