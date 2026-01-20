@@ -1169,7 +1169,7 @@ export const App: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-slate-50 dark:bg-slate-900">
+      <div className="flex h-screen w-full items-center justify-center bg-transparent">
         <div className="flex flex-col items-center gap-4">
           <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
           <p className="text-slate-500 font-bold animate-pulse">Loading Store Data...</p>
@@ -1187,21 +1187,14 @@ export const App: React.FC = () => {
 
   if (currentView === 'LANDING_BUILDER' && settings) {
       return (
-          <div className={`min-h-screen bg-[#f8fafc] dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300`}>
+          <div className={`min-h-screen bg-transparent text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300`}>
               <LandingPageBuilderView settings={settings} onSave={handleUpdateSettings} onBack={() => setCurrentView('SETTINGS')} />
           </div>
       );
   }
 
   return (
-    <div className={`min-h-screen bg-[#f8fafc] dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300 ${settings?.theme === 'dark' ? 'dark' : ''}`}>
-      {/* Background Ambience - RGB Style */}
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-[10%] left-[-10%] w-[150%] h-[60%] bg-blue-500/10 rounded-[100%] blur-[130px] animate-blob mix-blend-screen"></div>
-          <div className="absolute top-[30%] right-[-20%] w-[120%] h-[50%] bg-red-500/10 rounded-[100%] blur-[120px] animate-blob mix-blend-screen" style={{ animationDelay: '3s' }}></div>
-          <div className="absolute bottom-[-10%] left-[20%] w-[140%] h-[50%] bg-green-500/10 rounded-[100%] blur-[110px] animate-blob mix-blend-screen" style={{ animationDelay: '6s' }}></div>
-      </div>
-
+    <div className={`min-h-screen bg-transparent text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300 ${settings?.theme === 'dark' ? 'dark' : ''}`}>
       <Layout 
         currentView={currentView} 
         onNavigate={setCurrentView} 

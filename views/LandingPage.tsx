@@ -746,7 +746,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onViewDe
   }
 
   return (
-    <div className="min-h-screen flex flex-col font-sans text-slate-900 dark:text-white">
+    <div className="h-screen w-full overflow-y-auto overflow-x-hidden flex flex-col font-sans text-slate-900 dark:text-white scroll-smooth relative">
       
       {/* Navbar (Fixed) */}
       <nav className="fixed w-full z-50 px-6 py-4 transition-all duration-300 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border-b border-white/20 dark:border-white/5">

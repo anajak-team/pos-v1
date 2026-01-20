@@ -47,8 +47,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin, onBack }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white/30 dark:bg-black/40 backdrop-blur-2xl rounded-[2rem] shadow-2xl border border-white/20 dark:border-white/10 relative flex flex-col overflow-hidden">
+    <div className="h-screen w-full overflow-y-auto flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-white/30 dark:bg-black/40 backdrop-blur-2xl rounded-[2rem] shadow-2xl border border-white/20 dark:border-white/10 relative flex flex-col overflow-hidden my-auto shrink-0">
         
         {/* Header */}
         <div className="p-8 text-center bg-gradient-to-br from-blue-600/80 to-indigo-700/80 text-white shrink-0 backdrop-blur-md relative">

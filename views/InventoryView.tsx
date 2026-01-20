@@ -1,9 +1,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Product, StoreSettings, User } from '../types';
-import { Plus, Trash2, RefreshCw, Search, AlertTriangle, Bell, Lock, Box, Edit, ScanBarcode, DollarSign, Download, Upload, FileSpreadsheet } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Search, AlertTriangle, Bell, Lock, Box, Edit, ScanBarcode, DollarSign, Download, Upload, Printer, X, QrCode } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { useAlert } from '../components/Alert';
+import QRCode from 'qrcode';
+import JsBarcode from 'jsbarcode';
 
 interface InventoryViewProps {
   products: Product[];
@@ -15,9 +17,155 @@ interface InventoryViewProps {
   onOpenProductModal: (product: Product | null) => void;
 }
 
+const PrintableLabel = ({ product, settings, mode }: { product: Product, settings: StoreSettings, mode: 'barcode' | 'qrcode' }) => {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    useEffect(() => {
+        if (!canvasRef.current) return;
+        // Clear canvas
+        const ctx = canvasRef.current.getContext('2d');
+        if (ctx) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+
+        if (mode === 'barcode') {
+            try {
+                const codeValue = product.barcode || product.id.substring(0, 12);
+                JsBarcode(canvasRef.current, codeValue, {
+                    format: "CODE128",
+                    lineColor: "#000",
+                    width: 1.5,
+                    height: 35,
+                    displayValue: true,
+                    fontSize: 9,
+                    margin: 0,
+                    textMargin: 0
+                });
+            } catch (e) {
+                console.error("Barcode generation failed", e);
+            }
+        } else {
+            const qrValue = product.barcode || product.id;
+            QRCode.toCanvas(canvasRef.current, qrValue, { 
+                width: 80,
+                margin: 0,
+                errorCorrectionLevel: 'M'
+            }, (error) => {
+                if (error) console.error("QR generation failed", error);
+            });
+        }
+    }, [mode, product]);
+
+    return (
+        <div className="bg-white text-black p-1 w-[50mm] h-[30mm] shadow-sm rounded-sm flex flex-col items-center justify-center text-center leading-tight overflow-hidden border border-gray-200 print:border-none print:shadow-none break-inside-avoid page-break-inside-avoid relative">
+            <p className="text-[8px] font-bold uppercase tracking-wider mb-0.5 w-full truncate px-1">{settings.storeName}</p>
+            <p className="font-bold text-[9px] line-clamp-2 leading-tight mb-0.5 px-1 w-full break-words">{product.name}</p>
+            <p className="font-extrabold text-xs leading-none my-0.5">{settings.currency}{product.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+            
+            <div className="mt-0.5 flex-1 flex items-center justify-center w-full overflow-hidden">
+                 <canvas ref={canvasRef} className="max-w-full max-h-full"></canvas>
+            </div>
+        </div>
+    );
+};
+
+const ProductLabelPrint = ({ product, settings, onClose }: { product: Product, settings: StoreSettings, onClose: () => void }) => {
+    const [mode, setMode] = useState<'barcode' | 'qrcode'>('barcode');
+
+    return (
+        <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:bg-white print:block animate-fade-in">
+            <div className="relative flex flex-col items-center w-full max-w-sm print:w-full print:block print:static">
+                <div className="flex flex-col items-center gap-4 mb-8 shrink-0 print:hidden">
+                    <div className="flex gap-2 p-1 bg-white/20 backdrop-blur-md rounded-xl border border-white/20">
+                        <button 
+                            onClick={() => setMode('barcode')}
+                            className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${mode === 'barcode' ? 'bg-white text-primary shadow-sm' : 'text-white hover:bg-white/10'}`}
+                        >
+                            <ScanBarcode size={16} /> Barcode
+                        </button>
+                        <button 
+                            onClick={() => setMode('qrcode')}
+                            className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${mode === 'qrcode' ? 'bg-white text-primary shadow-sm' : 'text-white hover:bg-white/10'}`}
+                        >
+                            <QrCode size={16} /> QR Code
+                        </button>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                        <button onClick={() => window.print()} className="bg-white text-black px-6 py-3 rounded-full font-bold flex items-center gap-2 shadow-xl hover:bg-gray-100 transition-colors transform hover:scale-105 active:scale-95">
+                            <Printer size={20} /> Print Label
+                        </button>
+                        <button onClick={onClose} className="bg-black/50 text-white p-3 rounded-full hover:bg-black/70 transition-colors backdrop-blur-md">
+                            <X size={20} />
+                        </button>
+                    </div>
+                </div>
+                
+                {/* Preview Wrapper */}
+                <div className="shadow-2xl print:shadow-none">
+                    <PrintableLabel product={product} settings={settings} mode={mode} />
+                </div>
+                <p className="text-white/80 text-sm mt-6 print:hidden font-medium bg-black/20 px-4 py-1 rounded-full backdrop-blur-md">Preview (50mm x 30mm)</p>
+            </div>
+        </div>
+    );
+};
+
+const BulkLabelPrint = ({ products, settings, onClose }: { products: Product[], settings: StoreSettings, onClose: () => void }) => {
+    const [mode, setMode] = useState<'barcode' | 'qrcode'>('barcode');
+
+    return (
+        <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:bg-white print:block animate-fade-in">
+            <div className="relative flex flex-col items-center w-full max-w-5xl h-[85vh] print:w-full print:max-w-full print:h-auto print:static">
+                {/* Controls - Hidden on Print */}
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 shrink-0 print:hidden w-full bg-slate-900/80 backdrop-blur-md p-4 rounded-2xl border border-white/10 shadow-xl">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white/10 rounded-lg">
+                            <Printer className="text-white" size={24} />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-white">Bulk Print Labels</h3>
+                            <p className="text-xs text-slate-400">{products.length} products selected</p>
+                        </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-4">
+                         <div className="flex gap-1 p-1 bg-black/40 rounded-xl border border-white/10">
+                            <button onClick={() => setMode('barcode')} className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all ${mode === 'barcode' ? 'bg-white text-primary shadow-sm' : 'text-slate-400 hover:text-white'}`}>
+                                <ScanBarcode size={14} /> Barcode
+                            </button>
+                            <button onClick={() => setMode('qrcode')} className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all ${mode === 'qrcode' ? 'bg-white text-primary shadow-sm' : 'text-slate-400 hover:text-white'}`}>
+                                <QrCode size={14} /> QR Code
+                            </button>
+                        </div>
+                        <div className="h-8 w-px bg-white/10"></div>
+                        <button onClick={() => window.print()} className="bg-primary text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg hover:bg-blue-600 transition-colors text-sm">
+                            <Printer size={16} /> Print All
+                        </button>
+                        <button onClick={onClose} className="bg-white/10 text-white p-2.5 rounded-xl hover:bg-white/20 transition-colors">
+                            <X size={18} />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Scrollable Preview Area */}
+                <div className="flex-1 w-full overflow-y-auto bg-slate-200/90 dark:bg-black/50 p-8 rounded-3xl print:p-0 print:bg-white print:overflow-visible no-scrollbar shadow-inner">
+                    <div className="flex flex-wrap gap-1 justify-center print:justify-start print:gap-0 print:block">
+                        {products.map(p => (
+                            <div key={p.id} className="m-1 inline-block print:m-0 print:float-left print:mb-1 break-inside-avoid">
+                                <PrintableLabel product={p} settings={settings} mode={mode} />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDeleteProduct, onUpdateProduct, onImportProducts, settings, currentUser, onOpenProductModal }) => {
   const [search, setSearch] = useState('');
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+  const [printingProduct, setPrintingProduct] = useState<Product | null>(null);
+  const [isBulkPrintOpen, setIsBulkPrintOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const lowStockThreshold = settings.lowStockThreshold;
@@ -43,7 +191,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
         try {
             new Notification('Low Stock Warning', {
                 body: `${lowStockItems.length} products are running low on inventory.`,
-                icon: '/vite.svg', // Assuming a default icon exists or browser default
+                icon: '/vite.svg',
             });
         } catch (e) {
             console.error("Notification failed", e);
@@ -119,12 +267,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
         for (let i = 1; i < lines.length; i++) {
           if (!lines[i].trim()) continue;
           
-          // Regex to split by comma ignoring commas inside quotes
           const row = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
           
-          if (row.length < 3) continue; // Basic validation
+          if (row.length < 3) continue;
 
-          const product: any = { id: `imp-${Date.now()}-${i}`, image: '' }; // Generate temp ID, image empty
+          const product: any = { id: `imp-${Date.now()}-${i}`, image: '' };
           
           headers.forEach((h, idx) => {
             const val = row[idx];
@@ -173,6 +320,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
           )}
           {!isStaff && (
             <>
+                {products.length > 0 && (
+                    <button onClick={() => setIsBulkPrintOpen(true)} className="px-3 py-2 bg-white/60 dark:bg-white/10 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-sm shadow-sm border border-white/20 hover:bg-white/80 dark:hover:bg-white/20 transition-colors flex items-center gap-2">
+                        <Printer size={16} /> <span className="hidden sm:inline">Print All</span>
+                    </button>
+                )}
                 <button onClick={handleExport} className="px-3 py-2 bg-white/60 dark:bg-white/10 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-sm shadow-sm border border-white/20 hover:bg-white/80 dark:hover:bg-white/20 transition-colors flex items-center gap-2">
                     <Download size={16} /> <span className="hidden sm:inline">Export</span>
                 </button>
@@ -236,7 +388,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
                     <td className="p-4 font-bold text-slate-800 dark:text-slate-200">{settings.currency}{product.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     {!isStaff && <td className="p-4 font-medium text-slate-500">{product.cost ? `${settings.currency}${product.cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}</td>}
                     <td className="p-4"><div className={`flex items-center gap-2 font-bold transition-all ${isLow ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>{product.stock} Units {isLow && <AlertTriangle size={16} className="text-red-500 animate-pulse" />}</div>{cases !== null && <div className="text-xs text-slate-400 mt-0.5 flex gap-1"><Box size={12}/>{cases} cases</div>}</td>
-                    <td className="p-4 text-right"><div className="flex items-center justify-end gap-2">{isStaff ? <span className="text-slate-300 p-2"><Lock size={16} /></span> : (<>{isLow && <button onClick={() => handleReorder(product)} className="p-2 bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 rounded-lg" title="Reorder"><RefreshCw size={16} /></button>}<button onClick={() => onOpenProductModal(product)} className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg" title="Edit"><Edit size={16} /></button><button onClick={() => handleDeleteClick(product.id)} className="p-2 text-red-400 hover:bg-red-500/10 hover:text-red-600 rounded-lg" title="Delete"><Trash2 size={16} /></button></>)}</div></td>
+                    <td className="p-4 text-right"><div className="flex items-center justify-end gap-2">{isStaff ? <span className="text-slate-300 p-2"><Lock size={16} /></span> : (<>{isLow && <button onClick={() => handleReorder(product)} className="p-2 bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 rounded-lg" title="Reorder"><RefreshCw size={16} /></button>}<button onClick={() => setPrintingProduct(product)} className="p-2 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg" title="Print Label"><Printer size={16} /></button><button onClick={() => onOpenProductModal(product)} className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg" title="Edit"><Edit size={16} /></button><button onClick={() => handleDeleteClick(product.id)} className="p-2 text-red-400 hover:bg-red-500/10 hover:text-red-600 rounded-lg" title="Delete"><Trash2 size={16} /></button></>)}</div></td>
                   </tr>
                 )})}
               </tbody>
@@ -259,7 +411,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
                       <div className="flex gap-2">
                         {!isStaff && product.cost && (<div className="flex items-center text-[10px] text-slate-400 bg-slate-100 dark:bg-white/5 px-2 rounded-lg mr-auto"><DollarSign size={10}/> Cost: {product.cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>)}
                         {!isStaff && isLow && (<button onClick={() => handleReorder(product)} className="p-1.5 bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 rounded-lg text-[10px] font-bold flex items-center gap-1"><RefreshCw size={12} /> Restock</button>)}
-                        {!isStaff && (<><button onClick={() => onOpenProductModal(product)} className="p-1.5 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 rounded-lg"><Edit size={14} /></button><button onClick={() => handleDeleteClick(product.id)} className="p-1.5 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg"><Trash2 size={14} /></button></>)}
+                        {!isStaff && (<><button onClick={() => setPrintingProduct(product)} className="p-1.5 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg"><Printer size={14}/></button><button onClick={() => onOpenProductModal(product)} className="p-1.5 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 rounded-lg"><Edit size={14} /></button><button onClick={() => handleDeleteClick(product.id)} className="p-1.5 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg"><Trash2 size={14} /></button></>)}
                       </div>
                    </div>
                 </div>
@@ -267,6 +419,14 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
             })}
          </div>
       </div>
+      
+      {printingProduct && (
+          <ProductLabelPrint product={printingProduct} settings={settings} onClose={() => setPrintingProduct(null)} />
+      )}
+
+      {isBulkPrintOpen && (
+          <BulkLabelPrint products={filtered} settings={settings} onClose={() => setIsBulkPrintOpen(false)} />
+      )}
     </div>
   );
 };
