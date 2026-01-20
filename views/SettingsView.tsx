@@ -5,6 +5,7 @@ import { Save, Store, Receipt, Database, Percent, Download, AlertTriangle, Volum
 import { useToast } from '../components/Toast';
 import { useAlert } from '../components/Alert';
 import { exportFullBackup, importBackup, clearAllData } from '../services/storageService';
+import { TRANSLATIONS } from '../translations';
 
 interface SettingsViewProps {
   settings: StoreSettings;
@@ -168,6 +169,13 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
   const { showConfirm } = useAlert();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Translation Helper
+  const t = (key: keyof typeof TRANSLATIONS.en) => {
+    const lang = settings?.language || 'en';
+    // @ts-ignore
+    return TRANSLATIONS[lang]?.[key] || TRANSLATIONS.en[key];
+  };
+
   const handleChange = (field: keyof StoreSettings, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -261,9 +269,9 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-12">
-      <div className="flex justify-between items-end"><h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 drop-shadow-sm">Settings</h2><button onClick={handleSave} className="bg-primary text-white px-6 py-3 rounded-2xl font-bold shadow-lg flex items-center gap-2"><Save size={20} /> <span className="hidden sm:inline">Save</span></button></div>
+      <div className="flex justify-between items-end"><h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 drop-shadow-sm">{t('SETTINGS')}</h2><button onClick={handleSave} className="bg-primary text-white px-6 py-3 rounded-2xl font-bold shadow-lg flex items-center gap-2"><Save size={20} /> <span className="hidden sm:inline">{t('SAVE')}</span></button></div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <SectionCard title="Store Profile" icon={Store} colorClass="bg-blue-500 text-blue-600 dark:text-blue-400">
+        <SectionCard title={t('STORE_PROFILE')} icon={Store} colorClass="bg-blue-500 text-blue-600 dark:text-blue-400">
             {!isStaff && (
               <>
                 <InputGroup label="Store Name" value={formData.storeName} onChange={(v: string) => handleChange('storeName', v)} />
@@ -283,7 +291,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                 </div>
               </>
             )}
-            <div className="space-y-1.5 pt-2"><label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">Appearance</label><div className="grid grid-cols-2 gap-3"><button onClick={() => handleChange('theme', 'light')} className={`flex items-center justify-center gap-2 p-3 rounded-2xl border ${formData.theme === 'light' ? 'bg-blue-500/20 text-blue-700' : 'bg-white/30 text-slate-500'}`}><Sun size={18}/> Light</button><button onClick={() => handleChange('theme', 'dark')} className={`flex items-center justify-center gap-2 p-3 rounded-2xl border ${formData.theme === 'dark' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-white/30 text-slate-500'}`}><Moon size={18}/> Dark</button></div></div>
+            <div className="space-y-1.5 pt-2"><label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">{t('APPEARANCE')}</label><div className="grid grid-cols-2 gap-3"><button onClick={() => handleChange('theme', 'light')} className={`flex items-center justify-center gap-2 p-3 rounded-2xl border ${formData.theme === 'light' ? 'bg-blue-500/20 text-blue-700' : 'bg-white/30 text-slate-500'}`}><Sun size={18}/> {t('THEME_LIGHT')}</button><button onClick={() => handleChange('theme', 'dark')} className={`flex items-center justify-center gap-2 p-3 rounded-2xl border ${formData.theme === 'dark' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-white/30 text-slate-500'}`}><Moon size={18}/> {t('THEME_DARK')}</button></div></div>
         </SectionCard>
         
         {isAdmin && (
@@ -302,7 +310,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
         
         {!isStaff && (
           <>
-            <SectionCard title="Receipt & Taxes" icon={Receipt} colorClass="bg-purple-500 text-purple-600 dark:text-purple-400">
+            <SectionCard title={t('RECEIPT_TAXES')} icon={Receipt} colorClass="bg-purple-500 text-purple-600 dark:text-purple-400">
               <div className="space-y-3">
                 <textarea value={formData.receiptHeader} onChange={e => handleChange('receiptHeader', e.target.value)} className={commonInputClass} rows={2} placeholder="Receipt Header" />
                 <textarea value={formData.receiptFooter} onChange={e => handleChange('receiptFooter', e.target.value)} className={commonInputClass} rows={2} placeholder="Receipt Footer" />
@@ -326,7 +334,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
           </>
         )}
 
-        {!isStaff && <SectionCard title="Hardware & Peripherals" icon={Printer} colorClass="bg-orange-500 text-orange-600 dark:text-orange-400">
+        {!isStaff && <SectionCard title={t('HARDWARE')} icon={Printer} colorClass="bg-orange-500 text-orange-600 dark:text-orange-400">
             <div className="space-y-4">
                 <div className="flex flex-col gap-3">
                     <div className="flex items-center justify-between p-3 bg-white/50 dark:bg-white/5 rounded-2xl border border-white/20"><div className="flex items-center gap-3"><div className={`p-2 rounded-xl ${formData.enableSound ? 'bg-blue-500/20 text-blue-600' : 'bg-slate-200 text-slate-500'}`}>{formData.enableSound ? <Volume2 size={20} /> : <VolumeX size={20} />}</div><span className="font-bold text-sm text-slate-700 dark:text-slate-200">Sound Effects</span></div><button onClick={() => handleChange('enableSound', !formData.enableSound)} className={`w-12 h-6 rounded-full transition-colors relative ${formData.enableSound ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-600'}`}><div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${formData.enableSound ? 'translate-x-6' : ''}`} /></button></div>
@@ -337,7 +345,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
         </SectionCard>}
         
         {isAdmin && (
-          <SectionCard title="Team Management" icon={Users} colorClass="bg-teal-500 text-teal-600 dark:text-teal-400">
+          <SectionCard title={t('TEAM')} icon={Users} colorClass="bg-teal-500 text-teal-600 dark:text-teal-400">
              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                {users.map(user => (
                   <div key={user.id} className="flex items-center justify-between p-3 bg-white/50 dark:bg-white/5 rounded-2xl border border-white/20">
@@ -354,7 +362,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
           </SectionCard>
         )}
         
-        {!isStaff && <SectionCard title="Product Categories" icon={Tag} colorClass="bg-cyan-500 text-cyan-600 dark:text-cyan-400">
+        {!isStaff && <SectionCard title={t('CATEGORY')} icon={Tag} colorClass="bg-cyan-500 text-cyan-600 dark:text-cyan-400">
             <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
                 {categories.map(cat => (
                     <div key={cat} className="flex items-center justify-between p-3 bg-white/50 dark:bg-white/5 rounded-2xl border border-white/20">
@@ -369,13 +377,13 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             <div className="pt-2 border-t border-white/10"><div className="flex gap-2"><input placeholder="New category name..." className={commonInputClass} value={newCategory} onChange={e => setNewCategory(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()} /><button onClick={handleAddCategory} className="p-3 bg-primary text-white rounded-2xl font-bold"><Plus size={20} /></button></div></div>
         </SectionCard>}
         
-        <SectionCard title="Customer Database" icon={Contact} colorClass="bg-pink-500 text-pink-600 dark:text-pink-400">
+        <SectionCard title={t('DATA_MANAGEMENT')} icon={Database} colorClass="bg-slate-500 text-slate-600 dark:text-slate-400">
             <div className="space-y-4">
                 <div className="flex gap-2">
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16}/>
                         <input 
-                            placeholder="Search customers..." 
+                            placeholder={t('SEARCH')} 
                             className={commonInputClass + " pl-10"} 
                             value={customerSearch} 
                             onChange={e => setCustomerSearch(e.target.value)} 
@@ -403,15 +411,15 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             </div>
         </SectionCard>
 
-        {isAdmin && <SectionCard title="Data Management" icon={Database} colorClass="bg-slate-500 text-slate-600 dark:text-slate-400">
+        {isAdmin && <SectionCard title={t('DATA_MANAGEMENT')} icon={Database} colorClass="bg-slate-500 text-slate-600 dark:text-slate-400">
             <div className="grid grid-cols-2 gap-3">
                 <button onClick={handleExportData} className="flex flex-col items-center justify-center p-4 bg-white/50 dark:bg-white/5 rounded-2xl border border-white/20 hover:bg-blue-500/10 hover:border-blue-500/30 transition-all gap-2 group">
                     <Download size={24} className="text-blue-500 group-hover:scale-110 transition-transform" />
-                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Backup Data</span>
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{t('EXPORT')}</span>
                 </button>
                 <button onClick={handleImportClick} className="flex flex-col items-center justify-center p-4 bg-white/50 dark:bg-white/5 rounded-2xl border border-white/20 hover:bg-emerald-500/10 hover:border-emerald-500/30 transition-all gap-2 group">
                     <Upload size={24} className="text-emerald-500 group-hover:scale-110 transition-transform" />
-                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Restore Data</span>
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{t('IMPORT')}</span>
                 </button>
                 <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleFileChange} />
             </div>

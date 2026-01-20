@@ -2,6 +2,7 @@
 import React, { useEffect } from 'react';
 import { Shift, StoreSettings } from '../types';
 import { Printer, X, LogOut } from 'lucide-react';
+import { TRANSLATIONS } from '../translations';
 
 interface ShiftReportProps {
   shift: Shift;
@@ -16,6 +17,13 @@ export const ShiftReport: React.FC<ShiftReportProps> = ({ shift, settings, onClo
     const difference = shift.difference !== undefined ? shift.difference : (actualCash - expectedCash);
     const endTime = shift.endTime ? new Date(shift.endTime) : new Date();
 
+    // Translation Helper
+    const t = (key: keyof typeof TRANSLATIONS.en) => {
+        const lang = settings?.language || 'en';
+        // @ts-ignore
+        return TRANSLATIONS[lang]?.[key] || TRANSLATIONS.en[key];
+    };
+
     const format = (val: number) => val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     useEffect(() => {
@@ -28,7 +36,7 @@ export const ShiftReport: React.FC<ShiftReportProps> = ({ shift, settings, onClo
             <div className="relative flex flex-col items-center w-full max-w-md max-h-full print:max-w-full print:max-h-full print:static">
                  <div className="flex gap-3 mb-6 shrink-0 print:hidden w-full max-w-[80mm] justify-between">
                     <button onClick={() => window.print()} className="flex-1 bg-white text-black px-4 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg hover:bg-gray-100 transition-colors">
-                        <Printer size={18} /> Print
+                        <Printer size={18} /> {t('PRINT')}
                     </button>
                     <button onClick={onClose} className="flex-1 bg-primary text-white px-4 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg hover:bg-blue-600 transition-colors">
                         <LogOut size={18} /> Finish
@@ -38,7 +46,7 @@ export const ShiftReport: React.FC<ShiftReportProps> = ({ shift, settings, onClo
                 <div className="bg-white w-[80mm] mx-auto shadow-2xl overflow-hidden rounded-sm print:shadow-none print:w-full font-mono text-black p-5 text-xs leading-tight">
                     <div className="text-center mb-4 pb-4 border-b-2 border-black border-dashed">
                         <h1 className="text-xl font-bold uppercase mb-1">{settings.storeName}</h1>
-                        <p className="text-[10px] uppercase tracking-widest mb-2">Shift Closure Report</p>
+                        <p className="text-[10px] uppercase tracking-widest mb-2">{t('CLOSE_SHIFT')} Report</p>
                         
                         <div className="text-left mt-3 space-y-1">
                             <p>Shift ID: <span className="float-right">#{shift.id.slice(-6)}</span></p>
@@ -49,22 +57,22 @@ export const ShiftReport: React.FC<ShiftReportProps> = ({ shift, settings, onClo
                     </div>
 
                     <div className="mb-4 pb-4 border-b-2 border-black border-dashed">
-                        <p className="font-bold mb-2 uppercase border-b border-black pb-1">Sales Summary</p>
-                        <div className="flex justify-between mb-1"><span>Cash Sales</span><span>{settings.currency}{format(shift.cashSales)}</span></div>
-                        <div className="flex justify-between mb-1"><span>Card Sales</span><span>{settings.currency}{format(shift.cardSales)}</span></div>
-                        <div className="flex justify-between mb-1"><span>Digital Sales</span><span>{settings.currency}{format(shift.digitalSales)}</span></div>
-                        <div className="flex justify-between font-bold mt-2 pt-1 border-t border-dotted border-gray-400 text-sm"><span>TOTAL SALES</span><span>{settings.currency}{format(totalSales)}</span></div>
+                        <p className="font-bold mb-2 uppercase border-b border-black pb-1">{t('SALES_SUMMARY')}</p>
+                        <div className="flex justify-between mb-1"><span>{t('CASH')}</span><span>{settings.currency}{format(shift.cashSales)}</span></div>
+                        <div className="flex justify-between mb-1"><span>{t('CARD')}</span><span>{settings.currency}{format(shift.cardSales)}</span></div>
+                        <div className="flex justify-between mb-1"><span>{t('DIGITAL')}</span><span>{settings.currency}{format(shift.digitalSales)}</span></div>
+                        <div className="flex justify-between font-bold mt-2 pt-1 border-t border-dotted border-gray-400 text-sm"><span>{t('TOTAL')}</span><span>{settings.currency}{format(totalSales)}</span></div>
                     </div>
 
                     <div className="mb-6 pb-4 border-b-2 border-black border-dashed">
-                        <p className="font-bold mb-2 uppercase border-b border-black pb-1">Cash Reconciliation</p>
-                        <div className="flex justify-between mb-1"><span>Opening Float</span><span>{settings.currency}{format(shift.startingCash)}</span></div>
-                        <div className="flex justify-between mb-1"><span>(+) Cash Sales</span><span>{settings.currency}{format(shift.cashSales)}</span></div>
-                        <div className="flex justify-between font-bold mt-1 bg-gray-100 p-1"><span>Expected Cash</span><span>{settings.currency}{format(expectedCash)}</span></div>
-                        <div className="flex justify-between font-bold mt-1 p-1"><span>Actual Count</span><span>{settings.currency}{format(actualCash)}</span></div>
+                        <p className="font-bold mb-2 uppercase border-b border-black pb-1">{t('CASH_RECONCILIATION')}</p>
+                        <div className="flex justify-between mb-1"><span>{t('OPENING_FLOAT')}</span><span>{settings.currency}{format(shift.startingCash)}</span></div>
+                        <div className="flex justify-between mb-1"><span>(+) {t('CASH')}</span><span>{settings.currency}{format(shift.cashSales)}</span></div>
+                        <div className="flex justify-between font-bold mt-1 bg-gray-100 p-1"><span>{t('EXPECTED_DRAWER')}</span><span>{settings.currency}{format(expectedCash)}</span></div>
+                        <div className="flex justify-between font-bold mt-1 p-1"><span>{t('COUNTED_CASH')}</span><span>{settings.currency}{format(actualCash)}</span></div>
                         
                         <div className="flex justify-between font-bold mt-2 pt-1 border-t border-dotted border-gray-400">
-                            <span>Difference</span>
+                            <span>{t('DIFFERENCE')}</span>
                             <span className={`${difference < 0 ? 'text-black font-black' : ''}`}>
                                 {difference > 0 ? '+' : ''}{settings.currency}{format(difference)}
                             </span>

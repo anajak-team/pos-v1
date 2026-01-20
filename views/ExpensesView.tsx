@@ -1,8 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Expense, User, StoreSettings } from '../types';
 import { Receipt, Plus, Trash2, Tag, X, DollarSign } from 'lucide-react';
 import { useToast } from '../components/Toast';
+import { TRANSLATIONS } from '../translations';
 
 interface ExpensesViewProps {
   expenses: Expense[];
@@ -25,6 +27,13 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({ expenses, categories
   const [newCategory, setNewCategory] = useState('');
   const isStaff = currentUser.role === 'Staff';
   const { showToast } = useToast();
+
+  // Translation Helper
+  const t = (key: keyof typeof TRANSLATIONS.en) => {
+    const lang = settings?.language || 'en';
+    // @ts-ignore
+    return TRANSLATIONS[lang]?.[key] || TRANSLATIONS.en[key];
+  };
 
   const handleAddExpense = (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,18 +73,18 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({ expenses, categories
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 drop-shadow-sm">Expenses</h2>
-          <p className="text-slate-600 dark:text-slate-400 text-sm font-medium">Track your business operational costs</p>
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 drop-shadow-sm">{t('EXPENSES')}</h2>
+          <p className="text-slate-600 dark:text-slate-400 text-sm font-medium">{t('EXPENSES_DESC')}</p>
         </div>
         <button onClick={() => setIsModalOpen(true)} className="bg-primary text-white px-5 py-3 rounded-2xl flex items-center gap-2 hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/30 font-bold">
-          <Plus size={20} /> <span className="hidden sm:inline">Add Expense</span>
+          <Plus size={20} /> <span className="hidden sm:inline">{t('ADD_EXPENSE')}</span>
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Expense List */}
         <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl rounded-3xl shadow-xl border border-white/30 dark:border-white/10 overflow-hidden">
-          <div className="p-5 border-b border-white/20 bg-white/20 dark:bg-white/5"><h3 className="font-bold text-slate-800 dark:text-slate-100">Recent Expenses</h3></div>
+          <div className="p-5 border-b border-white/20 bg-white/20 dark:bg-white/5"><h3 className="font-bold text-slate-800 dark:text-slate-100">{t('RECENT_EXPENSES')}</h3></div>
           <div className="max-h-96 overflow-y-auto divide-y divide-white/20 dark:divide-white/5">
             {sortedExpenses.length === 0 ? (
               <div className="p-10 text-center text-slate-400">No expenses recorded yet.</div>
@@ -100,7 +109,7 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({ expenses, categories
 
         {/* Category Management */}
         <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl rounded-3xl shadow-xl border border-white/30 dark:border-white/10 overflow-hidden">
-          <div className="p-5 border-b border-white/20 bg-white/20 dark:bg-white/5"><h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2"><Tag size={18}/> Expense Categories</h3></div>
+          <div className="p-5 border-b border-white/20 bg-white/20 dark:bg-white/5"><h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2"><Tag size={18}/> {t('EXPENSE_CATEGORIES')}</h3></div>
           <div className="p-4 space-y-3">
             <div className="max-h-60 overflow-y-auto space-y-2 pr-2">
               {categories.map(cat => (
@@ -119,7 +128,7 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({ expenses, categories
                   value={newCategory}
                   onChange={(e) => setNewCategory(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
-                  className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30 outline-none text-sm"
+                  className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 outline-none text-sm text-slate-800 dark:text-white"
                 />
                 <button onClick={handleAddCategory} className="p-3 bg-primary text-white rounded-xl font-bold hover:bg-blue-600">
                   <Plus size={20} />
@@ -131,44 +140,45 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({ expenses, categories
       </div>
 
       {/* Add Expense Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-lg flex items-center justify-center p-4">
-          <div className="bg-white/80 dark:bg-slate-900/90 backdrop-blur-2xl rounded-3xl shadow-2xl w-full max-w-lg border border-white/20">
+      {isModalOpen && createPortal(
+        <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-lg flex items-center justify-center p-4">
+          <div className="bg-white/80 dark:bg-slate-900/90 backdrop-blur-2xl rounded-3xl shadow-2xl w-full max-w-lg border border-white/20 animate-fade-in">
             <div className="p-6 border-b border-white/10 flex justify-between items-center">
-              <h3 className="text-xl font-bold">Add New Expense</h3>
-              <button onClick={() => setIsModalOpen(false)}><X size={22} /></button>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">{t('ADD_EXPENSE')}</h3>
+              <button onClick={() => setIsModalOpen(false)}><X size={22} className="text-slate-600 dark:text-slate-300" /></button>
             </div>
             <form onSubmit={handleAddExpense} className="p-6 space-y-4">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Description</label>
-                <input required value={newExpense.description} onChange={e => setNewExpense({...newExpense, description: e.target.value})} className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30" />
+                <label className="text-xs font-bold text-slate-500 uppercase ml-1">{t('DESCRIPTION')}</label>
+                <input required value={newExpense.description} onChange={e => setNewExpense({...newExpense, description: e.target.value})} className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 outline-none focus:border-primary transition-all text-slate-800 dark:text-white" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase ml-1">Amount</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase ml-1">{t('AMOUNT')}</label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">{settings.currency}</span>
-                    <input required type="number" step="0.01" value={newExpense.amount || ''} onChange={e => setNewExpense({...newExpense, amount: parseFloat(e.target.value)})} className="w-full pl-8 p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30" />
+                    <input required type="number" step="0.01" value={newExpense.amount || ''} onChange={e => setNewExpense({...newExpense, amount: parseFloat(e.target.value)})} className="w-full pl-8 p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 outline-none focus:border-primary transition-all text-slate-800 dark:text-white" />
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase ml-1">Date</label>
-                  <input required type="date" value={newExpense.date} onChange={e => setNewExpense({...newExpense, date: e.target.value})} className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30" />
+                  <label className="text-xs font-bold text-slate-500 uppercase ml-1">{t('DATE')}</label>
+                  <input required type="date" value={newExpense.date} onChange={e => setNewExpense({...newExpense, date: e.target.value})} className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 outline-none focus:border-primary transition-all text-slate-800 dark:text-white" />
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Category</label>
-                <select value={newExpense.category} onChange={e => setNewExpense({...newExpense, category: e.target.value})} className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30">
+                <label className="text-xs font-bold text-slate-500 uppercase ml-1">{t('CATEGORY')}</label>
+                <select value={newExpense.category} onChange={e => setNewExpense({...newExpense, category: e.target.value})} className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 outline-none focus:border-primary transition-all text-slate-800 dark:text-white">
                   {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
               </div>
               <div className="flex gap-4 pt-4">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 rounded-xl font-bold text-slate-600 hover:bg-white/30">Cancel</button>
-                <button type="submit" className="flex-1 py-3 bg-primary text-white rounded-xl font-bold shadow-lg">Save Expense</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 rounded-xl font-bold text-slate-600 hover:bg-white/30">{t('CANCEL')}</button>
+                <button type="submit" className="flex-1 py-3 bg-primary text-white rounded-xl font-bold shadow-lg">{t('SAVE')}</button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

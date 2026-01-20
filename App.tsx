@@ -22,6 +22,7 @@ import * as api from './services/storageService';
 import { FileText, Printer, Wand2, ScanBarcode, Box, Image as ImageIcon, Upload, X, Check, ZoomIn, ZoomOut, Move, Save, Loader2, Minus, Plus, Undo2, Eye, Camera, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useToast } from './components/Toast';
 import { generateProductDescription } from './services/geminiService';
+import { TRANSLATIONS } from './translations';
 
 const ImageCropper = ({ imageSrc, onCrop, onCancel }: { imageSrc: string, onCrop: (croppedImage: string) => void, onCancel: () => void }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -473,9 +474,16 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories }: { 
   )
 };
 
-const TransactionsHistory = ({ transactions, currency, onPrint, onReturn, onView }: { transactions: Transaction[], currency: string, onPrint: (t: Transaction) => void, onReturn: (t: Transaction) => void, onView: (t: Transaction) => void }) => {
+const TransactionsHistory = ({ transactions, currency, onPrint, onReturn, onView, settings }: { transactions: Transaction[], currency: string, onPrint: (t: Transaction) => void, onReturn: (t: Transaction) => void, onView: (t: Transaction) => void, settings: StoreSettings }) => {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
+
+  // Translation Helper
+  const t = (key: keyof typeof TRANSLATIONS.en) => {
+    const lang = settings?.language || 'en';
+    // @ts-ignore
+    return TRANSLATIONS[lang]?.[key] || TRANSLATIONS.en[key];
+  };
 
   const filtered = transactions.filter(t => {
     const matchesSearch = (t.customerName || '').toLowerCase().includes(search.toLowerCase()) || t.id.includes(search);
@@ -487,24 +495,24 @@ const TransactionsHistory = ({ transactions, currency, onPrint, onReturn, onView
     <div className="max-w-6xl mx-auto space-y-6 pb-20">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <div>
-                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Transaction History</h2>
-                <p className="text-slate-600 dark:text-slate-400 text-sm">View and manage past sales</p>
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{t('TRANSACTION_HISTORY')}</h2>
+                <p className="text-slate-600 dark:text-slate-400 text-sm">{t('MANAGE_SALES_HISTORY')}</p>
             </div>
             <div className="flex gap-2 w-full sm:w-auto">
                 <input 
-                    placeholder="Search by ID or Customer..." 
-                    className="flex-1 sm:w-64 p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 outline-none text-sm"
+                    placeholder={t('SEARCH_TRANSACTIONS')} 
+                    className="flex-1 sm:w-64 p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 outline-none text-sm text-slate-800 dark:text-slate-200"
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                 />
                 <select 
-                    className="p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 outline-none text-sm font-bold"
+                    className="p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 outline-none text-sm font-bold text-slate-800 dark:text-slate-200"
                     value={filter}
                     onChange={e => setFilter(e.target.value)}
                 >
-                    <option value="all">All</option>
-                    <option value="sale">Sales</option>
-                    <option value="return">Returns</option>
+                    <option value="all">{t('FILTER_ALL')}</option>
+                    <option value="sale">{t('FILTER_SALES')}</option>
+                    <option value="return">{t('FILTER_RETURNS')}</option>
                 </select>
             </div>
         </div>
@@ -514,13 +522,13 @@ const TransactionsHistory = ({ transactions, currency, onPrint, onReturn, onView
                 <table className="w-full text-left text-sm">
                     <thead className="bg-white/20 dark:bg-white/5 border-b border-white/10 text-slate-500">
                         <tr>
-                            <th className="p-4">Date</th>
-                            <th className="p-4">Transaction ID</th>
-                            <th className="p-4">Customer</th>
-                            <th className="p-4">Items</th>
-                            <th className="p-4">Total</th>
-                            <th className="p-4">Method</th>
-                            <th className="p-4 text-right">Actions</th>
+                            <th className="p-4">{t('DATE')}</th>
+                            <th className="p-4">{t('TRANSACTION_ID')}</th>
+                            <th className="p-4">{t('CUSTOMER')}</th>
+                            <th className="p-4">{t('ITEMS')}</th>
+                            <th className="p-4">{t('TOTAL')}</th>
+                            <th className="p-4">{t('METHOD')}</th>
+                            <th className="p-4 text-right">{t('ACTIONS')}</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-white/10">
@@ -548,7 +556,7 @@ const TransactionsHistory = ({ transactions, currency, onPrint, onReturn, onView
                     </tbody>
                 </table>
                 {filtered.length === 0 && (
-                    <div className="p-8 text-center text-slate-400">No transactions found</div>
+                    <div className="p-8 text-center text-slate-400">{t('NO_TRANSACTIONS')}</div>
                 )}
             </div>
         </div>
@@ -1180,7 +1188,7 @@ export const App: React.FC = () => {
 
   if (!currentUser) {
     if (showLogin) {
-      return <LoginView onLogin={handleLogin} onBack={() => setShowLogin(false)} />;
+      return <LoginView onLogin={handleLogin} onBack={() => setShowLogin(false)} settings={settings} />;
     }
     return <LandingPage onGetStarted={() => setShowLogin(true)} onViewDemo={handleViewDemo} settings={settings} products={products} />;
   }
@@ -1207,7 +1215,7 @@ export const App: React.FC = () => {
         currentLanguage={settings?.language || 'en'}
         onToggleLanguage={handleToggleLanguage}
       >
-        {currentView === 'DASHBOARD' && <DashboardView transactions={transactions} isDarkMode={settings?.theme === 'dark'} currentUser={currentUser} expenses={expenses} products={products} />}
+        {currentView === 'DASHBOARD' && <DashboardView transactions={transactions} isDarkMode={settings?.theme === 'dark'} currentUser={currentUser} expenses={expenses} products={products} settings={settings} />}
         {currentView === 'POS' && <PosView 
             products={products} 
             onCompleteTransaction={handleTransaction} 
@@ -1236,6 +1244,7 @@ export const App: React.FC = () => {
             onPrint={setTransactionToPrint} 
             onReturn={setTransactionToReturn}
             onView={setTransactionToView}
+            settings={settings!}
         />}
         {currentView === 'PURCHASES' && <PurchaseView orders={purchases} products={products} settings={settings!} onCreateOrder={(order) => { setPurchases([order, ...purchases]); api.savePurchaseOrder(order); }} onReceiveOrder={(id) => { 
             const order = purchases.find(o => o.id === id);
@@ -1308,7 +1317,7 @@ export const App: React.FC = () => {
       <ReturnModal isOpen={!!transactionToReturn} onClose={() => setTransactionToReturn(null)} transaction={transactionToReturn} onProcessReturn={handleReturn} />
 
       {!currentShift && currentUser && !loading && (
-        <ShiftEntryModal currentUser={currentUser} onStartShift={handleStartShift} currency={settings?.currency || '$'} onLogout={handleLogout} />
+        <ShiftEntryModal currentUser={currentUser} onStartShift={handleStartShift} settings={settings!} onLogout={handleLogout} />
       )}
 
       {shiftReportData && (
@@ -1320,7 +1329,7 @@ export const App: React.FC = () => {
         onClose={() => setIsCloseShiftModalOpen(false)} 
         onConfirm={handleConfirmCloseShift}
         shift={currentShift || undefined}
-        currency={settings?.currency || '$'}
+        settings={settings!}
       />
 
       <WalletModal 
@@ -1329,7 +1338,7 @@ export const App: React.FC = () => {
         shift={currentShift!}
         onAddMovement={handleCashMovement}
         onCloseShift={() => setIsCloseShiftModalOpen(true)}
-        currency={settings?.currency || '$'}
+        settings={settings!}
       />
     </div>
   );

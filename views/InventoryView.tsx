@@ -6,6 +6,7 @@ import { useToast } from '../components/Toast';
 import { useAlert } from '../components/Alert';
 import QRCode from 'qrcode';
 import JsBarcode from 'jsbarcode';
+import { TRANSLATIONS } from '../translations';
 
 interface InventoryViewProps {
   products: Product[];
@@ -207,6 +208,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
   const { showToast } = useToast();
   const { showConfirm } = useAlert();
 
+  // Translation Helper
+  const t = (key: keyof typeof TRANSLATIONS.en) => {
+    const lang = settings?.language || 'en';
+    // @ts-ignore
+    return TRANSLATIONS[lang]?.[key] || TRANSLATIONS.en[key];
+  };
+
   useEffect(() => { if ('Notification' in window) setNotificationPermission(Notification.permission); }, []);
 
   const handleRequestPermission = async () => {
@@ -222,7 +230,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
   useEffect(() => {
     if (lowStockItems.length > 0 && notificationPermission === 'granted' && lowStockItems.length > prevLowStockCount.current) {
         try {
-            new Notification('Low Stock Warning', {
+            new Notification(t('LOW_STOCK_WARNING'), {
                 body: `${lowStockItems.length} products are running low on inventory.`,
                 icon: '/vite.svg',
             });
@@ -240,10 +248,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
 
   const handleDeleteClick = async (productId: string) => {
     const isConfirmed = await showConfirm({
-        title: 'Delete Product',
-        message: 'Are you sure you want to delete this product? This action cannot be undone and may affect transaction history.',
+        title: t('DELETE_PRODUCT_TITLE'),
+        message: t('DELETE_PRODUCT_MSG'),
         variant: 'danger',
-        confirmText: 'Delete',
+        confirmText: t('DELETE'),
+        cancelText: t('CANCEL')
     });
 
     if (isConfirmed) { 
@@ -342,31 +351,31 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
     <div className="max-w-6xl mx-auto space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-             <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 drop-shadow-sm">Inventory</h2>
-             <p className="text-slate-600 dark:text-slate-400 text-xs font-medium">Manage product catalog</p>
+             <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 drop-shadow-sm">{t('INVENTORY')}</h2>
+             <p className="text-slate-600 dark:text-slate-400 text-xs font-medium">{t('MANAGE_INVENTORY')}</p>
         </div>
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           {notificationPermission !== 'granted' && 'Notification' in window && (
             <button onClick={handleRequestPermission} className="hidden sm:flex items-center gap-2 px-4 py-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 rounded-xl hover:bg-indigo-500/20 transition-colors text-xs font-bold backdrop-blur-sm border border-indigo-500/20">
-              <Bell size={16} /> Alerts
+              <Bell size={16} /> {t('ALERTS')}
             </button>
           )}
           {!isStaff && (
             <>
                 {products.length > 0 && (
                     <button onClick={() => setIsBulkPrintOpen(true)} className="px-3 py-2 bg-white/60 dark:bg-white/10 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-sm shadow-sm border border-white/20 hover:bg-white/80 dark:hover:bg-white/20 transition-colors flex items-center gap-2">
-                        <Printer size={16} /> <span className="hidden sm:inline">Print All</span>
+                        <Printer size={16} /> <span className="hidden sm:inline">{t('PRINT_ALL')}</span>
                     </button>
                 )}
                 <button onClick={handleExport} className="px-3 py-2 bg-white/60 dark:bg-white/10 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-sm shadow-sm border border-white/20 hover:bg-white/80 dark:hover:bg-white/20 transition-colors flex items-center gap-2">
-                    <Download size={16} /> <span className="hidden sm:inline">Export</span>
+                    <Download size={16} /> <span className="hidden sm:inline">{t('EXPORT')}</span>
                 </button>
                 <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
                 <button onClick={handleImportClick} className="px-3 py-2 bg-white/60 dark:bg-white/10 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-sm shadow-sm border border-white/20 hover:bg-white/80 dark:hover:bg-white/20 transition-colors flex items-center gap-2">
-                    <Upload size={16} /> <span className="hidden sm:inline">Import</span>
+                    <Upload size={16} /> <span className="hidden sm:inline">{t('IMPORT')}</span>
                 </button>
                 <button onClick={() => onOpenProductModal(null)} className="flex-1 sm:flex-none justify-center bg-primary text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/30 font-bold text-sm">
-                    <Plus size={18} /> <span>Add Product</span>
+                    <Plus size={18} /> <span>{t('ADD_PRODUCT')}</span>
                 </button>
             </>
           )}
@@ -379,7 +388,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
             <AlertTriangle size={20} />
           </div>
           <div className="flex-1">
-            <h3 className="text-orange-900 dark:text-orange-200 font-bold text-sm">Low Stock Warning</h3>
+            <h3 className="text-orange-900 dark:text-orange-200 font-bold text-sm">{t('LOW_STOCK_WARNING')}</h3>
             <p className="text-orange-800 dark:text-orange-300 text-xs mt-0.5 font-medium">
               <span className="font-bold">{lowStockItems.length} products</span> are below the threshold of {settings.lowStockThreshold}.
             </p>
@@ -391,7 +400,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
          <div className="p-4 border-b border-white/20 dark:border-white/10 bg-white/20 dark:bg-white/5 flex flex-col sm:flex-row gap-3 justify-between items-center sticky top-0 z-10 backdrop-blur-md">
             <div className="relative w-full max-w-md">
                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-               <input type="text" placeholder="Search by name or barcode..." className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-white/30 dark:border-white/10 text-sm focus:bg-white/80 dark:focus:bg-slate-800/80 focus:border-primary/50 outline-none transition-all text-slate-800 dark:text-slate-200" value={search} onChange={(e) => setSearch(e.target.value)} />
+               <input type="text" placeholder={t('SEARCH_PLACEHOLDER')} className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-white/30 dark:border-white/10 text-sm focus:bg-white/80 dark:focus:bg-slate-800/80 focus:border-primary/50 outline-none transition-all text-slate-800 dark:text-slate-200" value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
          </div>
 
@@ -400,13 +409,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
             <table className="w-full text-left text-sm">
               <thead className="bg-white/30 dark:bg-white/5 text-slate-500 dark:text-slate-400 font-bold border-b border-white/20 dark:border-white/10">
                 <tr>
-                  <th className="p-4">Product</th>
-                  <th className="p-4">Barcode</th>
-                  <th className="p-4">Category</th>
-                  <th className="p-4">Price</th>
-                  {!isStaff && <th className="p-4">Cost</th>}
-                  <th className="p-4">Stock</th>
-                  <th className="p-4 text-right">Actions</th>
+                  <th className="p-4">{t('PRODUCT_NAME')}</th>
+                  <th className="p-4">{t('BARCODE')}</th>
+                  <th className="p-4">{t('CATEGORY')}</th>
+                  <th className="p-4">{t('PRICE')}</th>
+                  {!isStaff && <th className="p-4">{t('COST')}</th>}
+                  <th className="p-4">{t('STOCK')}</th>
+                  <th className="p-4 text-right">{t('ACTIONS')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/20 dark:divide-white/5">
@@ -421,7 +430,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
                     <td className="p-4 font-bold text-slate-800 dark:text-slate-200">{settings.currency}{product.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     {!isStaff && <td className="p-4 font-medium text-slate-500">{product.cost ? `${settings.currency}${product.cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}</td>}
                     <td className="p-4"><div className={`flex items-center gap-2 font-bold transition-all ${isLow ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>{product.stock} Units {isLow && <AlertTriangle size={16} className="text-red-500 animate-pulse" />}</div>{cases !== null && <div className="text-xs text-slate-400 mt-0.5 flex gap-1"><Box size={12}/>{cases} cases</div>}</td>
-                    <td className="p-4 text-right"><div className="flex items-center justify-end gap-2">{isStaff ? <span className="text-slate-300 p-2"><Lock size={16} /></span> : (<>{isLow && <button onClick={() => handleReorder(product)} className="p-2 bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 rounded-lg" title="Reorder"><RefreshCw size={16} /></button>}<button onClick={() => setPrintingProduct(product)} className="p-2 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg" title="Print Label"><Printer size={16} /></button><button onClick={() => onOpenProductModal(product)} className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg" title="Edit"><Edit size={16} /></button><button onClick={() => handleDeleteClick(product.id)} className="p-2 text-red-400 hover:bg-red-500/10 hover:text-red-600 rounded-lg" title="Delete"><Trash2 size={16} /></button></>)}</div></td>
+                    <td className="p-4 text-right"><div className="flex items-center justify-end gap-2">{isStaff ? <span className="text-slate-300 p-2"><Lock size={16} /></span> : (<>{isLow && <button onClick={() => handleReorder(product)} className="p-2 bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 rounded-lg" title={t('RESTOCK')}><RefreshCw size={16} /></button>}<button onClick={() => setPrintingProduct(product)} className="p-2 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg" title={t('PRINT')}><Printer size={16} /></button><button onClick={() => onOpenProductModal(product)} className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg" title={t('EDIT')}><Edit size={16} /></button><button onClick={() => handleDeleteClick(product.id)} className="p-2 text-red-400 hover:bg-red-500/10 hover:text-red-600 rounded-lg" title={t('DELETE')}><Trash2 size={16} /></button></>)}</div></td>
                   </tr>
                 )})}
               </tbody>
@@ -442,14 +451,15 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
                          {cases !== null && <span className="text-[9px] text-slate-400 flex items-center gap-1"><Box size={10}/> {cases} cases</span>}
                       </div>
                       <div className="flex gap-2">
-                        {!isStaff && product.cost && (<div className="flex items-center text-[10px] text-slate-400 bg-slate-100 dark:bg-white/5 px-2 rounded-lg mr-auto"><DollarSign size={10}/> Cost: {product.cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>)}
-                        {!isStaff && isLow && (<button onClick={() => handleReorder(product)} className="p-1.5 bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 rounded-lg text-[10px] font-bold flex items-center gap-1"><RefreshCw size={12} /> Restock</button>)}
+                        {!isStaff && product.cost && (<div className="flex items-center text-[10px] text-slate-400 bg-slate-100 dark:bg-white/5 px-2 rounded-lg mr-auto"><DollarSign size={10}/> {t('COST')}: {product.cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>)}
+                        {!isStaff && isLow && (<button onClick={() => handleReorder(product)} className="p-1.5 bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 rounded-lg text-[10px] font-bold flex items-center gap-1"><RefreshCw size={12} /> {t('RESTOCK')}</button>)}
                         {!isStaff && (<><button onClick={() => setPrintingProduct(product)} className="p-1.5 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg"><Printer size={14}/></button><button onClick={() => onOpenProductModal(product)} className="p-1.5 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 rounded-lg"><Edit size={14} /></button><button onClick={() => handleDeleteClick(product.id)} className="p-1.5 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg"><Trash2 size={14} /></button></>)}
                       </div>
                    </div>
                 </div>
               );
             })}
+            {filtered.length === 0 && <div className="text-center text-slate-400 text-sm py-8">{t('NO_PRODUCTS')}</div>}
          </div>
       </div>
       

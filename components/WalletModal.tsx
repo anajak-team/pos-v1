@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
-import { Shift, CashMovement } from '../types';
+import { Shift, CashMovement, StoreSettings } from '../types';
 import { X, ArrowDownLeft, ArrowUpRight, Wallet, History, LogOut } from 'lucide-react';
+import { TRANSLATIONS } from '../translations';
 
 interface WalletModalProps {
   isOpen: boolean;
@@ -9,14 +10,21 @@ interface WalletModalProps {
   shift: Shift;
   onAddMovement: (type: 'in' | 'out', amount: number, reason: string) => void;
   onCloseShift: () => void;
-  currency: string;
+  settings: StoreSettings;
 }
 
-export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, shift, onAddMovement, onCloseShift, currency }) => {
+export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, shift, onAddMovement, onCloseShift, settings }) => {
   const [activeTab, setActiveTab] = useState<'action' | 'history'>('action');
   const [movementType, setMovementType] = useState<'in' | 'out'>('in');
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
+
+  // Translation Helper
+  const t = (key: keyof typeof TRANSLATIONS.en) => {
+    const lang = settings?.language || 'en';
+    // @ts-ignore
+    return TRANSLATIONS[lang]?.[key] || TRANSLATIONS.en[key];
+  };
 
   if (!isOpen) return null;
 
@@ -41,7 +49,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, shift
       <div className="w-full max-w-md bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl rounded-3xl shadow-2xl overflow-hidden border border-white/20 dark:border-white/10 relative flex flex-col max-h-[85vh]">
         <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/30 dark:bg-white/5">
           <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-            <Wallet size={20} className="text-primary"/> Shift Wallet
+            <Wallet size={20} className="text-primary"/> {t('SHIFT_WALLET')}
           </h2>
           <button onClick={onClose} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-slate-500">
             <X size={20} />
@@ -52,16 +60,16 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, shift
             {/* Summary Card */}
             <div className="bg-gradient-to-br from-slate-800 to-slate-900 text-white p-5 rounded-2xl shadow-lg mb-6 relative overflow-hidden">
                 <div className="relative z-10">
-                    <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Expected In Drawer</p>
-                    <div className="text-4xl font-bold mb-4">{currency}{format(currentDrawerCash)}</div>
+                    <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">{t('EXPECTED_DRAWER')}</p>
+                    <div className="text-4xl font-bold mb-4">{settings.currency}{format(currentDrawerCash)}</div>
                     <div className="grid grid-cols-2 gap-4 text-sm border-t border-white/10 pt-3">
                         <div>
-                            <span className="text-slate-400 block text-xs">Opening Float</span>
-                            <span className="font-mono">{currency}{format(shift.startingCash)}</span>
+                            <span className="text-slate-400 block text-xs">{t('OPENING_FLOAT')}</span>
+                            <span className="font-mono">{settings.currency}{format(shift.startingCash)}</span>
                         </div>
                         <div>
-                            <span className="text-slate-400 block text-xs">Cash Sales</span>
-                            <span className="font-mono text-emerald-400">+{currency}{format(shift.cashSales)}</span>
+                            <span className="text-slate-400 block text-xs">{t('CASH')}</span>
+                            <span className="font-mono text-emerald-400">+{settings.currency}{format(shift.cashSales)}</span>
                         </div>
                     </div>
                 </div>
@@ -74,13 +82,13 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, shift
                     onClick={() => setActiveTab('action')}
                     className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'action' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-800 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
                 >
-                    Manage Cash
+                    {t('MANAGE_CASH')}
                 </button>
                 <button 
                     onClick={() => setActiveTab('history')}
                     className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'history' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-800 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
                 >
-                    Movement History
+                    {t('MOVEMENT_HISTORY')}
                 </button>
             </div>
 
@@ -93,7 +101,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, shift
                             className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${movementType === 'in' ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'border-transparent bg-slate-100 dark:bg-slate-800 text-slate-500'}`}
                         >
                             <ArrowDownLeft size={24} />
-                            <span className="font-bold text-sm">Pay In</span>
+                            <span className="font-bold text-sm">{t('PAY_IN')}</span>
                         </button>
                         <button 
                             type="button"
@@ -101,15 +109,15 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, shift
                             className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${movementType === 'out' ? 'border-red-500 bg-red-500/10 text-red-600 dark:text-red-400' : 'border-transparent bg-slate-100 dark:bg-slate-800 text-slate-500'}`}
                         >
                             <ArrowUpRight size={24} />
-                            <span className="font-bold text-sm">Pay Out</span>
+                            <span className="font-bold text-sm">{t('PAY_OUT')}</span>
                         </button>
                     </div>
 
                     <div className="space-y-3">
                         <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Amount</label>
+                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">{t('AMOUNT')}</label>
                             <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">{currency}</span>
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">{settings.currency}</span>
                                 <input 
                                     type="number" 
                                     step="0.01" 
@@ -122,7 +130,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, shift
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Reason</label>
+                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">{t('REASON')}</label>
                             <input 
                                 type="text" 
                                 required
@@ -133,7 +141,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, shift
                             />
                         </div>
                         <button type="submit" className={`w-full py-3.5 rounded-xl font-bold text-white shadow-lg transition-all active:scale-95 mt-2 ${movementType === 'in' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-red-500 hover:bg-red-600'}`}>
-                            Confirm {movementType === 'in' ? 'Add Cash' : 'Remove Cash'}
+                            {t('CONFIRM')}
                         </button>
                     </div>
                 </form>
@@ -152,7 +160,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, shift
                                     <div className="text-xs text-slate-500 dark:text-slate-400">{new Date(m.timestamp).toLocaleTimeString()} • {m.userName}</div>
                                 </div>
                                 <div className={`font-bold ${m.type === 'in' ? 'text-emerald-500' : 'text-red-500'}`}>
-                                    {m.type === 'in' ? '+' : '-'}{currency}{format(m.amount)}
+                                    {m.type === 'in' ? '+' : '-'}{settings.currency}{format(m.amount)}
                                 </div>
                             </div>
                         ))
@@ -166,7 +174,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, shift
                 onClick={() => { onClose(); onCloseShift(); }} 
                 className="w-full py-3 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
             >
-                <LogOut size={18} /> Close Shift
+                <LogOut size={18} /> {t('CLOSE_SHIFT')}
             </button>
         </div>
       </div>

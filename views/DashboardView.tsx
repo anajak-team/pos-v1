@@ -2,9 +2,9 @@
 import React, { useEffect, useState } from 'react';
 import { Transaction, User, Expense, StoreSettings, Product } from '../types';
 import { generateSalesInsight, generateProfitForecast } from '../services/geminiService';
-import { getSettings } from '../services/storageService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Sparkles, TrendingUp, DollarSign, ShoppingBag, ShieldAlert, PieChart as PieChartIcon, ArrowDownRight, ArrowUpRight, Wand2, Loader2, Package } from 'lucide-react';
+import { TRANSLATIONS } from '../translations';
 
 interface DashboardProps {
   transactions: Transaction[];
@@ -12,20 +12,23 @@ interface DashboardProps {
   currentUser: User;
   expenses: Expense[];
   products: Product[];
+  settings: StoreSettings | null;
 }
 
-export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMode, currentUser, expenses, products }) => {
+export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMode, currentUser, expenses, products, settings }) => {
   const [insight, setInsight] = useState<string>("");
   const [loadingInsight, setLoadingInsight] = useState(false);
-  const [settings, setSettings] = useState<StoreSettings | null>(null);
   
   // Forecast State
   const [profitForecast, setProfitForecast] = useState<string | null>(null);
   const [isForecasting, setIsForecasting] = useState(false);
 
-  useEffect(() => {
-    getSettings().then(setSettings);
-  }, []);
+  // Helper for translations
+  const t = (key: keyof typeof TRANSLATIONS.en) => {
+    const lang = settings?.language || 'en';
+    // @ts-ignore
+    return TRANSLATIONS[lang]?.[key] || TRANSLATIONS.en[key];
+  };
 
   // Separate sales and returns
   const sales = transactions.filter(t => t.type === 'sale');
@@ -141,8 +144,8 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMo
       <div className="max-w-4xl mx-auto space-y-6">
          <div className="flex justify-between items-end">
           <div>
-              <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 drop-shadow-sm">Welcome, {currentUser.name}</h2>
-              <p className="text-slate-600 dark:text-slate-400 text-sm font-medium">Here is your daily summary</p>
+              <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 drop-shadow-sm">{t('WELCOME')}, {currentUser.name}</h2>
+              <p className="text-slate-600 dark:text-slate-400 text-sm font-medium">{t('DAILY_SUMMARY')}</p>
           </div>
         </div>
 
@@ -171,7 +174,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMo
     <div className="space-y-6 max-w-7xl mx-auto pb-10">
       <div className="flex justify-between items-end">
         <div>
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 drop-shadow-sm">Dashboard</h2>
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 drop-shadow-sm">{t('DASHBOARD')}</h2>
             <p className="text-slate-600 dark:text-slate-400 text-sm font-medium">Financial overview & analytics</p>
         </div>
       </div>
@@ -206,7 +209,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMo
                     <DollarSign size={24} />
                 </div>
                 <div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide">Net Revenue</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide">{t('NET_REVENUE')}</p>
                     <div className="text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">{renderDualCurrency(netRevenue)}</div>
                 </div>
             </div>
@@ -218,7 +221,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMo
                     <ShoppingBag size={24} />
                 </div>
                 <div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide">Sales</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide">{t('SALES_COUNT')}</p>
                     <h4 className="text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">{totalOrders}</h4>
                 </div>
             </div>
@@ -230,7 +233,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMo
                     <TrendingUp size={24} />
                 </div>
                 <div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide">Avg. Order</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide">{t('AVG_ORDER')}</p>
                     <div className="text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">{renderDualCurrency(avgOrderValue)}</div>
                 </div>
             </div>
@@ -254,7 +257,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMo
          <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Gross Profit */}
             <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-3xl border border-white/30 dark:border-white/10 shadow-lg flex flex-col justify-between">
-               <p className="text-sm text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wide">Gross Profit</p>
+               <p className="text-sm text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wide">{t('GROSS_PROFIT')}</p>
                <div>
                   <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{renderDualCurrency(grossProfit)}</div>
                   <p className="text-xs text-slate-400 mt-1">Net Rev - Net COGS</p>
@@ -263,7 +266,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMo
             
             {/* Total Expenses */}
             <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-3xl border border-white/30 dark:border-white/10 shadow-lg flex flex-col justify-between">
-               <p className="text-sm text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wide">Total Expenses</p>
+               <p className="text-sm text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wide">{t('TOTAL_EXPENSES')}</p>
                <div>
                   <div className="text-2xl font-bold text-red-500 dark:text-red-400">{renderDualCurrency(totalExpenses)}</div>
                   <p className="text-xs text-slate-400 mt-1">Operational costs</p>
@@ -282,7 +285,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMo
                     {isForecasting ? <Loader2 className="animate-spin" size={16} /> : <Wand2 size={16} />}
                   </button>
                </div>
-               <p className="text-sm text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wide">Net Profit</p>
+               <p className="text-sm text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wide">{t('NET_PROFIT')}</p>
                <div>
                   <div className="flex items-center gap-2">
                      <div className={`text-3xl font-extrabold ${netProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
@@ -306,7 +309,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMo
          {/* Expense Chart */}
          <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-3xl border border-white/30 dark:border-white/10 shadow-lg flex flex-col">
             <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-2 flex items-center gap-2">
-               <PieChartIcon size={18} className="text-primary"/> Expense Breakdown
+               <PieChartIcon size={18} className="text-primary"/> {t('EXPENSE_BREAKDOWN')}
             </h3>
             <div className="flex-1 min-h-[200px]">
                {expenseChartData.length > 0 ? (
@@ -350,7 +353,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, isDarkMo
       <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-3xl border border-white/30 dark:border-white/10 shadow-lg h-96">
         <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-6 flex items-center gap-2">
            <TrendingUp size={20} className="text-primary"/>
-           Net Revenue (Last 7 Days)
+           {t('REVENUE_CHART')}
         </h3>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={chartData}>

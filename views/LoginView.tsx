@@ -1,21 +1,30 @@
 
 import React, { useState } from 'react';
 import { Store, Mail, Lock, ArrowRight, AlertCircle, Loader2, ShieldCheck, ChevronLeft, Check } from 'lucide-react';
-import { User } from '../types';
+import { User, StoreSettings } from '../types';
 import { getUsers } from '../services/storageService';
+import { TRANSLATIONS } from '../translations';
 
 interface LoginViewProps {
   onLogin: (user: User, rememberMe: boolean) => void;
   onBack?: () => void;
+  settings: StoreSettings | null;
 }
 
-export const LoginView: React.FC<LoginViewProps> = ({ onLogin, onBack }) => {
+export const LoginView: React.FC<LoginViewProps> = ({ onLogin, onBack, settings }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [checkingPermissions, setCheckingPermissions] = useState(false);
+
+  // Translation Helper
+  const t = (key: keyof typeof TRANSLATIONS.en) => {
+    const lang = settings?.language || 'en';
+    // @ts-ignore
+    return TRANSLATIONS[lang]?.[key] || TRANSLATIONS.en[key];
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,7 +51,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin, onBack }) => {
       onLogin(userProfile, rememberMe);
     } else {
       setLoading(false);
-      setError('Invalid email or password');
+      setError(t('INVALID_CREDENTIALS'));
     }
   };
 
@@ -64,20 +73,20 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin, onBack }) => {
           <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg border border-white/20">
             <Store size={32} className="text-white drop-shadow-md" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight drop-shadow-sm">ANAJAK POS</h1>
+          <h1 className="text-2xl font-bold tracking-tight drop-shadow-sm">{settings?.storeName || 'ANAJAK POS'}</h1>
           <p className="text-blue-100 text-sm mt-1 font-medium">Next Gen Store Management</p>
         </div>
 
         {/* Form Content */}
         <div className="p-8 flex-1">
           <div className="mb-6 text-center">
-            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Sign In</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-300">Access your dashboard</p>
+            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">{t('SIGN_IN')}</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-300">{t('ACCESS_DASHBOARD')}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-1.5">
-               <label className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase ml-2">Email Address</label>
+               <label className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase ml-2">{t('EMAIL_ADDRESS')}</label>
                <div className="relative group">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 transition-colors group-focus-within:text-primary" size={20} />
                   <input 
@@ -93,7 +102,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin, onBack }) => {
             </div>
 
             <div className="space-y-1.5">
-               <label className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase ml-2">Password</label>
+               <label className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase ml-2">{t('PASSWORD')}</label>
                <div className="relative group">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 transition-colors group-focus-within:text-primary" size={20} />
                   <input 
@@ -121,7 +130,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin, onBack }) => {
                     <Check size={14} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={3} />
                 </div>
                 <label htmlFor="rememberMe" className="text-sm font-medium text-slate-600 dark:text-slate-300 cursor-pointer select-none">
-                    Remember me
+                    {t('REMEMBER_ME')}
                 </label>
             </div>
 
@@ -140,16 +149,16 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin, onBack }) => {
               {checkingPermissions ? (
                 <>
                   <ShieldCheck size={20} className="animate-pulse" />
-                  <span>Verifying...</span>
+                  <span>{t('VERIFYING')}</span>
                 </>
               ) : loading ? (
                 <>
                   <Loader2 size={20} className="animate-spin" />
-                  <span>Authenticating...</span>
+                  <span>{t('AUTHENTICATING')}</span>
                 </>
               ) : (
                 <>
-                  <span>Sign In</span>
+                  <span>{t('SIGN_IN')}</span>
                   <ArrowRight size={20} />
                 </>
               )}

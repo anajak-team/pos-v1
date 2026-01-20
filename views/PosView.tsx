@@ -8,6 +8,7 @@ import { useToast } from '../components/Toast';
 import { useAlert } from '../components/Alert';
 import { suggestUpsell } from '../services/geminiService';
 import { getCart, saveCart } from '../services/storageService';
+import { TRANSLATIONS } from '../translations';
 
 interface CartItemRowProps {
   item: CartItem;
@@ -112,6 +113,12 @@ interface CartPanelProps {
 const CartPanel: React.FC<CartPanelProps> = (props) => {
   const { cart, settings, subtotal, discountAmount, tax, total, change, changeSecondary, clearCart, setShowCheckout, selectedCustomer, setSelectedCustomer, setIsCustomerModalOpen, currentUser, updateQuantity, removeFromCart, exitingItems, upsell, completed, discount, setDiscount, discountType, setDiscountType, showDiscountInput, setShowDiscountInput, paymentMethod, setPaymentMethod, cashReceived, setCashReceived, cashReceivedSecondary, setCashReceivedSecondary, processing, handleCheckout, lastTransaction, onPrint, isMobile, cartEndRef, totalPaid } = props;
 
+  const t = (key: keyof typeof TRANSLATIONS.en) => {
+    const lang = settings?.language || 'en';
+    // @ts-ignore
+    return TRANSLATIONS[lang]?.[key] || TRANSLATIONS.en[key];
+  };
+
   return (
     <div className={`flex flex-col h-full bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl ${isMobile ? 'rounded-t-3xl border-t border-white/20' : 'rounded-3xl border border-white/20 dark:border-white/10 shadow-2xl'}`}>
          <div className="p-5 border-b border-white/10 bg-white/10 dark:bg-black/10 flex justify-between items-center shrink-0">
@@ -119,10 +126,10 @@ const CartPanel: React.FC<CartPanelProps> = (props) => {
                <div className="bg-primary/10 text-primary p-2 rounded-xl">
                   <ShoppingCart size={20} />
                </div>
-               <span className="font-bold text-lg text-slate-800 dark:text-white">Current Order</span>
+               <span className="font-bold text-lg text-slate-800 dark:text-white">{t('CURRENT_ORDER')}</span>
             </div>
             <div className="flex gap-2">
-                <button onClick={clearCart} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-colors" disabled={cart.length === 0} title="Clear Cart"><Trash2 size={20} /></button>
+                <button onClick={clearCart} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-colors" disabled={cart.length === 0} title={t('CLEAR_CART')}><Trash2 size={20} /></button>
                 {isMobile && <button onClick={() => setShowCheckout(false)} className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl"><X size={20} /></button>}
             </div>
          </div>
@@ -148,7 +155,7 @@ const CartPanel: React.FC<CartPanelProps> = (props) => {
                 </div>
             ) : (
                 <button onClick={() => setIsCustomerModalOpen(true)} className="w-full py-2 border border-dashed border-primary/30 text-primary rounded-xl text-sm font-bold hover:bg-primary/5 transition-colors flex items-center justify-center gap-2">
-                    <Plus size={16} /> Add Customer
+                    <Plus size={16} /> {t('ADD_CUSTOMER')}
                 </button>
             )}
          </div>
@@ -157,7 +164,7 @@ const CartPanel: React.FC<CartPanelProps> = (props) => {
             {cart.length === 0 ? (
                <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4 opacity-60">
                   <ShoppingCart size={64} strokeWidth={1} />
-                  <p className="text-sm font-medium">Cart is empty</p>
+                  <p className="text-sm font-medium">{t('EMPTY_CART')}</p>
                </div>
             ) : (
                <>
@@ -194,13 +201,13 @@ const CartPanel: React.FC<CartPanelProps> = (props) => {
                 <>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between text-slate-500 dark:text-slate-400">
-                          <span>Subtotal</span>
+                          <span>{t('SUBTOTAL')}</span>
                           <span>{settings.currency}{subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                       
                       <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
                         <button onClick={() => setShowDiscountInput(!showDiscountInput)} className="text-primary font-bold text-xs flex items-center gap-1">
-                          <Tag size={12}/> {discountAmount > 0 ? 'Edit Discount' : 'Add Discount'}
+                          <Tag size={12}/> {discountAmount > 0 ? 'Edit Discount' : t('DISCOUNT')}
                         </button>
                         {discountAmount > 0 && (
                           <span className="font-bold text-red-500">- {settings.currency}{discountAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -225,11 +232,11 @@ const CartPanel: React.FC<CartPanelProps> = (props) => {
                       )}
 
                       <div className="flex justify-between text-slate-500 dark:text-slate-400">
-                          <span>Tax ({settings.taxRate}%)</span>
+                          <span>{t('TAX')} ({settings.taxRate}%)</span>
                           <span>{settings.currency}{tax.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                       <div className="flex justify-between items-end pt-2 border-t border-black/5 dark:border-white/5">
-                          <span className="font-bold text-lg text-slate-800 dark:text-white">Total</span>
+                          <span className="font-bold text-lg text-slate-800 dark:text-white">{t('TOTAL')}</span>
                           <div className="text-right">
                               <span className="font-bold text-2xl text-slate-900 dark:text-white block leading-none">{settings.currency}{total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                               {settings.secondaryCurrency && (
@@ -244,15 +251,15 @@ const CartPanel: React.FC<CartPanelProps> = (props) => {
                     <div className="grid grid-cols-3 gap-2">
                     <button onClick={() => setPaymentMethod('cash')} className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all ${paymentMethod === 'cash' ? 'bg-green-500/10 border-green-500/50 text-green-700 dark:text-green-400' : 'bg-slate-100 dark:bg-white/5 border-transparent text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10'}`}>
                         <Banknote size={20} className="mb-1" />
-                        <span className="text-[10px] font-bold uppercase">Cash</span>
+                        <span className="text-[10px] font-bold uppercase">{t('CASH')}</span>
                     </button>
                     <button onClick={() => setPaymentMethod('card')} className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all ${paymentMethod === 'card' ? 'bg-blue-500/10 border-blue-500/50 text-blue-700 dark:text-blue-400' : 'bg-slate-100 dark:bg-white/5 border-transparent text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10'}`}>
                         <CreditCard size={20} className="mb-1" />
-                        <span className="text-[10px] font-bold uppercase">Card</span>
+                        <span className="text-[10px] font-bold uppercase">{t('CARD')}</span>
                     </button>
                     <button onClick={() => setPaymentMethod('digital')} className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all ${paymentMethod === 'digital' ? 'bg-purple-500/10 border-purple-500/50 text-purple-700 dark:text-purple-400' : 'bg-slate-100 dark:bg-white/5 border-transparent text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10'}`}>
                         <Smartphone size={20} className="mb-1" />
-                        <span className="text-[10px] font-bold uppercase">Digital</span>
+                        <span className="text-[10px] font-bold uppercase">{t('DIGITAL')}</span>
                     </button>
                     </div>
 
@@ -288,7 +295,7 @@ const CartPanel: React.FC<CartPanelProps> = (props) => {
                         {totalPaid >= total && (
                             <div className="mt-2 flex flex-col p-3 bg-green-500/10 rounded-lg border border-green-500/20">
                                 <div className="flex justify-between items-center text-green-700 dark:text-green-400 text-sm font-bold">
-                                    <span>Change Due:</span>
+                                    <span>{t('CHANGE_DUE')}:</span>
                                     <span>{settings.currency}{change.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 </div>
                                 {settings.secondaryCurrency && (
@@ -308,7 +315,7 @@ const CartPanel: React.FC<CartPanelProps> = (props) => {
                     >
                     {processing ? <Loader2 className="animate-spin" /> : (
                         <>
-                            <span>Complete Order</span>
+                            <span>{t('COMPLETE_ORDER')}</span>
                             <ArrowRight size={20} />
                         </>
                     )}
@@ -329,7 +336,7 @@ const CartPanel: React.FC<CartPanelProps> = (props) => {
                         <Printer size={18} /> Receipt
                         </button>
                         <button onClick={clearCart} className="flex-1 py-3 bg-primary text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-600 transition-colors shadow-lg text-sm">
-                        Next <ArrowRight size={18} />
+                        {t('NEXT')} <ArrowRight size={18} />
                         </button>
                     </div>
                 </div>
@@ -399,6 +406,13 @@ export const PosView: React.FC<PosViewProps> = ({
   const cartEndRef = useRef<HTMLDivElement>(null);
   const prevCartItemsRef = useRef<string[]>([]);
   const [exitingItems, setExitingItems] = useState<Set<string>>(new Set());
+
+  // Translation helper for view
+  const t = (key: keyof typeof TRANSLATIONS.en) => {
+    const lang = settings?.language || 'en';
+    // @ts-ignore
+    return TRANSLATIONS[lang]?.[key] || TRANSLATIONS.en[key];
+  };
 
   useEffect(() => {
     if (cart.length > prevCartItemsRef.current.length) {
@@ -854,7 +868,7 @@ export const PosView: React.FC<PosViewProps> = ({
                   <input 
                     ref={searchInputRef}
                     type="text" 
-                    placeholder="Search or Scan Barcode..." 
+                    placeholder={t('SEARCH_PLACEHOLDER')} 
                     className="w-full pl-12 pr-10 py-3 rounded-2xl bg-white/60 dark:bg-slate-900/60 border border-white/20 dark:border-white/10 focus:bg-white/80 dark:focus:bg-slate-900/80 focus:border-primary/50 outline-none transition-all backdrop-blur-md shadow-sm text-slate-800 dark:text-white"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}

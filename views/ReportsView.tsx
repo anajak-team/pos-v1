@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { Transaction, Expense, StoreSettings, User } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { DollarSign, TrendingUp, ArrowDownRight, Calendar, ArrowUpRight } from 'lucide-react';
+import { TRANSLATIONS } from '../translations';
 
 // Props interface
 interface ReportsViewProps {
@@ -19,6 +20,13 @@ type DateRangeOption = '7d' | '30d' | '90d' | 'all';
 export const ReportsView: React.FC<ReportsViewProps> = ({ transactions, expenses, settings, currentUser }) => {
   const [dateRange, setDateRange] = useState<DateRangeOption>('30d');
   
+  // Translation Helper
+  const t = (key: keyof typeof TRANSLATIONS.en) => {
+    const lang = settings?.language || 'en';
+    // @ts-ignore
+    return TRANSLATIONS[lang]?.[key] || TRANSLATIONS.en[key];
+  };
+
   // Memoized filtered data based on date range
   const { filteredTransactions, filteredExpenses, filteredSales, filteredReturns } = useMemo(() => {
     const now = new Date();
@@ -126,15 +134,15 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ transactions, expenses
   };
 
   if (currentUser.role === 'Staff') {
-    return <div className="text-center p-10">Access to reports is restricted.</div>;
+    return <div className="text-center p-10 text-slate-500">Access to reports is restricted.</div>;
   }
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-10">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 drop-shadow-sm">Sales Reports</h2>
-          <p className="text-slate-600 dark:text-slate-400 text-sm font-medium">Analyze your performance</p>
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 drop-shadow-sm">{t('SALES_REPORTS')}</h2>
+          <p className="text-slate-600 dark:text-slate-400 text-sm font-medium">{t('ANALYZE_PERFORMANCE')}</p>
         </div>
         
         {/* Date Range Selector */}
@@ -144,10 +152,10 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ transactions, expenses
             onChange={e => setDateRange(e.target.value as DateRangeOption)}
             className="appearance-none w-full sm:w-auto pl-10 pr-4 py-3 rounded-xl bg-white/60 dark:bg-slate-900/60 border border-white/20 dark:border-white/10 focus:border-primary/50 outline-none transition-all backdrop-blur-md shadow-sm text-slate-800 dark:text-white font-bold"
           >
-            <option value="7d">Last 7 Days</option>
-            <option value="30d">Last 30 Days</option>
-            <option value="90d">Last 90 Days</option>
-            <option value="all">All Time</option>
+            <option value="7d">{t('LAST_7_DAYS')}</option>
+            <option value="30d">{t('LAST_30_DAYS')}</option>
+            <option value="90d">{t('LAST_90_DAYS')}</option>
+            <option value="all">{t('ALL_TIME')}</option>
           </select>
           <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18}/>
         </div>
@@ -155,16 +163,16 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ transactions, expenses
       
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard title="Net Revenue" value={renderDual(netRevenue)} icon={DollarSign} color="green"/>
-        <KPICard title="Gross Profit" value={renderDual(grossProfit)} icon={TrendingUp} color="blue"/>
-        <KPICard title="Total Expenses" value={renderDual(totalExpenses)} icon={ArrowDownRight} color="amber"/>
-        <KPICard title="Net Profit" value={renderDual(netProfit)} icon={netProfit >= 0 ? ArrowUpRight : ArrowDownRight} color={netProfit >= 0 ? "emerald" : "red"}/>
+        <KPICard title={t('NET_REVENUE')} value={renderDual(netRevenue)} icon={DollarSign} color="green"/>
+        <KPICard title={t('GROSS_PROFIT')} value={renderDual(grossProfit)} icon={TrendingUp} color="blue"/>
+        <KPICard title={t('TOTAL_EXPENSES')} value={renderDual(totalExpenses)} icon={ArrowDownRight} color="amber"/>
+        <KPICard title={t('NET_PROFIT')} value={renderDual(netProfit)} icon={netProfit >= 0 ? ArrowUpRight : ArrowDownRight} color={netProfit >= 0 ? "emerald" : "red"}/>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Sales Over Time Chart */}
         <div className="lg:col-span-2 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-3xl border border-white/30 dark:border-white/10 shadow-lg h-96">
-          <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-6">Net Revenue Over Time</h3>
+          <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-6">{t('NET_REVENUE_OVER_TIME')}</h3>
           <ResponsiveContainer width="100%" height="85%">
             <BarChart data={salesOverTime} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor}/>
@@ -178,7 +186,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ transactions, expenses
         
         {/* Top Selling Products */}
         <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-3xl border border-white/30 dark:border-white/10 shadow-lg h-96 flex flex-col">
-            <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-4 shrink-0">Top Products by Revenue</h3>
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-4 shrink-0">{t('TOP_PRODUCTS')}</h3>
             <div className="flex-1 overflow-y-auto space-y-3 no-scrollbar">
                 {topProducts.map((p, index) => (
                     <div key={index} className="flex justify-between items-center bg-white/40 dark:bg-white/5 p-3 rounded-xl border border-white/20">
@@ -193,7 +201,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ transactions, expenses
       
       {/* Sales By Category */}
       <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-3xl border border-white/30 dark:border-white/10 shadow-lg h-96">
-        <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-2">Revenue by Category</h3>
+        <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-2">{t('REVENUE_BY_CATEGORY')}</h3>
         <ResponsiveContainer width="100%" height="90%">
           <PieChart>
             <Pie data={salesByCategory} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>

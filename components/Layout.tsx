@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { ViewState, User } from '../types';
 import { LayoutDashboard, ShoppingCart, Package, History, Settings, Truck, LogOut, Wallet, Receipt, BarChart3, Wrench, MoreHorizontal, X, Moon, Sun, Globe } from 'lucide-react';
+import { TRANSLATIONS } from '../translations';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -20,52 +21,10 @@ interface LayoutProps {
 export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigate, storeName, onLogout, currentUser, onWalletClick, isDarkMode, onToggleTheme, currentLanguage, onToggleLanguage }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const t = (key: string) => {
-    const translations: Record<string, Record<string, string>> = {
-      en: {
-        DASHBOARD: 'Dashboard',
-        POS: 'Register',
-        TRANSACTIONS: 'History',
-        INVENTORY: 'Products',
-        REPAIRS: 'Repairs',
-        PURCHASES: 'Purchases',
-        EXPENSES: 'Expenses',
-        REPORTS: 'Reports',
-        SETTINGS: 'Settings',
-        MORE: 'More',
-        SHIFT_OPEN: 'Shift Open',
-        LOGOUT: 'Logout'
-      },
-      km: {
-        DASHBOARD: 'ផ្ទាំងគ្រប់គ្រង',
-        POS: 'ការលក់',
-        TRANSACTIONS: 'ប្រវត្តិ',
-        INVENTORY: 'ទំនិញ',
-        REPAIRS: 'ជួសជុល',
-        PURCHASES: 'ការទិញចូល',
-        EXPENSES: 'ចំណាយ',
-        REPORTS: 'របាយការណ៍',
-        SETTINGS: 'ការកំណត់',
-        MORE: 'បន្ថែម',
-        SHIFT_OPEN: 'បើកវេន',
-        LOGOUT: 'ចាកចេញ'
-      },
-      zh: {
-        DASHBOARD: '仪表板',
-        POS: '收银台',
-        TRANSACTIONS: '历史记录',
-        INVENTORY: '库存',
-        REPAIRS: '维修',
-        PURCHASES: '采购',
-        EXPENSES: '费用',
-        REPORTS: '报表',
-        SETTINGS: '设置',
-        MORE: '更多',
-        SHIFT_OPEN: '开班',
-        LOGOUT: '退出'
-      }
-    };
-    return translations[currentLanguage]?.[key] || translations['en'][key];
+  // Helper to get translated string
+  const t = (key: keyof typeof TRANSLATIONS.en) => {
+    // @ts-ignore
+    return TRANSLATIONS[currentLanguage]?.[key] || TRANSLATIONS.en[key];
   };
 
   const getLanguageFlag = (lang: string) => {
