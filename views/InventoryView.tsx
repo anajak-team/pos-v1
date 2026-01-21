@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Product, StoreSettings, User } from '../types';
 import { Plus, Trash2, RefreshCw, Search, AlertTriangle, Bell, Lock, Box, Edit, ScanBarcode, DollarSign, Download, Upload, Printer, X, QrCode, Type, Minimize } from 'lucide-react';
 import { useToast } from '../components/Toast';
@@ -76,8 +77,8 @@ const ProductLabelPrint = ({ product, settings, onClose }: { product: Product, s
     const [mode, setMode] = useState<'barcode' | 'qrcode'>('barcode');
     const [showInfo, setShowInfo] = useState(true);
 
-    return (
-        <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:bg-white print:block animate-fade-in">
+    return createPortal(
+        <div className="print-portal fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:bg-white print:block animate-fade-in">
             <div className="relative flex flex-col items-center w-full max-w-sm print:w-full print:block print:static">
                 <div className="flex flex-col items-center gap-4 mb-8 shrink-0 print:hidden">
                     <div className="flex flex-col gap-2 p-2 bg-white/20 backdrop-blur-md rounded-2xl border border-white/20 w-full">
@@ -128,7 +129,8 @@ const ProductLabelPrint = ({ product, settings, onClose }: { product: Product, s
                 </div>
                 <p className="text-white/80 text-sm mt-6 print:hidden font-medium bg-black/20 px-4 py-1 rounded-full backdrop-blur-md">Preview (50mm x 30mm)</p>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
@@ -136,8 +138,8 @@ const BulkLabelPrint = ({ products, settings, onClose }: { products: Product[], 
     const [mode, setMode] = useState<'barcode' | 'qrcode'>('barcode');
     const [showInfo, setShowInfo] = useState(true);
 
-    return (
-        <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:bg-white print:block animate-fade-in">
+    return createPortal(
+        <div className="print-portal fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:bg-white print:block animate-fade-in">
             <div className="relative flex flex-col items-center w-full max-w-5xl h-[85vh] print:w-full print:max-w-full print:h-auto print:static">
                 {/* Controls - Hidden on Print */}
                 <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 shrink-0 print:hidden w-full bg-slate-900/80 backdrop-blur-md p-4 rounded-2xl border border-white/10 shadow-xl">
@@ -191,7 +193,8 @@ const BulkLabelPrint = ({ products, settings, onClose }: { products: Product[], 
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

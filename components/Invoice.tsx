@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { Transaction, StoreSettings } from '../types';
 import { X, Printer } from 'lucide-react';
 
@@ -74,10 +75,10 @@ export const Invoice: React.FC<InvoiceProps> = ({ transaction, settings, onClose
   const isPreview = !!onClose;
 
   if (isPreview) {
-    return (
-        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 print:hidden animate-fade-in">
-             <div className="relative flex flex-col items-center max-h-full">
-                <div className="flex gap-2 mb-4 shrink-0">
+    return createPortal(
+        <div className="print-portal fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:bg-white print:block animate-fade-in">
+             <div className="relative flex flex-col items-center max-h-full print:w-full print:block print:static">
+                <div className="flex gap-2 mb-4 shrink-0 print:hidden w-full max-w-[80mm] justify-between">
                     <button onClick={() => window.print()} className="bg-white text-black px-4 py-2 rounded-full font-bold flex items-center gap-2 shadow-lg hover:bg-gray-100 transition-colors">
                         <Printer size={16} /> Print
                     </button>
@@ -85,17 +86,19 @@ export const Invoice: React.FC<InvoiceProps> = ({ transaction, settings, onClose
                         <X size={20} />
                     </button>
                 </div>
-                <div className="bg-white shadow-2xl overflow-hidden max-h-[80vh] overflow-y-auto rounded-sm scrollbar-thin">
+                <div className="bg-white shadow-2xl overflow-hidden max-h-[80vh] overflow-y-auto rounded-sm scrollbar-thin print:shadow-none print:max-h-full print:overflow-visible">
                      <ReceiptContent transaction={transaction} settings={settings} />
                 </div>
              </div>
-        </div>
+        </div>,
+        document.body
     );
   }
 
-  return (
-    <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-0 overflow-hidden">
+  return createPortal(
+    <div className="print-portal hidden print:block fixed inset-0 bg-white z-[9999] p-0 overflow-hidden">
          <ReceiptContent transaction={transaction} settings={settings} />
-    </div>
+    </div>,
+    document.body
   );
 };

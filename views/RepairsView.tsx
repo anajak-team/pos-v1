@@ -27,9 +27,9 @@ const statusColors: Record<string, string> = {
 
 const RepairTicketPrint = ({ ticket, settings, onClose, t }: { ticket: RepairTicket, settings: StoreSettings, onClose: () => void, t: any }) => (
     createPortal(
-        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 print:hidden animate-fade-in">
-            <div className="relative flex flex-col items-center w-full max-w-sm">
-                <div className="flex gap-2 mb-4 shrink-0">
+        <div className="print-portal fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:bg-white print:block animate-fade-in">
+            <div className="relative flex flex-col items-center w-full max-w-sm print:w-full print:block print:static">
+                <div className="flex gap-2 mb-4 shrink-0 print:hidden">
                     <button onClick={() => window.print()} className="bg-white text-black px-4 py-2 rounded-full font-bold flex items-center gap-2 shadow-lg hover:bg-gray-100 transition-colors">
                         <Printer size={16} /> {t('PRINT')}
                     </button>
@@ -39,7 +39,7 @@ const RepairTicketPrint = ({ ticket, settings, onClose, t }: { ticket: RepairTic
                 </div>
                 
                 {/* Ticket to Print */}
-                <div className="bg-white text-black p-6 w-[80mm] shadow-2xl rounded-sm font-mono text-xs leading-tight print:w-full print:absolute print:top-0 print:left-0 print:m-0 print:h-auto print:shadow-none">
+                <div className="bg-white text-black p-6 w-[80mm] shadow-2xl rounded-sm font-mono text-xs leading-tight print:w-full print:shadow-none print:m-0 print:p-0">
                     <div className="text-center border-b-2 border-dashed border-black pb-4 mb-4">
                         <h1 className="text-xl font-bold uppercase mb-1">{settings.storeName}</h1>
                         <p>REPAIR SERVICE TICKET</p>

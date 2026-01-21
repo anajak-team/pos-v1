@@ -1,5 +1,6 @@
 
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Shift, StoreSettings } from '../types';
 import { Printer, X, LogOut } from 'lucide-react';
 import { TRANSLATIONS } from '../translations';
@@ -31,8 +32,8 @@ export const ShiftReport: React.FC<ShiftReportProps> = ({ shift, settings, onClo
         // setTimeout(() => window.print(), 500);
     }, []);
 
-    return (
-        <div className="fixed inset-0 z-[120] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:bg-white print:block animate-fade-in">
+    return createPortal(
+        <div className="print-portal fixed inset-0 z-[120] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:bg-white print:block animate-fade-in">
             <div className="relative flex flex-col items-center w-full max-w-md max-h-full print:max-w-full print:max-h-full print:static">
                  <div className="flex gap-3 mb-6 shrink-0 print:hidden w-full max-w-[80mm] justify-between">
                     <button onClick={() => window.print()} className="flex-1 bg-white text-black px-4 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg hover:bg-gray-100 transition-colors">
@@ -93,6 +94,7 @@ export const ShiftReport: React.FC<ShiftReportProps> = ({ shift, settings, onClo
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
