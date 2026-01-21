@@ -2,8 +2,9 @@
 import React, { useState, useMemo } from 'react';
 import { Transaction, Expense, StoreSettings, User } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { DollarSign, TrendingUp, ArrowDownRight, Calendar, ArrowUpRight } from 'lucide-react';
+import { DollarSign, TrendingUp, ArrowDownRight, Calendar, ArrowUpRight, FileText } from 'lucide-react';
 import { TRANSLATIONS } from '../translations';
+import { DailyReport } from '../components/DailyReport';
 
 // Props interface
 interface ReportsViewProps {
@@ -19,6 +20,7 @@ type DateRangeOption = '7d' | '30d' | '90d' | 'all';
 // Main component
 export const ReportsView: React.FC<ReportsViewProps> = ({ transactions, expenses, settings, currentUser }) => {
   const [dateRange, setDateRange] = useState<DateRangeOption>('30d');
+  const [showDailyReport, setShowDailyReport] = useState(false);
   
   // Translation Helper
   const t = (key: keyof typeof TRANSLATIONS.en) => {
@@ -145,19 +147,29 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ transactions, expenses
           <p className="text-slate-600 dark:text-slate-400 text-sm font-medium">{t('ANALYZE_PERFORMANCE')}</p>
         </div>
         
-        {/* Date Range Selector */}
-        <div className="relative">
-          <select 
-            value={dateRange} 
-            onChange={e => setDateRange(e.target.value as DateRangeOption)}
-            className="appearance-none w-full sm:w-auto pl-10 pr-4 py-3 rounded-xl bg-white/60 dark:bg-slate-900/60 border border-white/20 dark:border-white/10 focus:border-primary/50 outline-none transition-all backdrop-blur-md shadow-sm text-slate-800 dark:text-white font-bold"
-          >
-            <option value="7d">{t('LAST_7_DAYS')}</option>
-            <option value="30d">{t('LAST_30_DAYS')}</option>
-            <option value="90d">{t('LAST_90_DAYS')}</option>
-            <option value="all">{t('ALL_TIME')}</option>
-          </select>
-          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18}/>
+        <div className="flex gap-3 items-center">
+            {/* Daily Report Button */}
+            <button 
+                onClick={() => setShowDailyReport(true)}
+                className="flex items-center gap-2 px-4 py-3 rounded-xl bg-primary text-white font-bold text-sm shadow-lg shadow-primary/30 hover:bg-blue-600 transition-colors"
+            >
+                <FileText size={18} /> <span className="hidden sm:inline">{t('DAILY_REPORT')}</span>
+            </button>
+
+            {/* Date Range Selector */}
+            <div className="relative">
+                <select 
+                    value={dateRange} 
+                    onChange={e => setDateRange(e.target.value as DateRangeOption)}
+                    className="appearance-none w-full sm:w-auto pl-10 pr-4 py-3 rounded-xl bg-white/60 dark:bg-slate-900/60 border border-white/20 dark:border-white/10 focus:border-primary/50 outline-none transition-all backdrop-blur-md shadow-sm text-slate-800 dark:text-white font-bold"
+                >
+                    <option value="7d">{t('LAST_7_DAYS')}</option>
+                    <option value="30d">{t('LAST_30_DAYS')}</option>
+                    <option value="90d">{t('LAST_90_DAYS')}</option>
+                    <option value="all">{t('ALL_TIME')}</option>
+                </select>
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18}/>
+            </div>
         </div>
       </div>
       
@@ -212,6 +224,16 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ transactions, expenses
           </PieChart>
         </ResponsiveContainer>
       </div>
+
+      {showDailyReport && (
+          <DailyReport 
+            transactions={transactions} 
+            expenses={expenses} 
+            settings={settings} 
+            onClose={() => setShowDailyReport(false)}
+            date={new Date()}
+          />
+      )}
     </div>
   );
 };

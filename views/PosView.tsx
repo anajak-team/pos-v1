@@ -959,7 +959,7 @@ export const PosView: React.FC<PosViewProps> = ({
                 onClick={() => { if (!completed) setShowCheckout(false); }} 
             />
             <div className="fixed bottom-0 left-0 right-0 h-[90vh] z-[101] animate-slide-up">
-                 <CartPanel {...cartPanelProps} isMobile />
+                 <CartPanel {...cartPanelProps} isMobile onClose={() => { if (!completed) setShowCheckout(false); }} />
             </div>
         </>,
         document.body

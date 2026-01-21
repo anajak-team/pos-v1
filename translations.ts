@@ -144,6 +144,15 @@ export const TRANSLATIONS = {
     LAST_30_DAYS: 'Last 30 Days',
     LAST_90_DAYS: 'Last 90 Days',
     ALL_TIME: 'All Time',
+    DAILY_REPORT: 'Daily Report',
+    GROSS_SALES: 'Gross Sales',
+    NET_SALES: 'Net Sales',
+    RETURNS: 'Returns',
+    PAYMENTS: 'Payments',
+    PERFORMANCE: 'Performance',
+    TOTAL_ORDERS: 'Total Orders',
+    AVG_VALUE: 'Avg. Value',
+    PROFIT_LOSS: 'Profit & Loss',
 
     // Repairs
     REPAIR_SERVICE: 'Repair Service',
@@ -335,6 +344,15 @@ export const TRANSLATIONS = {
     LAST_30_DAYS: '៣០ ថ្ងៃចុងក្រោយ',
     LAST_90_DAYS: '៩០ ថ្ងៃចុងក្រោយ',
     ALL_TIME: 'ទាំងអស់',
+    DAILY_REPORT: 'របាយការណ៍ប្រចាំថ្ងៃ',
+    GROSS_SALES: 'ការលក់ដុល',
+    NET_SALES: 'ការលក់សុទ្ធ',
+    RETURNS: 'ការត្រឡប់',
+    PAYMENTS: 'ការទូទាត់',
+    PERFORMANCE: 'សមិទ្ធផល',
+    TOTAL_ORDERS: 'ការបញ្ជាទិញសរុប',
+    AVG_VALUE: 'តម្លៃមធ្យម',
+    PROFIT_LOSS: 'ចំណេញ & ខាត',
 
     // Repairs
     REPAIR_SERVICE: 'សេវាកម្មជួសជុល',
@@ -526,6 +544,15 @@ export const TRANSLATIONS = {
     LAST_30_DAYS: '近30天',
     LAST_90_DAYS: '近90天',
     ALL_TIME: '全部时间',
+    DAILY_REPORT: '日报表',
+    GROSS_SALES: '销售总额',
+    NET_SALES: '销售净额',
+    RETURNS: '退货',
+    PAYMENTS: '支付方式',
+    PERFORMANCE: '业绩表现',
+    TOTAL_ORDERS: '订单总数',
+    AVG_VALUE: '平均客单',
+    PROFIT_LOSS: '损益',
 
     // Repairs
     REPAIR_SERVICE: '维修服务',
