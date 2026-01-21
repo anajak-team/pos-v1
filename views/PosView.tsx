@@ -9,6 +9,7 @@ import { useAlert } from '../components/Alert';
 import { suggestUpsell } from '../services/geminiService';
 import { getCart, saveCart } from '../services/storageService';
 import { TRANSLATIONS } from '../translations';
+import { Invoice } from '../components/Invoice';
 
 interface CartItemRowProps {
   item: CartItem;
@@ -108,10 +109,11 @@ interface CartPanelProps {
   isMobile?: boolean;
   cartEndRef: React.RefObject<HTMLDivElement | null>;
   totalPaid: number;
+  onClose?: () => void;
 }
 
 const CartPanel: React.FC<CartPanelProps> = (props) => {
-  const { cart, settings, subtotal, discountAmount, tax, total, change, changeSecondary, clearCart, setShowCheckout, selectedCustomer, setSelectedCustomer, setIsCustomerModalOpen, currentUser, updateQuantity, removeFromCart, exitingItems, upsell, completed, discount, setDiscount, discountType, setDiscountType, showDiscountInput, setShowDiscountInput, paymentMethod, setPaymentMethod, cashReceived, setCashReceived, cashReceivedSecondary, setCashReceivedSecondary, processing, handleCheckout, lastTransaction, onPrint, isMobile, cartEndRef, totalPaid } = props;
+  const { cart, settings, subtotal, discountAmount, tax, total, change, changeSecondary, clearCart, setShowCheckout, selectedCustomer, setSelectedCustomer, setIsCustomerModalOpen, currentUser, updateQuantity, removeFromCart, exitingItems, upsell, completed, discount, setDiscount, discountType, setDiscountType, showDiscountInput, setShowDiscountInput, paymentMethod, setPaymentMethod, cashReceived, setCashReceived, cashReceivedSecondary, setCashReceivedSecondary, processing, handleCheckout, lastTransaction, onPrint, isMobile, cartEndRef, totalPaid, onClose } = props;
 
   const t = (key: keyof typeof TRANSLATIONS.en) => {
     const lang = settings?.language || 'en';
@@ -129,8 +131,16 @@ const CartPanel: React.FC<CartPanelProps> = (props) => {
                <span className="font-bold text-lg text-slate-800 dark:text-white">{t('CURRENT_ORDER')}</span>
             </div>
             <div className="flex gap-2">
-                <button onClick={clearCart} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-colors" disabled={cart.length === 0} title={t('CLEAR_CART')}><Trash2 size={20} /></button>
-                {isMobile && <button onClick={() => setShowCheckout(false)} className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl"><X size={20} /></button>}
+                <button onClick={clearCart} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-colors" disabled={cart.length === 0 && !completed} title={t('CLEAR_CART')}><Trash2 size={20} /></button>
+                {isMobile && onClose && (
+                    <button 
+                        onClick={onClose} 
+                        disabled={completed}
+                        className={`p-2 rounded-xl transition-colors ${completed ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-200 dark:hover:bg-white/10'}`}
+                    >
+                        <X size={20} />
+                    </button>
+                )}
             </div>
          </div>
 
@@ -406,6 +416,7 @@ export const PosView: React.FC<PosViewProps> = ({
   const cartEndRef = useRef<HTMLDivElement>(null);
   const prevCartItemsRef = useRef<string[]>([]);
   const [exitingItems, setExitingItems] = useState<Set<string>>(new Set());
+  const [showReceipt, setShowReceipt] = useState(false);
 
   // Translation helper for view
   const t = (key: keyof typeof TRANSLATIONS.en) => {
@@ -468,6 +479,10 @@ export const PosView: React.FC<PosViewProps> = ({
   }, [products, search, selectedCategory, settings.hideOutOfStockProducts]);
 
   const addToCart = (product: Product) => {
+    if (completed) {
+        showToast("Please click 'Next' to start a new order", "info");
+        return;
+    }
     if (product.stock <= 0) {
       showToast('Item is out of stock', 'error');
       playSystemSound('error');
@@ -623,6 +638,7 @@ export const PosView: React.FC<PosViewProps> = ({
     setCart([]);
     setProcessing(false);
     setCompleted(true);
+    setShowReceipt(true);
   };
 
   const playSystemSound = (type: 'beep' | 'success' | 'error') => {
@@ -855,7 +871,8 @@ export const PosView: React.FC<PosViewProps> = ({
     lastTransaction,
     onPrint,
     cartEndRef,
-    totalPaid
+    totalPaid,
+    onClose: () => { if (!completed) setShowCheckout(false); }
   };
 
   return (
@@ -937,7 +954,10 @@ export const PosView: React.FC<PosViewProps> = ({
 
       {showCheckout && createPortal(
         <>
-            <div className="fixed inset-0 bg-black/40 z-[100] backdrop-blur-sm animate-fade-in" onClick={() => setShowCheckout(false)} />
+            <div 
+                className={`fixed inset-0 bg-black/40 z-[100] backdrop-blur-sm animate-fade-in ${completed ? 'cursor-not-allowed' : 'cursor-pointer'}`} 
+                onClick={() => { if (!completed) setShowCheckout(false); }} 
+            />
             <div className="fixed bottom-0 left-0 right-0 h-[90vh] z-[101] animate-slide-up">
                  <CartPanel {...cartPanelProps} isMobile />
             </div>
@@ -979,15 +999,14 @@ export const PosView: React.FC<PosViewProps> = ({
                                 <div className="relative w-[300px] h-[180px]">
                                     {/* Blue Outer Corners */}
                                     <div className="absolute -top-3 -left-3 w-12 h-12 border-t-[6px] border-l-[6px] border-primary rounded-tl-2xl"></div>
+                                    {/* ... corners ... */}
                                     <div className="absolute -top-3 -right-3 w-12 h-12 border-t-[6px] border-r-[6px] border-primary rounded-tr-2xl"></div>
                                     <div className="absolute -bottom-3 -left-3 w-12 h-12 border-b-[6px] border-l-[6px] border-primary rounded-bl-2xl"></div>
                                     <div className="absolute -bottom-3 -right-3 w-12 h-12 border-b-[6px] border-r-[6px] border-primary rounded-br-2xl"></div>
                                     
                                     {/* White Inner Bracket Markers */}
                                     <div className="absolute inset-0 flex items-center justify-between px-2">
-                                        {/* Left Bracket */}
                                         <div className="h-16 w-4 border-t-4 border-b-4 border-l-4 border-white/80 rounded-l-lg opacity-80"></div>
-                                        {/* Right Bracket */}
                                         <div className="h-16 w-4 border-t-4 border-b-4 border-r-4 border-white/80 rounded-r-lg opacity-80"></div>
                                     </div>
 
@@ -1129,6 +1148,14 @@ export const PosView: React.FC<PosViewProps> = ({
                 </div>
             </div>
         </div>
+      )}
+
+      {showReceipt && lastTransaction && (
+          <Invoice 
+            transaction={lastTransaction} 
+            settings={settings} 
+            onClose={() => setShowReceipt(false)} 
+          />
       )}
     </div>
   );

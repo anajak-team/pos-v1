@@ -76,7 +76,7 @@ export const Invoice: React.FC<InvoiceProps> = ({ transaction, settings, onClose
 
   if (isPreview) {
     return createPortal(
-        <div className="print-portal fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:bg-white print:block animate-fade-in">
+        <div className="print-portal fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:bg-white print:block animate-fade-in">
              <div className="relative flex flex-col items-center max-h-full print:w-full print:block print:static">
                 <div className="flex gap-2 mb-4 shrink-0 print:hidden w-full max-w-[80mm] justify-between">
                     <button onClick={() => window.print()} className="bg-white text-black px-4 py-2 rounded-full font-bold flex items-center gap-2 shadow-lg hover:bg-gray-100 transition-colors">
