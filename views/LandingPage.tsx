@@ -102,7 +102,17 @@ const HeroSection: React.FC<HeroSectionProps> = ({ content, onGetStarted, onView
 
 // --- Customer Specific Sections ---
 
-const CustomerDashboardSection = ({ currentUser, customerData, settings, transactions, repairs, content, onViewTransaction }: { currentUser: User, customerData: Customer, settings: StoreSettings, transactions: Transaction[], repairs: RepairTicket[], content: any, onViewTransaction: (t: Transaction) => void }) => {
+interface CustomerDashboardSectionProps {
+  currentUser: User;
+  customerData: Customer;
+  settings: StoreSettings;
+  transactions: Transaction[];
+  repairs: RepairTicket[];
+  content: any;
+  onViewTransaction: (t: Transaction) => void;
+}
+
+const CustomerDashboardSection: React.FC<CustomerDashboardSectionProps> = ({ currentUser, customerData, settings, transactions, repairs, content, onViewTransaction }) => {
     const totalSpent = customerData.totalSpent || 0;
     const points = customerData.points || 0;
     const orderCount = transactions ? transactions.length : 0;

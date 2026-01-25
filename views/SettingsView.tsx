@@ -150,7 +150,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
   const isStaff = currentUser.role === 'Staff';
   const isAdmin = currentUser.role === 'Admin';
   
-  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'Staff' as 'Admin' | 'Manager' | 'Staff' });
+  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'Staff' as 'Admin' | 'Manager' | 'Staff' | 'Customer' });
   const [customerSearch, setCustomerSearch] = useState('');
   const [newCategory, setNewCategory] = useState('');
   const [editingUser, setEditingUser] = useState<StoredUser | null>(null);
@@ -242,7 +242,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       if (confirmed) { await onDeleteUser(id); showToast('User deleted', 'info'); } 
   };
 
-  const handleUpdateUserRole = async (user: StoredUser, newRole: 'Admin' | 'Manager' | 'Staff') => { if (user.id === currentUser.id) { showToast("You cannot change your own role", 'error'); return; } const updatedUser = { ...user, role: newRole }; await onUpdateUser(updatedUser); showToast(`Updated ${user.name}'s role`, 'success'); };
+  const handleUpdateUserRole = async (user: StoredUser, newRole: 'Admin' | 'Manager' | 'Staff' | 'Customer') => { if (user.id === currentUser.id) { showToast("You cannot change your own role", 'error'); return; } const updatedUser = { ...user, role: newRole }; await onUpdateUser(updatedUser); showToast(`Updated ${user.name}'s role`, 'success'); };
   const handleSaveUserEdit = async (user: StoredUser) => { await onUpdateUser(user); showToast('User updated', 'success'); setEditingUser(null); };
 
   // Customer Handlers
@@ -440,14 +440,14 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   <div key={user.id} className="flex items-center justify-between p-3 bg-white/50 dark:bg-white/5 rounded-2xl border border-white/20">
                      <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 text-white flex items-center justify-center font-bold text-xs shadow-sm">{user.avatar || user.name.charAt(0)}</div><div><div className="font-bold text-sm">{user.name}</div><div className="text-xs text-slate-500">{user.email}</div></div></div>
                      <div className="flex items-center gap-1">
-                        <select value={user.role} onChange={(e) => handleUpdateUserRole(user, e.target.value as any)} className="bg-transparent text-xs font-bold py-1 px-2 rounded-lg border-none outline-none" disabled={user.id === currentUser.id}><option>Admin</option><option>Manager</option><option>Staff</option></select>
+                        <select value={user.role} onChange={(e) => handleUpdateUserRole(user, e.target.value as any)} className="bg-transparent text-xs font-bold py-1 px-2 rounded-lg border-none outline-none" disabled={user.id === currentUser.id}><option>Admin</option><option>Manager</option><option>Staff</option><option>Customer</option></select>
                         <button onClick={() => setEditingUser(user)} className="p-1.5 text-blue-500 hover:bg-blue-500/10 rounded-lg"><Edit size={16} /></button>
                         {user.id !== currentUser.id && <button onClick={() => handleDeleteUser(user.id)} className="p-1.5 text-red-400 hover:bg-red-500/10 rounded-lg"><Trash2 size={16} /></button>}
                      </div>
                   </div>
                ))}
             </div>
-            <div className="pt-4 border-t border-white/10"><h4 className="text-xs font-bold text-slate-500 uppercase mb-3 ml-1 flex items-center gap-1"><UserPlus size={14}/> Add User</h4><div className="space-y-3"><div className="grid grid-cols-2 gap-3"><input placeholder="Full Name" className={commonInputClass} value={newUser.name} onChange={e => setNewUser({...newUser, name: e.target.value})} /><select className={commonInputClass} value={newUser.role} onChange={e => setNewUser({...newUser, role: e.target.value as any})}><option>Staff</option><option>Manager</option><option>Admin</option></select></div><input type="email" placeholder="Email Address" className={commonInputClass} value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} /><input type="password" placeholder="Password" className={commonInputClass} value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} /><button onClick={handleAddUser} className="w-full py-3 bg-teal-600 text-white rounded-2xl font-bold">Create</button></div></div>
+            <div className="pt-4 border-t border-white/10"><h4 className="text-xs font-bold text-slate-500 uppercase mb-3 ml-1 flex items-center gap-1"><UserPlus size={14}/> Add User</h4><div className="space-y-3"><div className="grid grid-cols-2 gap-3"><input placeholder="Full Name" className={commonInputClass} value={newUser.name} onChange={e => setNewUser({...newUser, name: e.target.value})} /><select className={commonInputClass} value={newUser.role} onChange={e => setNewUser({...newUser, role: e.target.value as any})}><option>Staff</option><option>Manager</option><option>Admin</option><option>Customer</option></select></div><input type="email" placeholder="Email Address" className={commonInputClass} value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} /><input type="password" placeholder="Password" className={commonInputClass} value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} /><button onClick={handleAddUser} className="w-full py-3 bg-teal-600 text-white rounded-2xl font-bold">Create</button></div></div>
           </SectionCard>
         )}
         
