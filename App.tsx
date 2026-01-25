@@ -489,8 +489,29 @@ const TransactionsHistory = ({ transactions, currency, onPrint, onReturn, onView
 // --- Main App Component ---
 
 export const App = () => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [view, setView] = useState<ViewState>('DASHBOARD');
+  // Initialize state from LocalStorage for session persistence
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    try {
+      const stored = localStorage.getItem('pos_session_user');
+      return stored ? JSON.parse(stored) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  const [view, setView] = useState<ViewState>(() => {
+    return (localStorage.getItem('pos_session_view') as ViewState) || 'DASHBOARD';
+  });
+
+  const [customerData, setCustomerData] = useState<Customer | null>(() => {
+    try {
+      const stored = localStorage.getItem('pos_session_customer_data');
+      return stored ? JSON.parse(stored) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
   const [products, setProducts] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [settings, setSettings] = useState<StoreSettings | null>(null);
@@ -509,9 +530,6 @@ export const App = () => {
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
   
-  // Specific Customer State
-  const [customerData, setCustomerData] = useState<Customer | null>(null);
-
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -535,6 +553,30 @@ export const App = () => {
     init();
   }, []);
 
+  // -- Session Persistence Effects --
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('pos_session_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('pos_session_user');
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (view && view !== 'LOGIN') {
+      localStorage.setItem('pos_session_view', view);
+    }
+  }, [view]);
+
+  useEffect(() => {
+    if (customerData) {
+      localStorage.setItem('pos_session_customer_data', JSON.stringify(customerData));
+    } else {
+      localStorage.removeItem('pos_session_customer_data');
+    }
+  }, [customerData]);
+  // -- End Session Persistence Effects --
+
   const handleLogin = async (user: User, rememberMe: boolean) => {
     setCurrentUser(user);
     if (user.role === 'Customer') {
@@ -542,7 +584,7 @@ export const App = () => {
         const customerProfile = await api.getCustomerByEmail(user.email);
         if (customerProfile) {
             setCustomerData(customerProfile);
-            setView('LANDING_BUILDER'); // Default, will be intercepted
+            setView('LANDING_BUILDER'); // Default landing for customer logic interception
             showToast(`Welcome back, ${user.name}`, 'success');
         } else {
             showToast('Customer profile not found', 'error');
@@ -557,7 +599,13 @@ export const App = () => {
   const handleLogout = () => {
     setCurrentUser(null);
     setCustomerData(null);
-    setView('DASHBOARD'); // Or LANDING
+    
+    // Clear session storage but keep settings/other data
+    localStorage.removeItem('pos_session_user');
+    localStorage.removeItem('pos_session_view');
+    localStorage.removeItem('pos_session_customer_data');
+    
+    setView('DASHBOARD'); // Navigates to Landing Page because user is null
   };
 
   const handleStartShift = async (amount: number) => {

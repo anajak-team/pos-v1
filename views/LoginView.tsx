@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Store, Mail, Lock, ArrowRight, AlertCircle, Loader2, ShieldCheck, ChevronLeft, Check } from 'lucide-react';
 import { User, StoreSettings } from '../types';
 import { getUsers } from '../services/storageService';
@@ -27,6 +27,23 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin, onBack, onSignUpC
     return TRANSLATIONS[lang]?.[key] || TRANSLATIONS.en[key];
   };
 
+  useEffect(() => {
+    const rememberedCreds = localStorage.getItem('pos_remember_me');
+    if (rememberedCreds) {
+        try {
+            const { email: savedEmail, password: savedPassword } = JSON.parse(rememberedCreds);
+            if (savedEmail) {
+                setEmail(savedEmail);
+                setRememberMe(true);
+            }
+            // Optional: Pre-fill password. Security tradeoff in local-only app.
+            if (savedPassword) setPassword(savedPassword);
+        } catch (e) {
+            console.error("Failed to parse remember me data");
+        }
+    }
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -45,6 +62,13 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin, onBack, onSignUpC
       setLoading(false);
       setCheckingPermissions(true);
       
+      // Save credentials if Remember Me is checked
+      if (rememberMe) {
+          localStorage.setItem('pos_remember_me', JSON.stringify({ email, password }));
+      } else {
+          localStorage.removeItem('pos_remember_me');
+      }
+
       await new Promise(resolve => setTimeout(resolve, 600));
       
       // Success - remove password before passing to app
