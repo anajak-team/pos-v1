@@ -52,6 +52,9 @@ export const DailyReport: React.FC<DailyReportProps> = ({ transactions, expenses
     digital: sales.filter(t => t.paymentMethod === 'digital').reduce((sum, t) => sum + t.total, 0),
   };
 
+  const widthClass = settings.receiptPaperSize === '58mm' ? 'w-[58mm]' : 'w-[80mm]';
+  const maxWidthClass = settings.receiptPaperSize === '58mm' ? 'max-w-[58mm]' : 'max-w-[80mm]';
+
   // Translation
   const t = (key: keyof typeof TRANSLATIONS.en) => {
     const lang = settings?.language || 'en';
@@ -64,7 +67,7 @@ export const DailyReport: React.FC<DailyReportProps> = ({ transactions, expenses
   return createPortal(
     <div className="print-portal fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:bg-white print:block animate-fade-in">
       <div className="relative flex flex-col items-center w-full max-w-sm print:w-full print:block print:static">
-        <div className="flex gap-2 mb-4 shrink-0 print:hidden w-full max-w-[80mm] justify-between">
+        <div className={`flex gap-2 mb-4 shrink-0 print:hidden w-full ${maxWidthClass} justify-between`}>
             <button onClick={() => window.print()} className="bg-white text-black px-4 py-2 rounded-full font-bold flex items-center gap-2 shadow-lg hover:bg-gray-100 transition-colors">
                 <Printer size={16} /> {t('PRINT')}
             </button>
@@ -73,7 +76,7 @@ export const DailyReport: React.FC<DailyReportProps> = ({ transactions, expenses
             </button>
         </div>
 
-        <div className="bg-white w-[80mm] mx-auto shadow-2xl overflow-hidden rounded-sm print:shadow-none print:w-full font-mono text-black p-4 text-xs leading-tight">
+        <div className={`bg-white ${widthClass} mx-auto shadow-2xl overflow-hidden rounded-sm print:shadow-none print:w-full font-mono text-black p-4 text-xs leading-tight`}>
             <div className="text-center mb-4 pb-4 border-b-2 border-black border-dashed">
                 <h1 className="text-xl font-bold uppercase mb-1">{settings.storeName}</h1>
                 <p className="text-[10px] uppercase tracking-widest font-bold">{t('DAILY_REPORT')}</p>

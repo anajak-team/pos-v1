@@ -12,13 +12,16 @@ interface InvoiceProps {
 
 const ReceiptContent = ({ transaction, settings }: { transaction: Transaction, settings: StoreSettings }) => {
     const subtotal = transaction.items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    const widthClass = settings.receiptPaperSize === '58mm' ? 'w-[58mm]' : 'w-[80mm]';
+    
     return (
-        <div className="w-[80mm] mx-auto print:w-full font-mono text-black leading-tight bg-white p-4 print:p-0">
+        <div className={`${widthClass} mx-auto print:w-full font-mono text-black leading-tight bg-white p-4 print:p-0`}>
              <div className="text-center mb-4 pb-4 border-b-2 border-black border-dashed">
                 <h1 className="text-xl font-bold uppercase mb-1">{settings.storeName}</h1>
                 {settings.receiptHeader && <p className="text-sm mb-2">{settings.receiptHeader}</p>}
                 <div className="text-xs mt-2 space-y-1">
-                <p>{new Date(transaction.date).toLocaleDateString()} {new Date(transaction.date).toLocaleTimeString()}</p>
+                <p>{new Date(transaction.date).toLocaleDateString()}</p>
+                <p>{new Date(transaction.date).toLocaleTimeString()}</p>
                 <p>Order #{transaction.id.slice(-6)}</p>
                 {transaction.customerName && <p className="font-bold">Customer: {transaction.customerName}</p>}
                 </div>
@@ -73,12 +76,13 @@ const ReceiptContent = ({ transaction, settings }: { transaction: Transaction, s
 export const Invoice: React.FC<InvoiceProps> = ({ transaction, settings, onClose }) => {
   if (!transaction) return null;
   const isPreview = !!onClose;
+  const widthClass = settings.receiptPaperSize === '58mm' ? 'max-w-[58mm]' : 'max-w-[80mm]';
 
   if (isPreview) {
     return createPortal(
         <div className="print-portal fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:bg-white print:block animate-fade-in">
              <div className="relative flex flex-col items-center max-h-full print:w-full print:block print:static">
-                <div className="flex gap-2 mb-4 shrink-0 print:hidden w-full max-w-[80mm] justify-between">
+                <div className={`flex gap-2 mb-4 shrink-0 print:hidden w-full ${widthClass} justify-between`}>
                     <button onClick={() => window.print()} className="bg-white text-black px-4 py-2 rounded-full font-bold flex items-center gap-2 shadow-lg hover:bg-gray-100 transition-colors">
                         <Printer size={16} /> Print
                     </button>

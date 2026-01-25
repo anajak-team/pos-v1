@@ -10,6 +10,7 @@ export interface Product {
   description?: string;
   barcode?: string;
   itemsPerCase?: number;
+  zone?: string; // Physical location (e.g., Aisle 1, Warehouse B)
 }
 
 export interface CartItem extends Product {
@@ -57,7 +58,7 @@ export interface PurchaseOrder {
   expectedDelivery?: string;
 }
 
-export type ViewState = 'DASHBOARD' | 'POS' | 'INVENTORY' | 'TRANSACTIONS' | 'PURCHASES' | 'EXPENSES' | 'REPORTS' | 'SETTINGS' | 'REPAIRS' | 'LANDING_BUILDER';
+export type ViewState = 'DASHBOARD' | 'POS' | 'INVENTORY' | 'TRANSACTIONS' | 'PURCHASES' | 'EXPENSES' | 'REPORTS' | 'SETTINGS' | 'REPAIRS' | 'LANDING_BUILDER' | 'LOGIN' | 'SIGNUP' | 'CUSTOMER_DASHBOARD';
 
 export interface SalesMetric {
   date: string;
@@ -70,11 +71,12 @@ export interface PrinterConfig {
   type: 'receipt' | 'kitchen';
   address: string; // IP address or identifier
   status: 'online' | 'offline';
+  paperWidth?: '58mm' | '80mm';
 }
 
 export interface LandingPageSection {
   id: string;
-  type: 'hero' | 'features' | 'preview' | 'footer' | 'repair' | 'subscription' | 'video' | 'users';
+  type: 'hero' | 'features' | 'preview' | 'footer' | 'repair' | 'subscription' | 'video' | 'users' | 'customer_dashboard';
   label: string; // Display name for Admin UI
   visible: boolean;
   order: number;
@@ -94,6 +96,7 @@ export interface StoreSettings {
   lowStockThreshold: number;
   receiptHeader: string;
   receiptFooter: string;
+  receiptPaperSize?: '58mm' | '80mm';
   enableSound: boolean;
   theme: 'light' | 'dark';
   primaryColor?: string; // Format: "R G B" e.g., "37 99 235"
@@ -110,7 +113,7 @@ export interface StoreSettings {
 export interface User {
   id: string;
   name: string;
-  role: 'Admin' | 'Manager' | 'Staff';
+  role: 'Admin' | 'Manager' | 'Staff' | 'Customer';
   avatar?: string;
   email: string;
 }

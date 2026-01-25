@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Product, StoreSettings, User } from '../types';
-import { Plus, Trash2, RefreshCw, Search, AlertTriangle, Bell, Lock, Box, Edit, ScanBarcode, DollarSign, Download, Upload, Printer, X, QrCode, Type, Minimize } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Search, AlertTriangle, Bell, Lock, Box, Edit, ScanBarcode, DollarSign, Download, Upload, Printer, X, QrCode, Type, Minimize, MapPin, CheckSquare, Square } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { useAlert } from '../components/Alert';
 import QRCode from 'qrcode';
@@ -63,6 +63,7 @@ const PrintableLabel = ({ product, settings, mode, showInfo = true }: { product:
                     <p className="text-[8px] font-bold uppercase tracking-wider mb-0.5 w-full truncate px-1">{settings.storeName}</p>
                     <p className="font-bold text-[9px] line-clamp-2 leading-tight mb-0.5 px-1 w-full break-words">{product.name}</p>
                     <p className="font-extrabold text-xs leading-none my-0.5">{settings.currency}{product.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                    {product.zone && <p className="text-[7px] font-bold uppercase border border-black px-1 rounded-sm absolute top-1 right-1">{product.zone}</p>}
                 </>
             )}
             
@@ -203,6 +204,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const [printingProduct, setPrintingProduct] = useState<Product | null>(null);
   const [isBulkPrintOpen, setIsBulkPrintOpen] = useState(false);
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const lowStockThreshold = settings.lowStockThreshold;
@@ -227,7 +229,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
     if (permission === 'granted') { showToast('Notifications enabled', 'success'); }
   };
 
-  const filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || (p.barcode && p.barcode.includes(search)));
+  const filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || (p.barcode && p.barcode.includes(search)) || (p.zone && p.zone.toLowerCase().includes(search.toLowerCase())));
   const lowStockItems = products.filter(p => p.stock <= lowStockThreshold);
 
   useEffect(() => {
@@ -243,6 +245,25 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
     }
     prevLowStockCount.current = lowStockItems.length;
   }, [lowStockItems.length, notificationPermission]);
+
+  // Selection Handlers
+  const toggleSelection = (id: string) => {
+    const newSet = new Set(selectedProductIds);
+    if (newSet.has(id)) {
+        newSet.delete(id);
+    } else {
+        newSet.add(id);
+    }
+    setSelectedProductIds(newSet);
+  };
+
+  const toggleAll = () => {
+    if (selectedProductIds.size === filtered.length && filtered.length > 0) {
+        setSelectedProductIds(new Set());
+    } else {
+        setSelectedProductIds(new Set(filtered.map(p => p.id)));
+    }
+  };
 
   const handleReorder = (product: Product) => {
     onUpdateProduct({ ...product, stock: product.stock + (product.itemsPerCase || 20) });
@@ -266,7 +287,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
 
   // --- Export Functionality ---
   const handleExport = () => {
-    const headers = ['Name', 'Category', 'Price', 'Cost', 'Stock', 'Barcode', 'Description', 'ItemsPerCase'];
+    const headers = ['Name', 'Category', 'Price', 'Cost', 'Stock', 'Barcode', 'Description', 'ItemsPerCase', 'Zone'];
     const csvContent = [
       headers.join(','),
       ...products.map(p => [
@@ -277,7 +298,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
         p.stock || 0,
         `"${(p.barcode || '').replace(/"/g, '""')}"`,
         `"${(p.description || '').replace(/"/g, '""')}"`,
-        p.itemsPerCase || 1
+        p.itemsPerCase || 1,
+        `"${(p.zone || '').replace(/"/g, '""')}"`
       ].join(','))
     ].join('\n');
 
@@ -328,6 +350,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
             else if (h === 'barcode') product.barcode = val;
             else if (h === 'description') product.description = val;
             else if (h === 'itemspercase') product.itemsPerCase = parseInt(val) || 1;
+            else if (h === 'zone') product.zone = val;
           });
 
           if (product.name && product.price >= 0) {
@@ -350,6 +373,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
     event.target.value = ''; // Reset input
   };
 
+  const getProductsForPrint = () => {
+      if (selectedProductIds.size > 0) {
+          return products.filter(p => selectedProductIds.has(p.id));
+      }
+      return filtered;
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -365,9 +395,9 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
           )}
           {!isStaff && (
             <>
-                {products.length > 0 && (
-                    <button onClick={() => setIsBulkPrintOpen(true)} className="px-3 py-2 bg-white/60 dark:bg-white/10 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-sm shadow-sm border border-white/20 hover:bg-white/80 dark:hover:bg-white/20 transition-colors flex items-center gap-2">
-                        <Printer size={16} /> <span className="hidden sm:inline">{t('PRINT_ALL')}</span>
+                {(products.length > 0) && (
+                    <button onClick={() => setIsBulkPrintOpen(true)} className={`px-3 py-2 rounded-xl font-bold text-sm shadow-sm border border-white/20 transition-colors flex items-center gap-2 ${selectedProductIds.size > 0 ? 'bg-primary text-white' : 'bg-white/60 dark:bg-white/10 text-slate-700 dark:text-slate-200 hover:bg-white/80 dark:hover:bg-white/20'}`}>
+                        <Printer size={16} /> <span className="hidden sm:inline">{selectedProductIds.size > 0 ? `Print Selected (${selectedProductIds.size})` : t('PRINT_ALL')}</span>
                     </button>
                 )}
                 <button onClick={handleExport} className="px-3 py-2 bg-white/60 dark:bg-white/10 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-sm shadow-sm border border-white/20 hover:bg-white/80 dark:hover:bg-white/20 transition-colors flex items-center gap-2">
@@ -412,9 +442,15 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
             <table className="w-full text-left text-sm">
               <thead className="bg-white/30 dark:bg-white/5 text-slate-500 dark:text-slate-400 font-bold border-b border-white/20 dark:border-white/10">
                 <tr>
+                  <th className="p-4 w-10 text-center">
+                      <button onClick={toggleAll} className="text-slate-500 hover:text-primary transition-colors">
+                          {selectedProductIds.size > 0 && selectedProductIds.size === filtered.length ? <CheckSquare size={18}/> : <Square size={18}/>}
+                      </button>
+                  </th>
                   <th className="p-4">{t('PRODUCT_NAME')}</th>
                   <th className="p-4">{t('BARCODE')}</th>
                   <th className="p-4">{t('CATEGORY')}</th>
+                  <th className="p-4">Zone</th>
                   <th className="p-4">{t('PRICE')}</th>
                   {!isStaff && <th className="p-4">{t('COST')}</th>}
                   <th className="p-4">{t('STOCK')}</th>
@@ -425,11 +461,18 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
                 {filtered.map(product => {
                   const isLow = product.stock <= lowStockThreshold;
                   const cases = product.itemsPerCase && product.itemsPerCase > 1 ? Math.floor(product.stock / product.itemsPerCase) : null;
+                  const isSelected = selectedProductIds.has(product.id);
                   return (
-                  <tr key={product.id} className={`hover:bg-white/30 dark:hover:bg-white/5 transition-colors ${isLow ? 'bg-red-500/5' : ''}`}>
+                  <tr key={product.id} className={`hover:bg-white/30 dark:hover:bg-white/5 transition-colors ${isLow ? 'bg-red-500/5' : ''} ${isSelected ? 'bg-blue-500/10' : ''}`}>
+                    <td className="p-4 text-center">
+                        <button onClick={() => toggleSelection(product.id)} className={`transition-colors ${isSelected ? 'text-primary' : 'text-slate-400 hover:text-slate-600'}`}>
+                            {isSelected ? <CheckSquare size={18}/> : <Square size={18}/>}
+                        </button>
+                    </td>
                     <td className="p-4"><div className="flex items-center gap-3 min-w-[200px]"><img src={product.image} className="w-10 h-10 rounded-xl object-cover bg-white/20 shadow-sm" alt="" /><div><div className="font-bold text-slate-900 dark:text-slate-100 line-clamp-1">{product.name}</div><div className="text-slate-500 text-xs truncate max-w-[150px]">{product.description}</div></div></div></td>
                     <td className="p-4">{product.barcode ? (<span className="font-mono text-xs bg-white/50 dark:bg-white/10 border border-white/20 px-2 py-1 rounded-lg text-slate-600 dark:text-slate-400 flex items-center w-fit gap-1"><ScanBarcode size={12} /> {product.barcode}</span>) : <span className="text-slate-300 text-xs italic">None</span>}</td>
                     <td className="p-4"><span className="px-3 py-1 rounded-lg bg-white/50 dark:bg-white/10 border border-white/20 text-slate-600 dark:text-slate-300 text-xs font-bold">{product.category}</span></td>
+                    <td className="p-4"><span className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">{product.zone ? <><MapPin size={12} /> {product.zone}</> : '-'}</span></td>
                     <td className="p-4 font-bold text-slate-800 dark:text-slate-200">{settings.currency}{product.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     {!isStaff && <td className="p-4 font-medium text-slate-500">{product.cost ? `${settings.currency}${product.cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}</td>}
                     <td className="p-4"><div className={`flex items-center gap-2 font-bold transition-all ${isLow ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>{product.stock} Units {isLow && <AlertTriangle size={16} className="text-red-500 animate-pulse" />}</div>{cases !== null && <div className="text-xs text-slate-400 mt-0.5 flex gap-1"><Box size={12}/>{cases} cases</div>}</td>
@@ -445,9 +488,24 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
             {filtered.map(product => {
               const isLow = product.stock <= lowStockThreshold;
               const cases = product.itemsPerCase && product.itemsPerCase > 1 ? Math.floor(product.stock / product.itemsPerCase) : null;
+              const isSelected = selectedProductIds.has(product.id);
               return (
-                <div key={product.id} className={`p-3 rounded-xl border ${isLow ? 'bg-red-500/5 border-red-500/20' : 'bg-white/50 dark:bg-slate-800/50 border-white/20 dark:border-white/10'} backdrop-blur-md shadow-sm`}>
-                   <div className="flex gap-3 mb-2"><img src={product.image} className="w-12 h-12 rounded-lg object-cover bg-white/20 shadow-sm" alt="" /><div className="flex-1 min-w-0"><div className="flex justify-between items-start"><h4 className="font-bold text-slate-900 dark:text-slate-100 line-clamp-1 text-sm">{product.name}</h4><span className="font-bold text-slate-900 dark:text-slate-100 text-sm">{settings.currency}{product.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div><p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{product.category}</p>{product.barcode && (<div className="flex items-center gap-1 mt-1"><ScanBarcode size={10} className="text-slate-400" /><span className="text-[10px] font-mono text-slate-500 bg-white/40 dark:bg-white/10 px-1.5 py-0.5 rounded">{product.barcode}</span></div>)}</div></div>
+                <div key={product.id} className={`p-3 rounded-xl border ${isSelected ? 'border-primary/50 bg-blue-500/5' : isLow ? 'bg-red-500/5 border-red-500/20' : 'bg-white/50 dark:bg-slate-800/50 border-white/20 dark:border-white/10'} backdrop-blur-md shadow-sm transition-colors`}>
+                   <div className="flex gap-3 mb-2">
+                       <button onClick={() => toggleSelection(product.id)} className={`self-start mt-3 ${isSelected ? 'text-primary' : 'text-slate-300'}`}>
+                           {isSelected ? <CheckSquare size={20}/> : <Square size={20}/>}
+                       </button>
+                       <img src={product.image} className="w-12 h-12 rounded-lg object-cover bg-white/20 shadow-sm" alt="" />
+                       <div className="flex-1 min-w-0">
+                           <div className="flex justify-between items-start">
+                               <h4 className="font-bold text-slate-900 dark:text-slate-100 line-clamp-1 text-sm">{product.name}</h4>
+                               <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">{settings.currency}{product.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                           </div>
+                           <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{product.category}</p>
+                           {product.zone && <p className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5"><MapPin size={10} /> {product.zone}</p>}
+                           {product.barcode && (<div className="flex items-center gap-1 mt-1"><ScanBarcode size={10} className="text-slate-400" /><span className="text-[10px] font-mono text-slate-500 bg-white/40 dark:bg-white/10 px-1.5 py-0.5 rounded">{product.barcode}</span></div>)}
+                       </div>
+                   </div>
                    <div className="flex items-center justify-between pt-2 border-t border-black/5 dark:border-white/5">
                       <div className="flex flex-col">
                          <div className={`text-xs font-bold flex items-center gap-1 ${isLow ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>{isLow && <AlertTriangle size={12} />}{product.stock} Units</div>
@@ -471,7 +529,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
       )}
 
       {isBulkPrintOpen && (
-          <BulkLabelPrint products={filtered} settings={settings} onClose={() => setIsBulkPrintOpen(false)} />
+          <BulkLabelPrint products={getProductsForPrint()} settings={settings} onClose={() => setIsBulkPrintOpen(false)} />
       )}
     </div>
   );

@@ -471,7 +471,8 @@ export const PosView: React.FC<PosViewProps> = ({
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
       const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || 
-                            (p.barcode && p.barcode.includes(search));
+                            (p.barcode && p.barcode.includes(search)) || 
+                            (p.zone && p.zone.toLowerCase().includes(search.toLowerCase())); // Search by Zone
       const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
       const matchesStock = !settings.hideOutOfStockProducts || p.stock > 0;
       return matchesSearch && matchesCategory && matchesStock;

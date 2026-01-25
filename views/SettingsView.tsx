@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { StoreSettings, Transaction, PrinterConfig, User, StoredUser, Customer, ViewState } from '../types';
-import { Save, Store, Receipt, Database, Percent, Download, AlertTriangle, Volume2, VolumeX, Printer, Plus, Trash2, Wifi, RefreshCw, Loader2, Moon, Sun, Users, Shield, UserPlus, Lock, Mail, FileJson, Coins, Contact, Search, Tag, Upload, Edit, Wallet, Check, X, Crown, Gift, Globe, Layout, ArrowRight, EyeOff, Package } from 'lucide-react';
+import { Save, Store, Receipt, Database, Percent, Download, AlertTriangle, Volume2, VolumeX, Printer, Plus, Trash2, Wifi, RefreshCw, Loader2, Moon, Sun, Users, Shield, UserPlus, Lock, Mail, FileJson, Coins, Contact, Search, Tag, Upload, Edit, Wallet, Check, X, Crown, Gift, Globe, Layout, ArrowRight, EyeOff, Package, TestTube, FileText } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { useAlert } from '../components/Alert';
 import { exportFullBackup, importBackup, clearAllData } from '../services/storageService';
@@ -163,11 +163,16 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
   const [editingCategory, setEditingCategory] = useState<{ original: string, current: string } | null>(null);
   
   // Printer State
-  const [newPrinter, setNewPrinter] = useState<{name: string, address: string, type: 'receipt' | 'kitchen'}>({ name: '', address: '', type: 'receipt' });
+  const [newPrinter, setNewPrinter] = useState<{name: string, address: string, type: 'receipt' | 'kitchen', paperWidth: '58mm' | '80mm'}>({ name: '', address: '', type: 'receipt', paperWidth: '80mm' });
 
   const { showToast } = useToast();
   const { showConfirm } = useAlert();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync settings prop to state
+  useEffect(() => {
+    setFormData(settings);
+  }, [settings]);
 
   // Translation Helper
   const t = (key: keyof typeof TRANSLATIONS.en) => {
@@ -262,14 +267,34 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
   const saveEditingCategory = () => { if (editingCategory && editingCategory.current.trim() && editingCategory.current !== editingCategory.original) { onRenameCategory(editingCategory.original, editingCategory.current.trim()); setEditingCategory(null); showToast('Category updated', 'success'); } else { setEditingCategory(null); } };
 
   // Printer Handlers
-  const handleAddPrinter = () => { if (newPrinter.name && newPrinter.address) { const printer: PrinterConfig = { id: Date.now().toString(), name: newPrinter.name, address: newPrinter.address, type: newPrinter.type, status: 'online' }; handleChange('printers', [...(formData.printers || []), printer]); setNewPrinter({ name: '', address: '', type: 'receipt' }); showToast('Printer added', 'success'); } else { showToast('Please fill printer details', 'error'); } };
+  const handleAddPrinter = () => { 
+      if (newPrinter.name && newPrinter.address) { 
+          const printer: PrinterConfig = { 
+              id: Date.now().toString(), 
+              name: newPrinter.name, 
+              address: newPrinter.address, 
+              type: newPrinter.type, 
+              status: 'online',
+              paperWidth: newPrinter.paperWidth
+          }; 
+          handleChange('printers', [...(formData.printers || []), printer]); 
+          setNewPrinter({ name: '', address: '', type: 'receipt', paperWidth: '80mm' }); 
+          showToast('Printer added (Remember to Save)', 'success'); 
+      } else { 
+          showToast('Please fill printer details', 'error'); 
+      } 
+  };
   const handleDeletePrinter = (index: number) => { const updated = [...(formData.printers || [])]; updated.splice(index, 1); handleChange('printers', updated); };
+  const handleTestPrint = (printer: PrinterConfig) => {
+      showToast(`Test print sent to ${printer.name} (${printer.address})`, 'info');
+      // In a real app, this would perform a network request
+  };
 
   const commonInputClass = "w-full p-3 rounded-2xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 focus:bg-white/80 dark:focus:bg-black/40 focus:border-primary/50 outline-none transition-all text-slate-800 dark:text-white placeholder:text-slate-400 shadow-inner text-sm";
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-12">
-      <div className="flex justify-between items-end"><h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 drop-shadow-sm">{t('SETTINGS')}</h2><button onClick={handleSave} className="bg-primary text-white px-6 py-3 rounded-2xl font-bold shadow-lg flex items-center gap-2"><Save size={20} /> <span className="hidden sm:inline">{t('SAVE')}</span></button></div>
+      <div className="flex justify-between items-end"><h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 drop-shadow-sm">{t('SETTINGS')}</h2><button onClick={handleSave} className="bg-primary text-white px-6 py-3 rounded-2xl font-bold shadow-lg flex items-center gap-2 hover:bg-blue-600 transition-colors active:scale-95"><Save size={20} /> <span className="hidden sm:inline">{t('SAVE')}</span></button></div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <SectionCard title={t('STORE_PROFILE')} icon={Store} colorClass="bg-blue-500 text-blue-600 dark:text-blue-400">
             {!isStaff && (
@@ -319,6 +344,24 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   <InputGroup label="2nd Currency" value={formData.secondaryCurrency} onChange={(v) => handleChange('secondaryCurrency', v)} placeholder="Optional (e.g. €)" />
                 </div>
                 {formData.secondaryCurrency && (<InputGroup label={`Exchange Rate (1 ${formData.currency} = ? ${formData.secondaryCurrency})`} type="number" value={formData.exchangeRate} onChange={(v) => handleChange('exchangeRate', parseFloat(v) || 0)} />)}
+                
+                <div className="pt-2 border-t border-white/10 space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide ml-1 flex items-center gap-1"><FileText size={14}/> Paper Size</label>
+                    <div className="grid grid-cols-2 gap-3">
+                        <button 
+                            onClick={() => handleChange('receiptPaperSize', '80mm')} 
+                            className={`py-2 rounded-xl text-xs font-bold border transition-colors ${formData.receiptPaperSize === '80mm' || !formData.receiptPaperSize ? 'bg-primary text-white border-primary' : 'bg-white/50 dark:bg-black/20 text-slate-600 dark:text-slate-300 border-white/30 dark:border-white/10'}`}
+                        >
+                            80mm (Standard)
+                        </button>
+                        <button 
+                            onClick={() => handleChange('receiptPaperSize', '58mm')} 
+                            className={`py-2 rounded-xl text-xs font-bold border transition-colors ${formData.receiptPaperSize === '58mm' ? 'bg-primary text-white border-primary' : 'bg-white/50 dark:bg-black/20 text-slate-600 dark:text-slate-300 border-white/30 dark:border-white/10'}`}
+                        >
+                            58mm (Small)
+                        </button>
+                    </div>
+                </div>
               </div>
             </SectionCard>
 
@@ -340,7 +383,53 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                     <div className="flex items-center justify-between p-3 bg-white/50 dark:bg-white/5 rounded-2xl border border-white/20"><div className="flex items-center gap-3"><div className={`p-2 rounded-xl ${formData.enableSound ? 'bg-blue-500/20 text-blue-600' : 'bg-slate-200 text-slate-500'}`}>{formData.enableSound ? <Volume2 size={20} /> : <VolumeX size={20} />}</div><span className="font-bold text-sm text-slate-700 dark:text-slate-200">Sound Effects</span></div><button onClick={() => handleChange('enableSound', !formData.enableSound)} className={`w-12 h-6 rounded-full transition-colors relative ${formData.enableSound ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-600'}`}><div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${formData.enableSound ? 'translate-x-6' : ''}`} /></button></div>
                     <div className="flex items-center justify-between p-3 bg-white/50 dark:bg-white/5 rounded-2xl border border-white/20"><div className="flex items-center gap-3"><div className={`p-2 rounded-xl ${formData.autoOpenDrawer ? 'bg-green-500/20 text-green-600' : 'bg-slate-200 text-slate-500'}`}><Wallet size={20} /></div><span className="font-bold text-sm text-slate-700 dark:text-slate-200">Auto-Open Drawer (Cash)</span></div><button onClick={() => handleChange('autoOpenDrawer', !formData.autoOpenDrawer)} className={`w-12 h-6 rounded-full transition-colors relative ${formData.autoOpenDrawer ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-600'}`}><div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${formData.autoOpenDrawer ? 'translate-x-6' : ''}`} /></button></div>
                 </div>
-                <div className="pt-2 border-t border-white/10"><h4 className="text-xs font-bold text-slate-500 uppercase mb-3 ml-1">Network Printers</h4><div className="space-y-2 mb-3">{(formData.printers || []).map((printer, idx) => (<div key={idx} className="flex items-center justify-between p-2 bg-white/40 dark:bg-white/5 rounded-xl border border-white/20"><div className="flex items-center gap-2"><Printer size={16} className="text-slate-400"/><div><div className="font-bold text-xs text-slate-800 dark:text-slate-200">{printer.name}</div><div className="text-[10px] text-slate-500">{printer.address} • {printer.type}</div></div></div><button onClick={() => handleDeletePrinter(idx)} className="p-1.5 text-red-400 hover:bg-red-500/10 rounded-lg"><Trash2 size={14}/></button></div>))}{(!formData.printers || formData.printers.length === 0) && <div className="text-center text-xs text-slate-400 py-2">No printers configured</div>}</div><div className="bg-white/30 dark:bg-black/10 p-3 rounded-xl space-y-2"><input placeholder="Printer Name (e.g. Counter)" className={commonInputClass + " py-2 text-xs"} value={newPrinter.name} onChange={e => setNewPrinter({...newPrinter, name: e.target.value})} /><div className="flex gap-2"><input placeholder="IP / URL" className={commonInputClass + " py-2 text-xs flex-1"} value={newPrinter.address} onChange={e => setNewPrinter({...newPrinter, address: e.target.value})} /><select className={commonInputClass + " py-2 text-xs w-24"} value={newPrinter.type} onChange={e => setNewPrinter({...newPrinter, type: e.target.value as any})}><option value="receipt">Receipt</option><option value="kitchen">Kitchen</option></select></div><button onClick={handleAddPrinter} className="w-full py-2 bg-orange-500 text-white rounded-xl text-xs font-bold hover:bg-orange-600 transition-colors">Add Printer</button></div></div>
+                <div className="pt-2 border-t border-white/10">
+                    <h4 className="text-xs font-bold text-slate-500 uppercase mb-3 ml-1">Network Printers</h4>
+                    <div className="space-y-2 mb-3">
+                        {(formData.printers || []).map((printer, idx) => (
+                            <div key={idx} className="flex items-center justify-between p-2 bg-white/40 dark:bg-white/5 rounded-xl border border-white/20">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-2 bg-slate-200 dark:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300">
+                                        <Printer size={16} />
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-xs text-slate-800 dark:text-slate-200">{printer.name}</div>
+                                        <div className="text-[10px] text-slate-500 flex items-center gap-2">
+                                            <span>{printer.address}</span>
+                                            <span className="w-1 h-1 rounded-full bg-slate-400"></span>
+                                            <span className="uppercase">{printer.type}</span>
+                                            <span className="w-1 h-1 rounded-full bg-slate-400"></span>
+                                            <span>{printer.paperWidth || '80mm'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex gap-1">
+                                    <button onClick={() => handleTestPrint(printer)} className="p-1.5 text-blue-500 hover:bg-blue-500/10 rounded-lg" title="Test Print"><TestTube size={14}/></button>
+                                    <button onClick={() => handleDeletePrinter(idx)} className="p-1.5 text-red-400 hover:bg-red-500/10 rounded-lg" title="Delete"><Trash2 size={14}/></button>
+                                </div>
+                            </div>
+                        ))}
+                        {(!formData.printers || formData.printers.length === 0) && <div className="text-center text-xs text-slate-400 py-2">No printers configured</div>}
+                    </div>
+                    
+                    <div className="bg-white/30 dark:bg-black/10 p-3 rounded-xl space-y-2">
+                        <input placeholder="Printer Name (e.g. Counter)" className={commonInputClass + " py-2 text-xs"} value={newPrinter.name} onChange={e => setNewPrinter({...newPrinter, name: e.target.value})} />
+                        <div className="flex gap-2">
+                            <input placeholder="IP / URL" className={commonInputClass + " py-2 text-xs flex-1"} value={newPrinter.address} onChange={e => setNewPrinter({...newPrinter, address: e.target.value})} />
+                            <select className={commonInputClass + " py-2 text-xs w-24"} value={newPrinter.type} onChange={e => setNewPrinter({...newPrinter, type: e.target.value as any})}>
+                                <option value="receipt">Receipt</option>
+                                <option value="kitchen">Kitchen</option>
+                            </select>
+                        </div>
+                        <div className="flex gap-2 items-center">
+                             <select className={commonInputClass + " py-2 text-xs flex-1"} value={newPrinter.paperWidth} onChange={e => setNewPrinter({...newPrinter, paperWidth: e.target.value as any})}>
+                                <option value="80mm">80mm Paper</option>
+                                <option value="58mm">58mm Paper</option>
+                            </select>
+                            <button onClick={handleAddPrinter} className="flex-1 py-2 bg-orange-500 text-white rounded-xl text-xs font-bold hover:bg-orange-600 transition-colors shadow-md">Add Printer</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </SectionCard>}
         

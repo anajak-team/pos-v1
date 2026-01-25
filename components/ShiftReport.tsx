@@ -17,6 +17,9 @@ export const ShiftReport: React.FC<ShiftReportProps> = ({ shift, settings, onClo
     const actualCash = shift.countedCash !== undefined ? shift.countedCash : 0;
     const difference = shift.difference !== undefined ? shift.difference : (actualCash - expectedCash);
     const endTime = shift.endTime ? new Date(shift.endTime) : new Date();
+    
+    const widthClass = settings.receiptPaperSize === '58mm' ? 'w-[58mm]' : 'w-[80mm]';
+    const maxWidthClass = settings.receiptPaperSize === '58mm' ? 'max-w-[58mm]' : 'max-w-[80mm]';
 
     // Translation Helper
     const t = (key: keyof typeof TRANSLATIONS.en) => {
@@ -35,7 +38,7 @@ export const ShiftReport: React.FC<ShiftReportProps> = ({ shift, settings, onClo
     return createPortal(
         <div className="print-portal fixed inset-0 z-[120] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:bg-white print:block animate-fade-in">
             <div className="relative flex flex-col items-center w-full max-w-md max-h-full print:max-w-full print:max-h-full print:static">
-                 <div className="flex gap-3 mb-6 shrink-0 print:hidden w-full max-w-[80mm] justify-between">
+                 <div className={`flex gap-3 mb-6 shrink-0 print:hidden w-full ${maxWidthClass} justify-between`}>
                     <button onClick={() => window.print()} className="flex-1 bg-white text-black px-4 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg hover:bg-gray-100 transition-colors">
                         <Printer size={18} /> {t('PRINT')}
                     </button>
@@ -44,7 +47,7 @@ export const ShiftReport: React.FC<ShiftReportProps> = ({ shift, settings, onClo
                     </button>
                 </div>
 
-                <div className="bg-white w-[80mm] mx-auto shadow-2xl overflow-hidden rounded-sm print:shadow-none print:w-full font-mono text-black p-5 text-xs leading-tight">
+                <div className={`bg-white ${widthClass} mx-auto shadow-2xl overflow-hidden rounded-sm print:shadow-none print:w-full font-mono text-black p-5 text-xs leading-tight`}>
                     <div className="text-center mb-4 pb-4 border-b-2 border-black border-dashed">
                         <h1 className="text-xl font-bold uppercase mb-1">{settings.storeName}</h1>
                         <p className="text-[10px] uppercase tracking-widest mb-2">{t('CLOSE_SHIFT')} Report</p>

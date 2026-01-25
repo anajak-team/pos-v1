@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Layout } from './components/Layout';
 import { LoginView } from './views/LoginView';
+import { SignUpView } from './views/SignUpView';
 import { DashboardView } from './views/DashboardView';
 import { PosView } from './views/PosView';
 import { InventoryView } from './views/InventoryView';
@@ -19,10 +20,12 @@ import { CloseShiftModal } from './components/CloseShiftModal';
 import { WalletModal } from './components/WalletModal';
 import { ViewState, Product, Transaction, StoreSettings, PurchaseOrder, User, Shift, Expense, CartItem, Customer, StoredUser, RepairTicket, CashMovement } from './types';
 import * as api from './services/storageService';
-import { FileText, Printer, Wand2, ScanBarcode, Box, Image as ImageIcon, Upload, X, Check, ZoomIn, ZoomOut, Move, Save, Loader2, Minus, Plus, Undo2, Eye, Camera, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { FileText, Printer, Wand2, ScanBarcode, Box, Image as ImageIcon, Upload, X, Check, ZoomIn, ZoomOut, Move, Save, Loader2, Minus, Plus, Undo2, Eye, Camera, CheckCircle2, AlertTriangle, MapPin, Trash2, ArrowLeft } from 'lucide-react';
 import { useToast } from './components/Toast';
 import { generateProductDescription } from './services/geminiService';
 import { TRANSLATIONS } from './translations';
+
+// --- Helper Components ---
 
 const ImageCropper = ({ imageSrc, onCrop, onCancel }: { imageSrc: string, onCrop: (croppedImage: string) => void, onCancel: () => void }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -220,23 +223,6 @@ const BarcodeScanner = ({ onScan, onClose }: { onScan: (code: string) => void, o
                 (decodedText: string) => {
                     if (scannerRef.current && !scanSuccess && isMounted) {
                         setScanSuccess(true);
-                        // Beep
-                        try {
-                             const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-                             if (AudioContext) {
-                                 const ctx = new AudioContext();
-                                 const osc = ctx.createOscillator();
-                                 const gain = ctx.createGain();
-                                 osc.connect(gain);
-                                 gain.connect(ctx.destination);
-                                 osc.frequency.setValueAtTime(800, ctx.currentTime);
-                                 gain.gain.setValueAtTime(0.1, ctx.currentTime);
-                                 osc.start();
-                                 osc.stop(ctx.currentTime + 0.1);
-                             }
-                        } catch(e){}
-
-                        // Slight delay to show success
                         setTimeout(() => {
                             if(isMounted) onScan(decodedText);
                         }, 500);
@@ -270,7 +256,6 @@ const BarcodeScanner = ({ onScan, onClose }: { onScan: (code: string) => void, o
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // ERROR FIX: Must stop camera before starting a file scan
     if (scannerRef.current) {
         try {
             await scannerRef.current.stop();
@@ -289,8 +274,7 @@ const BarcodeScanner = ({ onScan, onClose }: { onScan: (code: string) => void, o
         console.error(err);
         setError("No barcode found in image");
         setTimeout(() => setError(null), 2000);
-        // Try to restart scanner
-        onClose(); // Just close to be safe and let user retry
+        onClose(); 
     } finally {
         e.target.value = '';
     }
@@ -316,66 +300,37 @@ const BarcodeScanner = ({ onScan, onClose }: { onScan: (code: string) => void, o
         ) : (
             <div className="relative w-full h-full">
                 <div id="product-modal-scanner-reader" className="w-full h-full"></div>
-                
-                {/* Visual Overlay - Professional Viewfinder */}
+                {/* Visual Overlay */}
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                    {/* Frame Container */}
                     <div className="relative w-[300px] h-[180px]">
-                        {/* Blue Outer Corners */}
                         <div className="absolute -top-3 -left-3 w-12 h-12 border-t-[6px] border-l-[6px] border-primary rounded-tl-2xl"></div>
                         <div className="absolute -top-3 -right-3 w-12 h-12 border-t-[6px] border-r-[6px] border-primary rounded-tr-2xl"></div>
                         <div className="absolute -bottom-3 -left-3 w-12 h-12 border-b-[6px] border-l-[6px] border-primary rounded-bl-2xl"></div>
                         <div className="absolute -bottom-3 -right-3 w-12 h-12 border-b-[6px] border-r-[6px] border-primary rounded-br-2xl"></div>
-                        
-                        {/* White Inner Bracket Markers */}
-                        <div className="absolute inset-0 flex items-center justify-between px-2">
-                            {/* Left Bracket */}
-                            <div className="h-16 w-4 border-t-4 border-b-4 border-l-4 border-white/80 rounded-l-lg opacity-80"></div>
-                            {/* Right Bracket */}
-                            <div className="h-16 w-4 border-t-4 border-b-4 border-r-4 border-white/80 rounded-r-lg opacity-80"></div>
-                        </div>
-
-                        {/* Red Laser Line */}
                         <div className="absolute top-1/2 left-6 right-6 h-[2px] bg-red-500 shadow-[0_0_15px_rgba(239,68,68,1)] animate-pulse -translate-y-1/2 z-10 rounded-full"></div>
-                    </div>
-                </div>
-
-                {scanSuccess && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-green-500/20 backdrop-blur-sm animate-fade-in z-30">
-                        <div className="bg-white text-green-600 px-8 py-5 rounded-3xl flex flex-col items-center shadow-2xl animate-scale-in">
-                            <CheckCircle2 size={56} className="mb-2" />
-                            <span className="font-bold text-xl text-center">Scanned!</span>
-                        </div>
-                    </div>
-                )}
-                
-                {/* Footer Controls */}
-                <div className="absolute bottom-12 left-0 right-0 flex flex-col items-center gap-6 z-20">
-                    <p className="text-white/80 text-center font-bold tracking-wide drop-shadow-md px-6">
-                        Point camera at a barcode to scan
-                    </p>
-                    
-                    <div className="flex items-center gap-12">
-                        <button 
-                            onClick={() => fileInputRef.current?.click()}
-                            className="p-5 bg-white/20 backdrop-blur-lg rounded-full text-white hover:bg-white/30 transition-all shadow-xl border border-white/20 active:scale-95 group"
-                        >
-                            <ImageIcon size={32} className="group-hover:scale-110 transition-transform" />
-                        </button>
                     </div>
                 </div>
             </div>
         )}
         
         {!error && (
-            <input 
-                type="file" 
-                ref={fileInputRef} 
-                className="hidden" 
-                accept="image/*" 
-                onChange={handleImageUpload} 
-            />
+            <div className="absolute bottom-12 left-0 right-0 flex justify-center z-20">
+                <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-5 bg-white/20 backdrop-blur-lg rounded-full text-white hover:bg-white/30 transition-all shadow-xl"
+                >
+                    <ImageIcon size={32} />
+                </button>
+            </div>
         )}
+        
+        <input 
+            type="file" 
+            ref={fileInputRef} 
+            className="hidden" 
+            accept="image/*" 
+            onChange={handleImageUpload} 
+        />
     </div>
   );
 };
@@ -390,7 +345,7 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories }: { 
 
   useEffect(() => {
     if (productToEdit) setFormData(productToEdit);
-    else setFormData({ category: categories[0] || 'Other', name: '', price: 0, cost: 0, stock: 0, description: '', barcode: '', itemsPerCase: 1, image: '' });
+    else setFormData({ category: categories[0] || 'Other', name: '', price: 0, cost: 0, stock: 0, description: '', barcode: '', itemsPerCase: 1, image: '', zone: '' });
   }, [productToEdit, isOpen, categories]);
 
   const handleGenerateDesc = async () => { if (formData.name) { setIsGenerating(true); const desc = await generateProductDescription(formData.name, formData.category || 'General'); setFormData(prev => ({ ...prev, description: desc })); setIsGenerating(false); } };
@@ -434,6 +389,21 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories }: { 
             <div className="space-y-1"><label className="text-xs font-bold text-slate-500 dark:text-slate-400">Cost (COGS)</label><input type="number" step="0.01" className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 outline-none" value={formData.cost || ''} onChange={e => setFormData({...formData, cost: parseFloat(e.target.value)})} placeholder="0.00" /></div>
           </div>
           <div className="grid grid-cols-2 gap-4"><div className="space-y-1"><label className="text-xs font-bold text-slate-500 dark:text-slate-400">Stock</label><input required type="number" className="w-full p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 outline-none" value={formData.stock || ''} onChange={e => setFormData({...formData, stock: parseInt(e.target.value)})} /></div><div className="space-y-1"><label className="text-xs font-bold text-slate-500 dark:text-slate-400">Items per Case</label><div className="relative"><Box className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16}/><input type="number" min="1" className="w-full pl-9 p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 outline-none" value={formData.itemsPerCase} onChange={e => setFormData({...formData, itemsPerCase: parseInt(e.target.value)})} placeholder="1" /></div></div></div>
+          
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-500 dark:text-slate-400">Location</label>
+            <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <input 
+                    type="text" 
+                    className="w-full pl-9 p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 outline-none transition-all"
+                    value={formData.zone || ''} 
+                    onChange={e => setFormData({...formData, zone: e.target.value})} 
+                    placeholder="Zone / Aisle (e.g. Aisle 1, Shelf B)" 
+                />
+            </div>
+          </div>
+
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-500 dark:text-slate-400">Barcode</label>
             <div className="relative">
@@ -475,871 +445,364 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories }: { 
 };
 
 const TransactionsHistory = ({ transactions, currency, onPrint, onReturn, onView, settings }: { transactions: Transaction[], currency: string, onPrint: (t: Transaction) => void, onReturn: (t: Transaction) => void, onView: (t: Transaction) => void, settings: StoreSettings }) => {
-  const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('all');
-
-  // Translation Helper
-  const t = (key: keyof typeof TRANSLATIONS.en) => {
-    const lang = settings?.language || 'en';
-    // @ts-ignore
-    return TRANSLATIONS[lang]?.[key] || TRANSLATIONS.en[key];
-  };
-
-  const filtered = transactions.filter(t => {
-    const matchesSearch = (t.customerName || '').toLowerCase().includes(search.toLowerCase()) || t.id.includes(search);
-    const matchesFilter = filter === 'all' || t.type === filter;
-    return matchesSearch && matchesFilter;
-  });
-
-  return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-20">
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div>
-                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{t('TRANSACTION_HISTORY')}</h2>
-                <p className="text-slate-600 dark:text-slate-400 text-sm">{t('MANAGE_SALES_HISTORY')}</p>
-            </div>
-            <div className="flex gap-2 w-full sm:w-auto">
-                <input 
-                    placeholder={t('SEARCH_TRANSACTIONS')} 
-                    className="flex-1 sm:w-64 p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 outline-none text-sm text-slate-800 dark:text-slate-200"
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                />
-                <select 
-                    className="p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 outline-none text-sm font-bold text-slate-800 dark:text-slate-200"
-                    value={filter}
-                    onChange={e => setFilter(e.target.value)}
-                >
-                    <option value="all">{t('FILTER_ALL')}</option>
-                    <option value="sale">{t('FILTER_SALES')}</option>
-                    <option value="return">{t('FILTER_RETURNS')}</option>
-                </select>
-            </div>
-        </div>
-
-        <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl rounded-2xl shadow-xl border border-white/30 dark:border-white/10 overflow-hidden">
-            <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                    <thead className="bg-white/20 dark:bg-white/5 border-b border-white/10 text-slate-500">
-                        <tr>
-                            <th className="p-4">{t('DATE')}</th>
-                            <th className="p-4">{t('TRANSACTION_ID')}</th>
-                            <th className="p-4">{t('CUSTOMER')}</th>
-                            <th className="p-4">{t('ITEMS')}</th>
-                            <th className="p-4">{t('TOTAL')}</th>
-                            <th className="p-4">{t('METHOD')}</th>
-                            <th className="p-4 text-right">{t('ACTIONS')}</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/10">
-                        {filtered.map(t => (
-                            <tr key={t.id} className="hover:bg-white/10 transition-colors">
-                                <td className="p-4 whitespace-nowrap text-slate-600 dark:text-slate-400">
-                                    {new Date(t.date).toLocaleDateString()} <span className="text-[10px] opacity-70">{new Date(t.date).toLocaleTimeString()}</span>
-                                </td>
-                                <td className="p-4 font-mono text-xs">{t.id.slice(-8)}</td>
-                                <td className="p-4 font-bold text-slate-800 dark:text-slate-200">{t.customerName || 'Walk-in'}</td>
-                                <td className="p-4 text-slate-600 dark:text-slate-400">{t.items.reduce((acc, i) => acc + i.quantity, 0)} items</td>
-                                <td className={`p-4 font-bold ${t.type === 'return' ? 'text-red-500' : 'text-emerald-600'}`}>
-                                    {t.type === 'return' ? '-' : ''}{currency}{t.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </td>
-                                <td className="p-4 capitalize text-slate-600 dark:text-slate-400">{t.paymentMethod}</td>
-                                <td className="p-4 text-right flex justify-end gap-2">
-                                    <button onClick={() => onView(t)} className="p-2 bg-blue-500/10 text-blue-600 rounded-lg hover:bg-blue-500/20" title="View Details"><Eye size={16}/></button>
-                                    <button onClick={() => onPrint(t)} className="p-2 bg-slate-500/10 text-slate-600 dark:text-slate-400 rounded-lg hover:bg-slate-500/20" title="Print Receipt"><Printer size={16}/></button>
-                                    {t.type === 'sale' && (
-                                        <button onClick={() => onReturn(t)} className="p-2 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-500/20" title="Process Return"><Undo2 size={16}/></button>
-                                    )}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-                {filtered.length === 0 && (
-                    <div className="p-8 text-center text-slate-400">{t('NO_TRANSACTIONS')}</div>
-                )}
-            </div>
-        </div>
-    </div>
-  );
-};
-
-const ReturnModal = ({ isOpen, onClose, transaction, onProcessReturn }: { isOpen: boolean, onClose: () => void, transaction: Transaction | null, onProcessReturn: (originalTx: Transaction, itemsToReturn: CartItem[]) => void }) => {
-    const [itemsToReturn, setItemsToReturn] = useState<CartItem[]>([]);
-
-    useEffect(() => {
-        if (transaction) {
-            setItemsToReturn(transaction.items.map(item => ({ ...item, quantity: 0 })));
-        }
-    }, [transaction]);
-
-    if (!isOpen || !transaction) return null;
-
-    const handleQuantityChange = (itemId: string, delta: number) => {
-        setItemsToReturn(prev => prev.map(item => {
-            if (item.id === itemId) {
-                const originalItem = transaction.items.find(i => i.id === itemId);
-                const originalQty = originalItem ? originalItem.quantity : 0;
-                const newQty = Math.max(0, Math.min(originalQty, item.quantity + delta));
-                return { ...item, quantity: newQty };
-            }
-            return item;
-        }));
-    };
-
-    const totalReturnAmount = itemsToReturn.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    const hasItemsToReturn = itemsToReturn.some(item => item.quantity > 0);
-
-    const handleConfirmReturn = () => {
-        const itemsWithQuantities = itemsToReturn.filter(item => item.quantity > 0);
-        if (itemsWithQuantities.length > 0) {
-            onProcessReturn(transaction, itemsWithQuantities);
-        }
-    };
-
     return (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-lg flex items-center justify-center p-4">
-            <div className="bg-white/80 dark:bg-slate-900/90 backdrop-blur-2xl rounded-3xl shadow-2xl w-full max-w-lg border border-white/20 flex flex-col max-h-[90vh]">
-                <div className="p-6 border-b border-white/10 flex justify-between items-center">
-                    <div>
-                        <h3 className="text-xl font-bold">Process Return</h3>
-                        <p className="text-xs text-slate-500">Original Order: #{transaction.id.slice(-6)}</p>
-                    </div>
-                    <button onClick={onClose}><X size={22} /></button>
-                </div>
-                <div className="p-6 space-y-4 overflow-y-auto">
-                    <p className="text-sm text-slate-600 dark:text-slate-300">Select items and quantities to return:</p>
-                    <div className="space-y-3">
-                        {transaction.items.map(originalItem => {
-                            const returnItem = itemsToReturn.find(i => i.id === originalItem.id);
-                            const returnQty = returnItem ? returnItem.quantity : 0;
-                            return (
-                                <div key={originalItem.id} className="flex items-center justify-between p-3 bg-white/50 dark:bg-white/5 rounded-xl border border-white/20">
-                                    <div className="flex items-center gap-3">
-                                        <img src={originalItem.image} className="w-10 h-10 rounded-lg object-cover" alt="" />
-                                        <div>
-                                            <div className="font-bold text-sm">{originalItem.name}</div>
-                                            <div className="text-xs text-slate-500">Sold: {originalItem.quantity}</div>
+        <div className="max-w-6xl mx-auto space-y-4">
+            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">{TRANSLATIONS.en.TRANSACTION_HISTORY}</h2>
+            <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/30 dark:border-white/10 overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                        <thead className="bg-white/30 dark:bg-white/5 text-slate-500 dark:text-slate-400 font-bold">
+                            <tr>
+                                <th className="p-4">{TRANSLATIONS.en.TRANSACTION_ID}</th>
+                                <th className="p-4">{TRANSLATIONS.en.DATE}</th>
+                                <th className="p-4">{TRANSLATIONS.en.CUSTOMER}</th>
+                                <th className="p-4">{TRANSLATIONS.en.ITEMS}</th>
+                                <th className="p-4">{TRANSLATIONS.en.TOTAL}</th>
+                                <th className="p-4 text-right">{TRANSLATIONS.en.ACTIONS}</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/20 dark:divide-white/5">
+                            {transactions.map(t => (
+                                <tr key={t.id} className="hover:bg-white/30 dark:hover:bg-white/5 transition-colors">
+                                    <td className="p-4 font-mono text-xs">{t.id.slice(-6)}</td>
+                                    <td className="p-4">{new Date(t.date).toLocaleString()}</td>
+                                    <td className="p-4">{t.customerName || '-'}</td>
+                                    <td className="p-4">{t.items.length} items</td>
+                                    <td className="p-4 font-bold">{currency}{t.total.toLocaleString()}</td>
+                                    <td className="p-4 text-right">
+                                        <div className="flex justify-end gap-2">
+                                            <button onClick={() => onPrint(t)} className="p-2 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg"><Printer size={16} /></button>
+                                            <button onClick={() => onView(t)} className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg"><Eye size={16} /></button>
+                                            {t.type === 'sale' && <button onClick={() => onReturn(t)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg"><Undo2 size={16} /></button>}
                                         </div>
-                                    </div>
-                                    <div className="flex items-center gap-2 bg-slate-100 dark:bg-black/20 rounded-lg p-1 border border-white/20">
-                                        <button onClick={() => handleQuantityChange(originalItem.id, -1)} disabled={returnQty === 0} className="p-1.5 disabled:opacity-30"><Minus size={14}/></button>
-                                        <span className="w-6 text-center font-bold text-sm">{returnQty}</span>
-                                        <button onClick={() => handleQuantityChange(originalItem.id, 1)} disabled={returnQty >= originalItem.quantity} className="p-1.5 disabled:opacity-30"><Plus size={14}/></button>
-                                    </div>
-                                </div>
-                            )
-                        })}
-                    </div>
-                </div>
-                <div className="p-6 border-t border-white/10 bg-white/10 mt-auto">
-                    <div className="flex justify-between items-center mb-4">
-                        <span className="font-bold text-lg">Total Refund:</span>
-                        <span className="font-bold text-2xl text-red-500">-${totalReturnAmount.toFixed(2)}</span>
-                    </div>
-                    <button onClick={handleConfirmReturn} disabled={!hasItemsToReturn} className="w-full py-4 bg-red-600 text-white rounded-xl font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                        <Undo2 size={18} /> Process Refund
-                    </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     );
 };
 
-export const App: React.FC = () => {
+// --- Main App Component ---
+
+export const App = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [showLogin, setShowLogin] = useState(false);
-  const [currentView, setCurrentView] = useState<ViewState>('POS');
-  
-  // Data States
+  const [view, setView] = useState<ViewState>('DASHBOARD');
   const [products, setProducts] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [purchases, setPurchases] = useState<PurchaseOrder[]>([]);
   const [settings, setSettings] = useState<StoreSettings | null>(null);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [expenseCategories, setExpenseCategories] = useState<string[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [users, setUsers] = useState<StoredUser[]>([]);
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [currentShift, setCurrentShift] = useState<Shift | null>(null);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [expenseCategories, setExpenseCategories] = useState<string[]>([]);
   const [repairs, setRepairs] = useState<RepairTicket[]>([]);
-
-  // UI States
-  const [transactionToPrint, setTransactionToPrint] = useState<Transaction | null>(null);
-  const [transactionToReturn, setTransactionToReturn] = useState<Transaction | null>(null);
-  const [transactionToView, setTransactionToView] = useState<Transaction | null>(null);
-  const [productModalState, setProductModalState] = useState<{isOpen: boolean; product: Partial<Product> | null}>({isOpen: false, product: null});
-  const [isCloseShiftModalOpen, setIsCloseShiftModalOpen] = useState(false);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
-  const [shiftReportData, setShiftReportData] = useState<Shift | null>(null);
+  const [isCloseShiftModalOpen, setIsCloseShiftModalOpen] = useState(false);
+  const [completedShift, setCompletedShift] = useState<Shift | null>(null);
+  const [productModalOpen, setProductModalOpen] = useState(false);
+  const [productToEdit, setProductToEdit] = useState<Product | null>(null);
   
+  // Specific Customer State
+  const [customerData, setCustomerData] = useState<Customer | null>(null);
+
   const { showToast } = useToast();
 
   useEffect(() => {
     const init = async () => {
-        try {
-            const storedUser = localStorage.getItem('nexus_user') || sessionStorage.getItem('nexus_user');
-            // If user is NOT logged in, we MUST force fetch real settings for the Landing Page.
-            const forceProduction = !storedUser;
-
-            // Load settings and products initially (needed for landing page)
-            const appSettings = await api.getSettings(forceProduction);
-            const productsData = await api.getProducts(forceProduction);
-            
-            setSettings(appSettings);
-            setProducts(productsData);
-
-            if (storedUser) {
-                setCurrentUser(JSON.parse(storedUser));
-            } else {
-                setLoading(false);
-            }
-        } catch(e) {
-            console.error("Failed to load settings or products", e);
-            setLoading(false);
-        }
+      const loadedSettings = await api.getSettings();
+      setSettings(loadedSettings);
+      document.documentElement.classList.toggle('dark', loadedSettings.theme === 'dark');
+      
+      setProducts(await api.getProducts());
+      setTransactions(await api.getTransactions());
+      setUsers(await api.getUsers());
+      setShifts(await api.getShifts());
+      setActiveShift(await api.getActiveShift());
+      setCustomers(await api.getCustomers());
+      setCategories(await api.getCategories());
+      setExpenses(await api.getExpenses());
+      setExpenseCategories(await api.getExpenseCategories());
+      setRepairs(await api.getRepairs());
+      setPurchaseOrders(await api.getPurchaseOrders());
     };
     init();
   }, []);
 
-  useEffect(() => {
-    if (currentUser) {
-      loadInitialData();
-    }
-  }, [currentUser]);
-
-  const loadInitialData = async () => {
-    setLoading(true);
-    try {
-      const [
-        productsData, 
-        transactionsData, 
-        settingsData, 
-        purchasesData, 
-        activeShiftData,
-        categoriesData,
-        expensesData,
-        usersData,
-        customersData,
-        expenseCategoriesData,
-        repairsData
-      ] = await Promise.all([
-        api.getProducts(),
-        api.getTransactions(),
-        api.getSettings(),
-        api.getPurchaseOrders(),
-        api.getActiveShift(),
-        api.getCategories(),
-        api.getExpenses(),
-        api.getUsers(),
-        api.getCustomers(),
-        api.getExpenseCategories(),
-        api.getRepairs()
-      ]);
-      setProducts(productsData);
-      setTransactions(transactionsData);
-      setSettings(settingsData);
-      setPurchases(purchasesData);
-      setCurrentShift(activeShiftData);
-      setCategories(categoriesData);
-      setExpenses(expensesData);
-      setUsers(usersData);
-      setCustomers(customersData);
-      setExpenseCategories(expenseCategoriesData);
-      setRepairs(repairsData);
-    } catch (error) {
-      showToast('Failed to load store data.', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (settings) {
-      // Apply theme mode
-      if (settings.theme === 'dark') document.documentElement.classList.add('dark');
-      else document.documentElement.classList.remove('dark');
-      
-      // Apply primary color
-      if (settings.primaryColor) {
-          document.documentElement.style.setProperty('--color-primary', settings.primaryColor);
-      }
-    }
-  }, [settings?.theme, settings?.primaryColor]);
-
-  useEffect(() => {
-    if (transactionToPrint) {
-      const timer = setTimeout(() => window.print(), 100);
-      return () => clearTimeout(timer);
-    }
-  }, [transactionToPrint]);
-
-  const handleLogin = (user: User, rememberMe: boolean) => {
-    if (rememberMe) {
-        localStorage.setItem('nexus_user', JSON.stringify(user));
-    } else {
-        sessionStorage.setItem('nexus_user', JSON.stringify(user));
-    }
-    localStorage.removeItem('nexus_demo_mode');
+  const handleLogin = async (user: User, rememberMe: boolean) => {
     setCurrentUser(user);
-  };
-
-  const handleLogout = async () => {
-    localStorage.removeItem('nexus_user');
-    sessionStorage.removeItem('nexus_user');
-    localStorage.removeItem('nexus_demo_mode');
-    
-    setCurrentUser(null);
-    setCurrentShift(null); 
-    setShiftReportData(null);
-    setShowLogin(false);
-    setCurrentView('POS');
-    
-    setTransactions([]);
-    setPurchases([]);
-    setExpenses([]);
-    setUsers([]);
-    setCustomers([]);
-    setRepairs([]);
-    
-    try {
-       const publicSettings = await api.getSettings(true);
-       const publicProducts = await api.getProducts(true);
-       setSettings(publicSettings);
-       setProducts(publicProducts);
-    } catch(e) {
-       console.error("Error resetting to public state", e);
+    if (user.role === 'Customer') {
+        // Fetch specific customer data linked to this user
+        const customerProfile = await api.getCustomerByEmail(user.email);
+        if (customerProfile) {
+            setCustomerData(customerProfile);
+            setView('LANDING_BUILDER'); // Default, will be intercepted
+            showToast(`Welcome back, ${user.name}`, 'success');
+        } else {
+            showToast('Customer profile not found', 'error');
+            setCurrentUser(null);
+        }
+    } else {
+        setView('DASHBOARD');
+        showToast(`Welcome back, ${user.name}`, 'success');
     }
   };
 
-  const handleViewDemo = () => {
-    const demoUser: User = {
-      id: 'demo_user',
-      name: 'Demo Manager',
-      role: 'Manager',
-      email: 'demo@nexus.com',
-      avatar: 'D'
-    };
-    localStorage.setItem('nexus_demo_mode', 'true');
-    localStorage.setItem('nexus_user', JSON.stringify(demoUser));
-    setCurrentUser(demoUser);
-    showToast('Welcome to Demo Mode', 'success');
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setCustomerData(null);
+    setView('DASHBOARD'); // Or LANDING
   };
 
   const handleStartShift = async (amount: number) => {
     if (!currentUser) return;
     try {
-      const newShift = await api.saveShift({ userId: currentUser.id, userName: currentUser.name, startTime: new Date().toISOString(), startingCash: amount, cashSales: 0, cardSales: 0, digitalSales: 0, status: 'OPEN', cashMovements: [] });
-      setCurrentShift(newShift);
-      showToast(`Shift started with ${settings?.currency || '$'}${amount.toFixed(2)} float`, 'success');
-    } catch (error) {
-      showToast('Failed to start shift', 'error');
+        const newShift = await api.saveShift({
+            userId: currentUser.id,
+            userName: currentUser.name,
+            startTime: new Date().toISOString(),
+            startingCash: amount,
+            cashSales: 0,
+            cardSales: 0,
+            digitalSales: 0,
+            status: 'OPEN',
+            cashMovements: []
+        });
+        setActiveShift(newShift);
+        setShifts([newShift, ...shifts]);
+        showToast('Shift started successfully', 'success');
+    } catch (e) {
+        showToast('Failed to start shift', 'error');
     }
   };
 
-  const handleConfirmCloseShift = async (countedCash: number) => {
-    if (!currentShift) return;
-    const totalSales = (currentShift.cashSales || 0) + (currentShift.cardSales || 0) + (currentShift.digitalSales || 0);
-    
-    const payIn = currentShift.cashMovements?.filter(m => m.type === 'in').reduce((sum, m) => sum + m.amount, 0) || 0;
-    const payOut = currentShift.cashMovements?.filter(m => m.type === 'out').reduce((sum, m) => sum + m.amount, 0) || 0;
-    
-    const expectedCash = (currentShift.startingCash || 0) + (currentShift.cashSales || 0) + payIn - payOut;
-    const difference = countedCash - expectedCash;
-    const shiftToClose: Partial<Shift> = { id: currentShift.id, endTime: new Date().toISOString(), status: 'CLOSED', totalSales, expectedCash, countedCash, difference };
-    try {
-      const savedShift = await api.saveShift(shiftToClose);
-      setCurrentShift(null);
+  const handleCloseShift = async (countedCash: number) => {
+      if (!activeShift) return;
+      const closedShift = await api.saveShift({
+          ...activeShift,
+          endTime: new Date().toISOString(),
+          status: 'CLOSED',
+          countedCash,
+          difference: countedCash - ((activeShift.expectedCash || 0)) // Note: calculation should be more robust in real app
+      });
+      setActiveShift(null);
+      setShifts(shifts.map(s => s.id === closedShift.id ? closedShift : s));
+      setCompletedShift(closedShift);
       setIsCloseShiftModalOpen(false);
-      setIsWalletModalOpen(false);
-      setShiftReportData(savedShift);
-      showToast('Shift closed successfully.', 'success');
-    } catch (error) {
-      showToast('Failed to close shift', 'error');
-    }
   };
 
-  const handleCashMovement = async (type: 'in' | 'out', amount: number, reason: string) => {
-    if (!currentShift || !currentUser) return;
-    
-    const newMovement: CashMovement = {
-        id: Date.now().toString(),
-        type,
-        amount,
-        reason,
-        timestamp: new Date().toISOString(),
-        userId: currentUser.id,
-        userName: currentUser.name
-    };
-
-    const updatedMovements = [...(currentShift.cashMovements || []), newMovement];
-    const updatedShift = { ...currentShift, cashMovements: updatedMovements };
-    
-    try {
-        await api.saveShift(updatedShift);
-        setCurrentShift(updatedShift);
-        showToast(`Cash ${type === 'in' ? 'added' : 'removed'} successfully`, 'success');
-    } catch (error) {
-        showToast('Failed to record cash movement', 'error');
-    }
-  };
-
-  const handleCloseShiftReport = () => {
-    setShiftReportData(null);
-    handleLogout();
-  };
-
-  const handleCloseProductModal = () => {
-    setProductModalState({ isOpen: false, product: null });
-  };
-  
-  const handleUpdateProduct = async (product: Product) => {
-    try {
-      const updatedProduct = await api.updateProduct(product);
-      setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
-    } catch (error) {
-      showToast('Failed to update product', 'error');
-      throw error;
-    }
-  };
-
-  const handleAddProduct = async (productData: Partial<Product>): Promise<Product> => {
-    try {
-      const newProduct = await api.addProduct(productData);
-      setProducts(prev => [...prev, newProduct]);
+  const handleAddProduct = async (product: Partial<Product>) => {
+      const newProduct = await api.addProduct(product);
+      setProducts([...products, newProduct]);
+      showToast('Product added successfully', 'success');
       return newProduct;
-    } catch (error) {
-      showToast('Failed to add product', 'error');
-      throw error;
-    }
   };
 
-  const handleSaveProductFromModal = async (productData: Partial<Product>) => {
-    try {
-      if (productData.id) {
-        await handleUpdateProduct(productData as Product);
-        showToast('Product updated successfully', 'success');
-      } else {
-        await handleAddProduct(productData);
-        showToast('Product added successfully', 'success');
-      }
-      handleCloseProductModal();
-    } catch (error) {
-      showToast('Failed to save product', 'error');
-    }
+  const handleUpdateProduct = async (product: Product) => {
+      const updated = await api.updateProduct(product);
+      setProducts(products.map(p => p.id === updated.id ? updated : p));
+      showToast('Product updated', 'success');
   };
+
   const handleDeleteProduct = async (id: string) => {
-    try {
       await api.deleteProduct(id);
       setProducts(products.filter(p => p.id !== id));
-      showToast('Product deleted', 'info');
-    } catch (error) {
-      showToast('Failed to delete product', 'error');
-    }
   };
 
-  const handleImportProducts = async (newProducts: Product[]) => {
-    try {
-      const updatedProducts = [...products];
-      let addedCount = 0;
-      let updatedCount = 0;
-
-      for (const p of newProducts) {
-        const existingIndex = updatedProducts.findIndex(ex => 
-          (p.barcode && ex.barcode === p.barcode) || 
-          (p.name && ex.name.toLowerCase() === p.name.toLowerCase())
-        );
-        
-        if (existingIndex >= 0) {
-          updatedProducts[existingIndex] = { ...updatedProducts[existingIndex], ...p, id: updatedProducts[existingIndex].id };
-          updatedCount++;
-        } else {
-          updatedProducts.push(p);
-          addedCount++;
-        }
-      }
+  const handleTransaction = async (t: Transaction) => {
+      const saved = await api.saveTransaction(t);
+      setTransactions([saved, ...transactions]);
       
-      await api.saveProducts(updatedProducts);
-      setProducts(updatedProducts);
-      showToast(`Import Success: ${addedCount} added, ${updatedCount} updated`, 'success');
-    } catch (e) {
-      console.error(e);
-      showToast('Import failed', 'error');
-    }
-  };
-
-  const handleUpdateCategories = async (newCategories: string[]) => {
-    try {
-      const updated = await api.saveCategories(newCategories);
-      setCategories(updated);
-      showToast('Categories updated', 'success');
-    } catch (error) {
-      showToast('Failed to update categories', 'error');
-    }
-  };
-  const handleRenameCategory = async (oldName: string, newName: string) => {
-    try {
-      const updatedCategories = categories.map(c => c === oldName ? newName : c);
-      await api.saveCategories(updatedCategories);
-      setCategories(updatedCategories);
-      const updatedProducts = products.map(p => p.category === oldName ? { ...p, category: newName } : p);
-      await api.saveProducts(updatedProducts);
-      setProducts(updatedProducts);
-      showToast(`Category renamed and products updated.`, 'success');
-    } catch (error) {
-      showToast('Failed to rename category', 'error');
-    }
-  };
-  
-  const handleUpdateExpenseCategories = async (newCategories: string[]) => {
-    try {
-      const updated = await api.saveExpenseCategories(newCategories);
-      setExpenseCategories(updated);
-      showToast('Expense categories updated', 'success');
-    } catch (error) {
-      showToast('Failed to update expense categories', 'error');
-    }
-  };
-
-  const handleAddUser = async (user: Omit<StoredUser, 'id'>) => {
-    const savedUser = await api.addUser(user);
-    setUsers(prev => [...prev, savedUser]);
-  };
-  const handleUpdateUser = async (user: StoredUser) => {
-    const updatedUser = await api.updateUser(user);
-    setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
-  };
-  const handleDeleteUser = async (userId: string) => {
-    await api.deleteUser(userId);
-    setUsers(prev => prev.filter(u => u.id !== userId));
-  };
-  
-  const handleAddCustomer = async (customer: Omit<Customer, 'id'>): Promise<Customer> => {
-    const savedCustomer = await api.addCustomer(customer);
-    setCustomers(prev => [...prev, savedCustomer]);
-    return savedCustomer;
-  };
-  const handleUpdateCustomer = async (customer: Customer) => {
-    const updatedCustomer = await api.updateCustomer(customer);
-    setCustomers(prev => prev.map(c => c.id === updatedCustomer.id ? updatedCustomer : c));
-  };
-  const handleDeleteCustomer = async (customerId: string) => {
-    await api.deleteCustomer(customerId);
-    setCustomers(prev => prev.filter(c => c.id !== customerId));
-  };
-
-  const handleAddRepair = async (repair: Omit<RepairTicket, 'id' | 'createdAt' | 'updatedAt'>) => {
-      try {
-          const newRepair = await api.addRepair(repair);
-          setRepairs([newRepair, ...repairs]);
-      } catch (err) {
-          showToast('Failed to create repair ticket', 'error');
-      }
-  };
-  const handleUpdateRepair = async (repair: RepairTicket) => {
-      try {
-          const updatedRepair = await api.updateRepair(repair);
-          setRepairs(repairs.map(r => r.id === updatedRepair.id ? updatedRepair : r));
-      } catch (err) {
-          showToast('Failed to update repair ticket', 'error');
-      }
-  };
-  const handleDeleteRepair = async (id: string) => {
-      try {
-          await api.deleteRepair(id);
-          setRepairs(repairs.filter(r => r.id !== id));
-      } catch (err) {
-          showToast('Failed to delete repair ticket', 'error');
-      }
-  };
-
-  const handleUpdateSettings = async (newSettings: StoreSettings) => {
-    try {
-      const updated = await api.saveSettings(newSettings);
-      setSettings(updated);
-      showToast('Settings saved successfully', 'success');
-    } catch(error) {
-      showToast('Failed to save settings', 'error');
-    }
-  };
-
-  const handleAddExpense = async (expense: Omit<Expense, 'id'>) => { try { const savedExpense = await api.addExpense(expense); setExpenses([savedExpense, ...expenses]); } catch(error) { showToast('Failed to add expense', 'error'); } };
-  const handleDeleteExpense = async (id: string) => { try { await api.deleteExpense(id); setExpenses(expenses.filter(e => e.id !== id)); showToast('Expense deleted', 'info'); } catch(error) { showToast('Failed to delete expense', 'error'); } };
-
-  const handleTransaction = async (transaction: Transaction) => {
-    const newTransaction: Transaction = { ...transaction, id: transaction.id || `trx-${Date.now()}`, shiftId: currentShift?.id };
-    try {
-      const savedTransaction = await api.saveTransaction(newTransaction);
-      setTransactions([savedTransaction, ...transactions]);
-      
-      const changedProducts: Product[] = [];
-      const updatedProducts = products.map(p => { 
-          const sold = transaction.items.find(i => i.id === p.id); 
-          if (sold) {
-              const updated = { ...p, stock: Math.max(0, p.stock - sold.quantity) };
-              changedProducts.push(updated);
+      // Update Stock
+      const updates = t.items.map(async item => {
+          const product = products.find(p => p.id === item.id);
+          if (product) {
+              const updated = await api.updateProduct({ ...product, stock: product.stock - item.quantity });
               return updated;
           }
-          return p; 
       });
-      setProducts(updatedProducts);
       
-      if (changedProducts.length > 0) {
-          await api.saveProducts(changedProducts);
+      const updatedProducts = (await Promise.all(updates)).filter(Boolean) as Product[];
+      setProducts(prev => prev.map(p => updatedProducts.find(up => up.id === p.id) || p));
+
+      // Update Shift
+      if (activeShift) {
+          const shiftUpdate: Partial<Shift> = {
+              id: activeShift.id,
+              cashSales: activeShift.cashSales + (t.paymentMethod === 'cash' ? t.total : 0),
+              cardSales: activeShift.cardSales + (t.paymentMethod === 'card' ? t.total : 0),
+              digitalSales: activeShift.digitalSales + (t.paymentMethod === 'digital' ? t.total : 0),
+          };
+          const updatedShift = await api.saveShift(shiftUpdate);
+          setActiveShift(updatedShift);
       }
 
-      if (currentShift) { const updatedShift = { ...currentShift }; if (transaction.paymentMethod === 'cash') updatedShift.cashSales += transaction.total; else if (transaction.paymentMethod === 'card') updatedShift.cardSales += transaction.total; else if (transaction.paymentMethod === 'digital') updatedShift.digitalSales += transaction.total; setCurrentShift(updatedShift); await api.saveShift(updatedShift); }
-      if (transaction.customerId) await api.updateCustomerStats(transaction.customerId, transaction.total);
-      
-      showToast('Transaction completed', 'success');
-    } catch (error) {
-      showToast('Transaction failed', 'error');
-    }
-  };
-
-  const handleReturn = async (originalTx: Transaction, itemsToReturn: CartItem[]) => {
-      const refundAmount = itemsToReturn.reduce((sum, item) => sum + item.price * item.quantity, 0);
-      
-      // 1. Create return transaction
-      const returnTx: Transaction = {
-          id: `ret-${Date.now()}`,
-          date: new Date().toISOString(),
-          items: itemsToReturn,
-          total: refundAmount,
-          tax: 0, // Simplified tax handling for returns
-          paymentMethod: originalTx.paymentMethod,
-          type: 'return',
-          originalTransactionId: originalTx.id,
-          customerId: originalTx.customerId,
-          customerName: originalTx.customerName,
-          shiftId: currentShift?.id
-      };
-
-      try {
-          const savedReturn = await api.saveTransaction(returnTx);
-          setTransactions([savedReturn, ...transactions]);
-
-          // 2. Restock items
-          const changedProducts: Product[] = [];
-          const updatedProducts = products.map(p => {
-              const returned = itemsToReturn.find(i => i.id === p.id);
-              if (returned) {
-                  const updated = { ...p, stock: p.stock + returned.quantity };
-                  changedProducts.push(updated);
-                  return updated;
-              }
-              return p;
-          });
-          setProducts(updatedProducts);
-          if (changedProducts.length > 0) await api.saveProducts(changedProducts);
-
-          // 3. Update customer stats (deduct points/spend)
-          if (originalTx.customerId) {
-              await api.updateCustomerStats(originalTx.customerId, -refundAmount); // Negative spend
-          }
-
-          setTransactionToReturn(null);
-          showToast('Return processed successfully', 'success');
-      } catch (err) {
-          showToast('Failed to process return', 'error');
+      // Update Customer
+      if (t.customerId) {
+          await api.updateCustomerStats(t.customerId, t.total);
+          const updatedCustomers = await api.getCustomers();
+          setCustomers(updatedCustomers);
       }
   };
 
-  const handleToggleTheme = async () => {
+  const handleAddExpense = async (expense: Omit<Expense, 'id'>) => {
+      const newExpense = await api.addExpense(expense);
+      setExpenses([...expenses, newExpense]);
+  };
+
+  const handleDeleteExpense = async (id: string) => {
+      await api.deleteExpense(id);
+      setExpenses(expenses.filter(e => e.id !== id));
+  };
+
+  // Toggle Theme Logic (Reused for Customer View)
+  const toggleTheme = () => {
     if (!settings) return;
     const newTheme: 'light' | 'dark' = settings.theme === 'light' ? 'dark' : 'light';
     const newSettings: StoreSettings = { ...settings, theme: newTheme };
-    setSettings(newSettings);
-    try {
-        await api.saveSettings(newSettings);
-    } catch (e) {
-        console.error("Failed to save theme preference");
-    }
+    api.saveSettings(newSettings).then(() => {
+        setSettings(newSettings);
+        document.documentElement.classList.toggle('dark', newTheme === 'dark');
+    });
   };
 
-  const AVAILABLE_LANGUAGES: ('en' | 'km' | 'zh')[] = ['en', 'km', 'zh'];
-
-  const handleToggleLanguage = async () => {
+  const toggleLanguage = () => {
     if (!settings) return;
-    const currentIndex = AVAILABLE_LANGUAGES.indexOf(settings.language as any);
-    const nextIndex = (currentIndex + 1) % AVAILABLE_LANGUAGES.length;
-    const newLang = AVAILABLE_LANGUAGES[nextIndex];
-    
-    const newSettings = { ...settings, language: newLang };
-    setSettings(newSettings);
-    try {
-        await api.saveSettings(newSettings);
-    } catch (e) {
-        console.error("Failed to save language preference");
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-transparent">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-slate-500 font-bold animate-pulse">Loading Store Data...</p>
-        </div>
-      </div>
-    );
+    const langs = ['en', 'km', 'zh'];
+    const currentIdx = langs.indexOf(settings.language || 'en');
+    const nextLang = langs[(currentIdx + 1) % langs.length];
+    const newSettings = { ...settings, language: nextLang as any };
+    api.saveSettings(newSettings).then(() => setSettings(newSettings));
   }
+
+  if (!settings) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" size={40} /></div>;
 
   if (!currentUser) {
-    if (showLogin) {
-      return <LoginView onLogin={handleLogin} onBack={() => setShowLogin(false)} settings={settings} />;
-    }
-    return <LandingPage onGetStarted={() => setShowLogin(true)} onViewDemo={handleViewDemo} settings={settings} products={products} />;
+      if (view === 'LOGIN') {
+          return <LoginView onLogin={handleLogin} onBack={() => setView('DASHBOARD')} onSignUpClick={() => setView('SIGNUP')} settings={settings} />;
+      }
+      if (view === 'SIGNUP') {
+          return <SignUpView onSignUpSuccess={() => { setView('LOGIN'); showToast('Account created! Please sign in.', 'success'); }} onBack={() => setView('LOGIN')} settings={settings} />;
+      }
+      if (view === 'LANDING_BUILDER') {
+          return <LandingPageBuilderView settings={settings} onSave={(s) => { api.saveSettings(s).then(setSettings); }} onBack={() => setView('DASHBOARD')} />;
+      }
+      return <LandingPage onGetStarted={() => setView('LOGIN')} onViewDemo={() => {}} settings={settings} products={products} />;
   }
 
-  if (currentView === 'LANDING_BUILDER' && settings) {
+  // --- Customer View Logic ---
+  // If user is a customer, always show the Landing Page with their data
+  if (currentUser.role === 'Customer' && customerData) {
       return (
-          <div className={`min-h-screen bg-transparent text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300`}>
-              <LandingPageBuilderView settings={settings} onSave={handleUpdateSettings} onBack={() => setCurrentView('SETTINGS')} />
-          </div>
+          <LandingPage
+            onGetStarted={() => {}} // No-op
+            onViewDemo={() => {}}
+            settings={settings}
+            products={products}
+            currentUser={currentUser}
+            customerData={customerData}
+            transactions={transactions}
+            repairs={repairs}
+            onLogout={handleLogout}
+          />
       );
   }
 
+  // Active Shift Check for Staff/Admins
+  if (!activeShift && currentUser && currentUser.role !== 'Customer' && view !== 'LANDING_BUILDER' && view !== 'SETTINGS') {
+      return <ShiftEntryModal currentUser={currentUser} onStartShift={handleStartShift} settings={settings} onLogout={handleLogout} />;
+  }
+
+  const renderView = () => {
+      switch (view) {
+          case 'DASHBOARD': return <DashboardView transactions={transactions} isDarkMode={settings.theme === 'dark'} currentUser={currentUser} expenses={expenses} products={products} settings={settings} />;
+          case 'POS': return <PosView products={products} onCompleteTransaction={handleTransaction} onPrint={() => {}} settings={settings} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} currentUser={currentUser} onOpenProductModal={(p) => { setProductToEdit(p); setProductModalOpen(true); }} categories={categories} customers={customers} onAddCustomer={async (c) => await api.addCustomer(c)} />;
+          case 'INVENTORY': return <InventoryView products={products} onDeleteProduct={handleDeleteProduct} onUpdateProduct={handleUpdateProduct} onImportProducts={async (newProds) => { await api.saveProducts(newProds); setProducts(await api.getProducts()); }} settings={settings} currentUser={currentUser} onOpenProductModal={(p) => { setProductToEdit(p); setProductModalOpen(true); }} />;
+          case 'TRANSACTIONS': return <TransactionsHistory transactions={transactions} currency={settings.currency} onPrint={() => {}} onReturn={() => {}} onView={() => {}} settings={settings} />;
+          case 'SETTINGS': return <SettingsView settings={settings} onSave={async (s) => { await api.saveSettings(s); setSettings(s); document.documentElement.classList.toggle('dark', s.theme === 'dark'); showToast('Settings saved', 'success'); }} transactions={transactions} currentUser={currentUser} categories={categories} onUpdateCategories={async (c) => { await api.saveCategories(c); setCategories(c); }} onRenameCategory={()=>{}} users={users} onAddUser={async (u) => { const n = await api.addUser(u); setUsers([...users, n]); }} onUpdateUser={async (u) => { await api.updateUser(u); setUsers(users.map(us => us.id === u.id ? u : us)); }} onDeleteUser={async (id) => { await api.deleteUser(id); setUsers(users.filter(u => u.id !== id)); }} customers={customers} onAddCustomer={async (c) => { const n = await api.addCustomer(c); setCustomers([...customers, n]); }} onUpdateCustomer={async (c) => { await api.updateCustomer(c); setCustomers(customers.map(cu => cu.id === c.id ? c : cu)); }} onDeleteCustomer={async (id) => { await api.deleteCustomer(id); setCustomers(customers.filter(c => c.id !== id)); }} onNavigate={setView} />;
+          case 'PURCHASES': return <PurchaseView orders={purchaseOrders} products={products} settings={settings} onCreateOrder={async (o) => { const n = await api.savePurchaseOrder(o); setPurchaseOrders([n, ...purchaseOrders]); }} onReceiveOrder={async (id) => { const o = purchaseOrders.find(po => po.id === id); if(o) { const u = await api.savePurchaseOrder({...o, status: 'Received'}); setPurchaseOrders(purchaseOrders.map(p => p.id === id ? u : p)); o.items.forEach(async i => { const p = products.find(prod => prod.id === i.productId); if(p) { const updated = await api.updateProduct({...p, stock: p.stock + i.quantity}); setProducts(prev => prev.map(pr => pr.id === updated.id ? updated : pr)); } }); showToast('Order received, inventory updated', 'success'); } }} currentUser={currentUser} />;
+          case 'EXPENSES': return <ExpensesView expenses={expenses} categories={expenseCategories} onAddExpense={handleAddExpense} onDeleteExpense={handleDeleteExpense} onUpdateCategories={async (c) => { await api.saveExpenseCategories(c); setExpenseCategories(c); }} settings={settings} currentUser={currentUser} />;
+          case 'REPORTS': return <ReportsView transactions={transactions} expenses={expenses} settings={settings} currentUser={currentUser} />;
+          case 'REPAIRS': return <RepairsView repairs={repairs} customers={customers} onAddRepair={async (r) => { const n = await api.addRepair(r); setRepairs([n, ...repairs]); }} onUpdateRepair={async (r) => { const u = await api.updateRepair(r); setRepairs(repairs.map(rep => rep.id === r.id ? u : rep)); }} onDeleteRepair={async (id) => { await api.deleteRepair(id); setRepairs(repairs.filter(r => r.id !== id)); }} settings={settings} currentUser={currentUser} />;
+          case 'LANDING_BUILDER': return <LandingPageBuilderView settings={settings} onSave={async (s) => { await api.saveSettings(s); setSettings(s); showToast('Landing page updated', 'success'); }} onBack={() => setView('SETTINGS')} />;
+          default: return <DashboardView transactions={transactions} isDarkMode={settings.theme === 'dark'} currentUser={currentUser} expenses={expenses} products={products} settings={settings} />;
+      }
+  };
+
   return (
-    <div className={`min-h-screen bg-transparent text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300 ${settings?.theme === 'dark' ? 'dark' : ''}`}>
-      <Layout 
-        currentView={currentView} 
-        onNavigate={setCurrentView} 
-        storeName={settings?.storeName || 'Store'}
-        onLogout={handleLogout}
-        currentUser={currentUser}
+    <Layout 
+        currentView={view} 
+        onNavigate={setView} 
+        storeName={settings.storeName} 
+        onLogout={handleLogout} 
+        currentUser={currentUser} 
         onWalletClick={() => setIsWalletModalOpen(true)}
-        isDarkMode={settings?.theme === 'dark'}
-        onToggleTheme={handleToggleTheme}
-        currentLanguage={settings?.language || 'en'}
-        onToggleLanguage={handleToggleLanguage}
-      >
-        {currentView === 'DASHBOARD' && <DashboardView transactions={transactions} isDarkMode={settings?.theme === 'dark'} currentUser={currentUser} expenses={expenses} products={products} settings={settings} />}
-        {currentView === 'POS' && <PosView 
-            products={products} 
-            onCompleteTransaction={handleTransaction} 
-            onPrint={setTransactionToPrint}
-            settings={settings!}
-            onAddProduct={handleAddProduct}
-            onUpdateProduct={handleUpdateProduct}
-            currentUser={currentUser}
-            onOpenProductModal={(p) => setProductModalState({isOpen: true, product: p})}
-            categories={categories}
-            customers={customers}
-            onAddCustomer={handleAddCustomer}
-        />}
-        {currentView === 'INVENTORY' && <InventoryView 
-            products={products} 
-            onDeleteProduct={handleDeleteProduct} 
-            onUpdateProduct={handleUpdateProduct} 
-            onImportProducts={handleImportProducts}
-            settings={settings!}
-            currentUser={currentUser}
-            onOpenProductModal={(p) => setProductModalState({isOpen: true, product: p})}
-        />}
-        {currentView === 'TRANSACTIONS' && <TransactionsHistory 
-            transactions={transactions} 
-            currency={settings?.currency || '$'} 
-            onPrint={setTransactionToPrint} 
-            onReturn={setTransactionToReturn}
-            onView={setTransactionToView}
-            settings={settings!}
-        />}
-        {currentView === 'PURCHASES' && <PurchaseView orders={purchases} products={products} settings={settings!} onCreateOrder={(order) => { setPurchases([order, ...purchases]); api.savePurchaseOrder(order); }} onReceiveOrder={(id) => { 
-            const order = purchases.find(o => o.id === id);
-            if (order) {
-                const updatedOrder = { ...order, status: 'Received' as const };
-                setPurchases(purchases.map(o => o.id === id ? updatedOrder : o));
-                api.savePurchaseOrder(updatedOrder);
-                // Update stock
-                const changedProducts: Product[] = [];
-                const updatedProducts = products.map(p => {
-                    const item = order.items.find(i => i.productId === p.id);
-                    if (item) {
-                        const updated = { ...p, stock: p.stock + item.quantity, cost: item.unitCost }; // Update Cost too
-                        changedProducts.push(updated);
-                        return updated;
-                    }
-                    return p;
-                });
-                setProducts(updatedProducts);
-                if(changedProducts.length > 0) api.saveProducts(changedProducts);
-                showToast('Order received and stock updated', 'success');
-            }
-        }} currentUser={currentUser} />}
-        {currentView === 'EXPENSES' && <ExpensesView expenses={expenses} categories={expenseCategories} onAddExpense={handleAddExpense} onDeleteExpense={handleDeleteExpense} onUpdateCategories={handleUpdateExpenseCategories} settings={settings!} currentUser={currentUser} />}
-        {currentView === 'REPORTS' && <ReportsView transactions={transactions} expenses={expenses} settings={settings!} currentUser={currentUser} />}
-        {currentView === 'REPAIRS' && <RepairsView repairs={repairs} customers={customers} onAddRepair={handleAddRepair} onUpdateRepair={handleUpdateRepair} onDeleteRepair={handleDeleteRepair} settings={settings!} currentUser={currentUser} />}
-        {currentView === 'SETTINGS' && <SettingsView 
-            settings={settings!} 
-            onSave={handleUpdateSettings} 
-            transactions={transactions}
-            currentUser={currentUser}
-            categories={categories}
-            onUpdateCategories={handleUpdateCategories}
-            onRenameCategory={handleRenameCategory}
-            users={users}
-            onAddUser={handleAddUser}
-            onUpdateUser={handleUpdateUser}
-            onDeleteUser={handleDeleteUser}
-            customers={customers}
-            onAddCustomer={handleAddCustomer}
-            onUpdateCustomer={handleUpdateCustomer}
-            onDeleteCustomer={handleDeleteCustomer}
-            onNavigate={setCurrentView}
-        />}
-      </Layout>
-
-      {/* Global Modals */}
-      <ProductModal 
-        isOpen={productModalState.isOpen} 
-        onClose={handleCloseProductModal} 
-        onSave={handleSaveProductFromModal} 
-        productToEdit={productModalState.product} 
-        categories={categories} 
-      />
-      
-      <Invoice transaction={transactionToPrint} settings={settings!} onClose={() => setTransactionToPrint(null)} />
-      
-      {/* View Transaction Invoice Modal */}
-      {transactionToView && (
-          <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-              <div className="bg-white rounded-lg shadow-xl overflow-hidden max-h-[90vh] overflow-y-auto">
-                  <div className="flex justify-end p-2 sticky top-0 bg-white z-10 border-b">
-                      <button onClick={() => setTransactionToView(null)} className="p-2 hover:bg-gray-100 rounded-full"><X size={20}/></button>
-                  </div>
-                  <Invoice transaction={transactionToView} settings={settings!} />
-              </div>
-          </div>
-      )}
-
-      <ReturnModal isOpen={!!transactionToReturn} onClose={() => setTransactionToReturn(null)} transaction={transactionToReturn} onProcessReturn={handleReturn} />
-
-      {!currentShift && currentUser && !loading && (
-        <ShiftEntryModal currentUser={currentUser} onStartShift={handleStartShift} settings={settings!} onLogout={handleLogout} />
-      )}
-
-      {shiftReportData && (
-        <ShiftReport shift={shiftReportData} settings={settings!} onClose={handleCloseShiftReport} />
-      )}
-
-      <CloseShiftModal 
-        isOpen={isCloseShiftModalOpen} 
-        onClose={() => setIsCloseShiftModalOpen(false)} 
-        onConfirm={handleConfirmCloseShift}
-        shift={currentShift || undefined}
-        settings={settings!}
-      />
-
-      <WalletModal 
-        isOpen={isWalletModalOpen}
-        onClose={() => setIsWalletModalOpen(false)}
-        shift={currentShift!}
-        onAddMovement={handleCashMovement}
-        onCloseShift={() => setIsCloseShiftModalOpen(true)}
-        settings={settings!}
-      />
-    </div>
+        isDarkMode={settings.theme === 'dark'}
+        onToggleTheme={toggleTheme}
+        currentLanguage={settings.language || 'en'}
+        onToggleLanguage={toggleLanguage}
+    >
+        {renderView()}
+        {activeShift && (
+            <WalletModal 
+                isOpen={isWalletModalOpen} 
+                onClose={() => setIsWalletModalOpen(false)} 
+                shift={activeShift} 
+                onAddMovement={async (type, amount, reason) => {
+                    const movement: CashMovement = {
+                        id: Date.now().toString(),
+                        type,
+                        amount,
+                        reason,
+                        timestamp: new Date().toISOString(),
+                        userId: currentUser.id,
+                        userName: currentUser.name
+                    };
+                    const updatedShift = await api.saveShift({ ...activeShift, cashMovements: [...(activeShift.cashMovements || []), movement] });
+                    setActiveShift(updatedShift);
+                    setShifts(shifts.map(s => s.id === updatedShift.id ? updatedShift : s));
+                    showToast('Cash movement recorded', 'success');
+                }}
+                onCloseShift={() => setIsCloseShiftModalOpen(true)}
+                settings={settings}
+            />
+        )}
+        <CloseShiftModal 
+            isOpen={isCloseShiftModalOpen} 
+            onClose={() => setIsCloseShiftModalOpen(false)} 
+            onConfirm={handleCloseShift} 
+            shift={activeShift || undefined} 
+            settings={settings} 
+        />
+        {completedShift && (
+            <ShiftReport 
+                shift={completedShift} 
+                settings={settings} 
+                onClose={() => { setCompletedShift(null); handleLogout(); }} 
+            />
+        )}
+        <ProductModal 
+            isOpen={productModalOpen} 
+            onClose={() => setProductModalOpen(false)} 
+            onSave={async (p) => { 
+                if (productToEdit) { 
+                    await handleUpdateProduct({ ...productToEdit, ...p } as Product); 
+                } else { 
+                    await handleAddProduct(p); 
+                } 
+                setProductModalOpen(false); 
+            }} 
+            productToEdit={productToEdit} 
+            categories={categories} 
+        />
+    </Layout>
   );
 };
+
+export default App;

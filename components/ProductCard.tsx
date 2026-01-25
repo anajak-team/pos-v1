@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Product } from '../types';
-import { Plus, Package } from 'lucide-react';
+import { Plus, Package, MapPin } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
@@ -24,6 +24,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAdd, curren
           className="w-full h-full object-cover rounded-lg shadow-sm transform group-hover:scale-105 transition-transform duration-500 bg-white/10"
           loading="lazy"
         />
+        {product.zone && (
+            <div className="absolute top-2.5 left-2.5 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded text-[8px] font-bold text-white flex items-center gap-1 shadow-sm border border-white/10">
+                <MapPin size={8} /> {product.zone}
+            </div>
+        )}
         <div className="absolute bottom-2.5 right-2.5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-1 rounded-md shadow-sm border border-white/20 opacity-0 group-hover:opacity-100 transition-opacity">
           <Plus size={14} className="text-primary" />
         </div>

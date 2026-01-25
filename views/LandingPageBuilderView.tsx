@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { StoreSettings } from '../types';
-import { ArrowLeft, Globe, Gift, Eye, Shield, ArrowUp, ArrowDown, EyeOff, Trash2, Plus, Save, Wrench, CreditCard, Video, Users, Upload } from 'lucide-react';
+import { ArrowLeft, Globe, Gift, Eye, Shield, ArrowUp, ArrowDown, EyeOff, Trash2, Plus, Save, Wrench, CreditCard, Video, Users, Upload, User } from 'lucide-react';
 
 interface LandingPageBuilderProps {
   settings: StoreSettings;
@@ -185,6 +185,7 @@ export const LandingPageBuilderView: React.FC<LandingPageBuilderProps> = ({ sett
                                 {section.type === 'repair' && <Wrench size={18} />}
                                 {section.type === 'subscription' && <CreditCard size={18} />}
                                 {section.type === 'footer' && <Shield size={18} />}
+                                {section.type === 'customer_dashboard' && <User size={18} />}
                             </div>
                             <span className={`font-bold text-sm ${section.visible ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400 decoration-slate-400'}`}>
                                 {section.label}
@@ -221,6 +222,22 @@ export const LandingPageBuilderView: React.FC<LandingPageBuilderProps> = ({ sett
                                         </div>
                                     </div>
                                 </>
+                            )}
+
+                            {section.type === 'customer_dashboard' && (
+                                <div className="space-y-4">
+                                    <InputGroup label="Dashboard Badge (Top)" value={section.content.title} onChange={(v) => handleUpdateSectionContent(index, { ...section.content, title: v })} placeholder="Your Dashboard" />
+                                    <div className="space-y-1"><label className="text-xs font-bold text-slate-500 uppercase ml-1">Welcome Subtitle</label><textarea value={section.content.subtitle} onChange={(e) => handleUpdateSectionContent(index, { ...section.content, subtitle: e.target.value })} className={commonInputClass} rows={2} placeholder="Track your points..." /></div>
+                                    
+                                    <div className="grid grid-cols-2 gap-3 pt-2 border-t border-white/10">
+                                        <InputGroup label="Points Label" value={section.content.pointsLabel} onChange={(v) => handleUpdateSectionContent(index, { ...section.content, pointsLabel: v })} placeholder="Loyalty Points" />
+                                        <InputGroup label="Spent Label" value={section.content.spentLabel} onChange={(v) => handleUpdateSectionContent(index, { ...section.content, spentLabel: v })} placeholder="Lifetime Spent" />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <InputGroup label="Orders Section Title" value={section.content.recentPurchasesTitle} onChange={(v) => handleUpdateSectionContent(index, { ...section.content, recentPurchasesTitle: v })} placeholder="Recent Purchases" />
+                                        <InputGroup label="Repairs Section Title" value={section.content.repairsTitle} onChange={(v) => handleUpdateSectionContent(index, { ...section.content, repairsTitle: v })} placeholder="My Repairs" />
+                                    </div>
+                                </div>
                             )}
 
                             {section.type === 'features' && (
@@ -275,21 +292,27 @@ export const LandingPageBuilderView: React.FC<LandingPageBuilderProps> = ({ sett
                                                             <input 
                                                                 type="text" 
                                                                 value={user.logo || ''} 
-                                                                onChange={e => handleUpdateUser(index, uIndex, 'logo', e.target.value)} 
-                                                                className="w-full p-3 rounded-2xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 focus:bg-white/80 dark:focus:bg-black/40 focus:border-primary/50 outline-none transition-all text-slate-800 dark:text-white placeholder:text-slate-400 shadow-inner text-sm pr-10"
-                                                                placeholder="https://... or Upload"
+                                                                onChange={(e) => handleUpdateUser(index, uIndex, 'logo', e.target.value)} 
+                                                                className={commonInputClass} 
+                                                                placeholder="Image URL" 
                                                             />
-                                                            <label className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-slate-200/80 dark:bg-slate-700/80 rounded-lg cursor-pointer hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors" title="Upload Image">
-                                                                <Upload size={14} className="text-slate-600 dark:text-slate-300"/>
-                                                                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleLogoUpload(index, uIndex, e)} />
+                                                            <input 
+                                                                type="file" 
+                                                                accept="image/*" 
+                                                                onChange={(e) => handleLogoUpload(index, uIndex, e)} 
+                                                                className="hidden" 
+                                                                id={`logo-upload-${index}-${uIndex}`} 
+                                                            />
+                                                            <label htmlFor={`logo-upload-${index}-${uIndex}`} className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-primary cursor-pointer hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg">
+                                                                <Upload size={16} />
                                                             </label>
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <button onClick={() => handleRemoveUser(index, uIndex)} className="p-3 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-xl transition-colors mt-6"><Trash2 size={16}/></button>
+                                                <button onClick={() => handleRemoveUser(index, uIndex)} className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg self-center"><Trash2 size={16}/></button>
                                             </div>
                                         ))}
-                                        <button onClick={() => handleAddUser(index)} className="w-full py-2 border-2 border-dashed border-slate-300 dark:border-white/20 rounded-xl text-slate-500 font-bold text-xs hover:bg-slate-100 dark:hover:bg-white/5 transition-colors flex items-center justify-center gap-2"><Plus size={14}/> Add User/Client</button>
+                                        <button onClick={() => handleAddUser(index)} className="w-full py-2 border-2 border-dashed border-slate-300 dark:border-white/20 rounded-xl text-slate-500 font-bold text-xs hover:bg-slate-100 dark:hover:bg-white/5 transition-colors flex items-center justify-center gap-2"><Plus size={14}/> Add User Logo</button>
                                     </div>
                                 </div>
                             )}
@@ -306,44 +329,30 @@ export const LandingPageBuilderView: React.FC<LandingPageBuilderProps> = ({ sett
                             )}
 
                             {section.type === 'subscription' && (
-                                <>
+                                <div className="space-y-4">
                                     <InputGroup label="Section Title" value={section.content.title} onChange={(v) => handleUpdateSectionContent(index, { ...section.content, title: v })} />
                                     <div className="space-y-1"><label className="text-xs font-bold text-slate-500 uppercase ml-1">Subtitle</label><textarea value={section.content.subtitle} onChange={(e) => handleUpdateSectionContent(index, { ...section.content, subtitle: e.target.value })} className={commonInputClass} rows={2} /></div>
                                     
-                                    <div className="space-y-3 mt-4">
-                                        <label className="text-xs font-bold text-slate-500 uppercase ml-1">Plans</label>
-                                        {section.content.plans.map((plan: any, pIndex: number) => (
-                                            <div key={pIndex} className={`p-4 rounded-xl border relative ${plan.recommended ? 'bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-200 dark:border-indigo-500/30' : 'bg-white dark:bg-white/5 border-white/20'}`}>
-                                                <button onClick={() => handleRemovePlan(index, pIndex)} className="absolute top-2 right-2 p-1 text-red-400 hover:bg-red-500/10 rounded-md transition-opacity"><Trash2 size={14} /></button>
-                                                
-                                                <div className="grid grid-cols-2 gap-3 mb-2">
-                                                    <InputGroup label="Plan Name" value={plan.name} onChange={(v) => handleUpdatePlan(index, pIndex, 'name', v)} />
-                                                    <div className="flex items-center gap-2 mt-6">
-                                                        <input type="checkbox" checked={plan.recommended} onChange={(e) => handleUpdatePlan(index, pIndex, 'recommended', e.target.checked)} className="w-4 h-4 accent-primary" />
-                                                        <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Recommended</span>
-                                                    </div>
+                                    <div className="space-y-3">
+                                        <label className="text-xs font-bold text-slate-500 uppercase ml-1">Pricing Plans</label>
+                                        {(section.content.plans || []).map((plan: any, pIndex: number) => (
+                                            <div key={pIndex} className="p-3 bg-white dark:bg-white/5 rounded-xl border border-white/20 dark:border-white/10 relative group space-y-2">
+                                                <button onClick={() => handleRemovePlan(index, pIndex)} className="absolute top-2 right-2 p-1 text-red-400 hover:bg-red-500/10 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={14} /></button>
+                                                <div className="flex gap-2">
+                                                    <InputGroup label="Name" value={plan.name} onChange={(v) => handleUpdatePlan(index, pIndex, 'name', v)} className="flex-1" />
+                                                    <InputGroup label="Price" value={plan.price} onChange={(v) => handleUpdatePlan(index, pIndex, 'price', v)} className="w-24" />
+                                                    <InputGroup label="Period" value={plan.period} onChange={(v) => handleUpdatePlan(index, pIndex, 'period', v)} className="w-20" />
                                                 </div>
-                                                
-                                                <div className="grid grid-cols-3 gap-2 mb-2">
-                                                    <InputGroup label="Price" value={plan.price} onChange={(v) => handleUpdatePlan(index, pIndex, 'price', v)} />
-                                                    <InputGroup label="Period" value={plan.period} onChange={(v) => handleUpdatePlan(index, pIndex, 'period', v)} />
-                                                    <InputGroup label="Btn Text" value={plan.buttonText} onChange={(v) => handleUpdatePlan(index, pIndex, 'buttonText', v)} />
-                                                </div>
-
-                                                <div className="space-y-1">
-                                                    <label className="text-xs font-bold text-slate-500 uppercase ml-1">Features (one per line)</label>
-                                                    <textarea 
-                                                        value={Array.isArray(plan.features) ? plan.features.join('\n') : plan.features} 
-                                                        onChange={(e) => handleUpdatePlan(index, pIndex, 'features', e.target.value.split('\n'))} 
-                                                        className={commonInputClass + " text-xs"} 
-                                                        rows={3} 
-                                                    />
+                                                <InputGroup label="Features (Comma separated)" value={plan.features?.join(', ')} onChange={(v) => handleUpdatePlan(index, pIndex, 'features', v.split(',').map((s: string) => s.trim()))} />
+                                                <div className="flex items-center gap-2">
+                                                    <input type="checkbox" checked={plan.recommended} onChange={(e) => handleUpdatePlan(index, pIndex, 'recommended', e.target.checked)} className="rounded border-slate-300" />
+                                                    <label className="text-xs text-slate-500">Recommended Plan</label>
                                                 </div>
                                             </div>
                                         ))}
                                         <button onClick={() => handleAddPlan(index)} className="w-full py-2 border-2 border-dashed border-slate-300 dark:border-white/20 rounded-xl text-slate-500 font-bold text-xs hover:bg-slate-100 dark:hover:bg-white/5 transition-colors flex items-center justify-center gap-2"><Plus size={14}/> Add Plan</button>
                                     </div>
-                                </>
+                                </div>
                             )}
 
                             {section.type === 'footer' && (

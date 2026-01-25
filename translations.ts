@@ -170,7 +170,7 @@ export const TRANSLATIONS = {
     DEVICE_NAME: 'Device Name',
     SERIAL_NUMBER: 'Serial No. / IMEI',
     
-    // Login
+    // Login & Signup
     SIGN_IN: 'Sign In',
     ACCESS_DASHBOARD: 'Access your dashboard',
     EMAIL_ADDRESS: 'Email Address',
@@ -179,6 +179,10 @@ export const TRANSLATIONS = {
     VERIFYING: 'Verifying...',
     AUTHENTICATING: 'Authenticating...',
     INVALID_CREDENTIALS: 'Invalid email or password',
+    CREATE_ACCOUNT: 'Create Account',
+    JOIN_REWARDS: 'Join our rewards program',
+    FULL_NAME: 'Full Name',
+    CONFIRM_PASSWORD: 'Confirm Password',
 
     // Shift
     OPEN_SHOP: 'Open Shop',
@@ -379,6 +383,10 @@ export const TRANSLATIONS = {
     VERIFYING: 'កំពុងផ្ទៀងផ្ទាត់...',
     AUTHENTICATING: 'កំពុងចូល...',
     INVALID_CREDENTIALS: 'អ៊ីមែល ឬពាក្យសម្ងាត់មិនត្រឹមត្រូវ',
+    CREATE_ACCOUNT: 'បង្កើតគណនី',
+    JOIN_REWARDS: 'ចូលរួមកម្មវិធីរង្វាន់របស់យើង',
+    FULL_NAME: 'ឈ្មោះ​ពេញ',
+    CONFIRM_PASSWORD: 'បញ្ជាក់ពាក្យសម្ងាត់',
 
     // Shift
     OPEN_SHOP: 'បើកហាង',
@@ -579,6 +587,10 @@ export const TRANSLATIONS = {
     VERIFYING: '验证中...',
     AUTHENTICATING: '登录中...',
     INVALID_CREDENTIALS: '邮箱或密码错误',
+    CREATE_ACCOUNT: '创建账户',
+    JOIN_REWARDS: '加入会员计划',
+    FULL_NAME: '全名',
+    CONFIRM_PASSWORD: '确认密码',
 
     // Shift
     OPEN_SHOP: '开店',

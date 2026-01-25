@@ -8,7 +8,6 @@ const KEYS = {
   CART: 'nexus_cart',
 };
 
-// ... (existing code: Default Data and Helpers remain unchanged) ...
 // --- Default Data ---
 const DEFAULT_CATEGORIES = ['Food', 'Beverage', 'Retail', 'Service', 'Other', 'Electronics', 'Apparel', 'Books', 'Home Goods', 'Toys'];
 const DEFAULT_EXPENSE_CATEGORIES = ['Rent', 'Utilities', 'Wages', 'Supplies', 'Marketing', 'Other'];
@@ -52,11 +51,22 @@ const DEFAULT_SETTINGS: StoreSettings = {
                 }
             },
             {
+                id: 'customer_dashboard',
+                type: 'customer_dashboard',
+                label: 'Customer Dashboard',
+                visible: true,
+                order: 1,
+                content: {
+                    title: 'Your Dashboard',
+                    subtitle: 'Track your points, orders, and repairs.'
+                }
+            },
+            {
                 id: 'features',
                 type: 'features',
                 label: 'Features Grid',
                 visible: true,
-                order: 1,
+                order: 2,
                 content: {
                     items: [
                         { icon: 'ShoppingCart', title: 'Smart POS', desc: 'Fast, intuitive checkout with barcode scanning and multiple payment methods.', color: 'blue' },
@@ -71,7 +81,7 @@ const DEFAULT_SETTINGS: StoreSettings = {
                 type: 'video',
                 label: 'Video Showcase',
                 visible: true,
-                order: 2,
+                order: 3,
                 content: {
                     title: 'See It In Action',
                     subtitle: 'Watch how ANAJAK POS transforms retail operations.',
@@ -83,7 +93,7 @@ const DEFAULT_SETTINGS: StoreSettings = {
                 type: 'preview',
                 label: 'App Preview',
                 visible: true,
-                order: 3,
+                order: 4,
                 content: {
                     title: 'Interactive Dashboard Preview'
                 }
@@ -93,7 +103,7 @@ const DEFAULT_SETTINGS: StoreSettings = {
                 type: 'users',
                 label: 'Our Users',
                 visible: true,
-                order: 4,
+                order: 5,
                 content: {
                     title: 'Trusted by Industry Leaders',
                     users: [
@@ -109,7 +119,7 @@ const DEFAULT_SETTINGS: StoreSettings = {
                 type: 'repair',
                 label: 'Repair Tracker',
                 visible: true,
-                order: 5,
+                order: 6,
                 content: {
                     title: 'Track Your Repair',
                     subtitle: 'Enter your ticket number or phone number to check status.'
@@ -120,7 +130,7 @@ const DEFAULT_SETTINGS: StoreSettings = {
                 type: 'subscription',
                 label: 'Pricing Plans',
                 visible: true,
-                order: 6,
+                order: 7,
                 content: {
                     title: 'Simple Pricing',
                     subtitle: 'Choose the plan that fits your business needs.',
@@ -136,7 +146,7 @@ const DEFAULT_SETTINGS: StoreSettings = {
                 type: 'footer',
                 label: 'Footer',
                 visible: true,
-                order: 7,
+                order: 8,
                 content: {
                     copyright: 'ANAJAK POS Systems. All rights reserved.'
                 }
@@ -341,12 +351,16 @@ export const saveSettings = async (settings: StoreSettings): Promise<StoreSettin
 export const getUsers = async (): Promise<StoredUser[]> => {
     if (isDemo()) return getDemoLocal('users', DEFAULT_USERS);
     const { data, error } = await supabase.from('users').select('*');
+    // If Supabase fails or returns empty, fallback to DEFAULT_USERS so login works
     if (error || !data || data.length === 0) {
-        if (data && data.length === 0) {
-             await supabase.from('users').insert(DEFAULT_USERS);
-             return DEFAULT_USERS;
+        try {
+            if (data && data.length === 0) {
+                 await supabase.from('users').insert(DEFAULT_USERS);
+            }
+        } catch (e) {
+            console.warn("Supabase connection failed or timed out, using default users for fallback.");
         }
-        return [];
+        return DEFAULT_USERS;
     }
     return data;
 };
@@ -388,6 +402,50 @@ export const deleteUser = async (userId: string): Promise<void> => {
     const { error } = await supabase.from('users').delete().eq('id', userId);
     if (error) throw error;
 };
+
+export const registerCustomer = async (customerData: { name: string; email: string; phone: string; password: string; }): Promise<StoredUser> => {
+    // 1. Check if user email already exists
+    const users = await getUsers();
+    if (users.find(u => u.email.toLowerCase() === customerData.email.toLowerCase())) {
+        throw new Error('Email already registered');
+    }
+
+    // 2. Create the User record (for Login)
+    const newUser: Omit<StoredUser, 'id'> = {
+        name: customerData.name,
+        email: customerData.email,
+        password: customerData.password,
+        role: 'Customer',
+        avatar: customerData.name.charAt(0).toUpperCase()
+    };
+    
+    // 3. Create or Link the Customer record (for Data)
+    const customers = await getCustomers();
+    const existingCustomer = customers.find(c => 
+        (c.email && c.email.toLowerCase() === customerData.email.toLowerCase()) || 
+        c.phone === customerData.phone
+    );
+
+    if (!existingCustomer) {
+        await addCustomer({
+            name: customerData.name,
+            email: customerData.email,
+            phone: customerData.phone,
+            totalSpent: 0,
+            visits: 0,
+            points: 0,
+            lastVisit: new Date().toISOString()
+        });
+    }
+
+    // 4. Save User
+    return await addUser(newUser);
+};
+
+export const getCustomerByEmail = async (email: string): Promise<Customer | null> => {
+    const customers = await getCustomers();
+    return customers.find(c => c.email?.toLowerCase() === email.toLowerCase()) || null;
+}
 
 // --- Shifts ---
 export const getShifts = async (): Promise<Shift[]> => {

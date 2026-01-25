@@ -15,7 +15,8 @@ export const SEED_PRODUCTS: Product[] = [
     description: 'Rich, full-bodied roast from Ethiopian beans.',
     image: 'https://picsum.photos/200',
     barcode: '10001',
-    itemsPerCase: 20
+    itemsPerCase: 20,
+    zone: 'Counter'
   },
   {
     id: '2',
@@ -27,7 +28,8 @@ export const SEED_PRODUCTS: Product[] = [
     description: 'Buttery, flaky pastry baked fresh daily.',
     image: 'https://picsum.photos/201',
     barcode: '10002',
-    itemsPerCase: 12
+    itemsPerCase: 12,
+    zone: 'Display Case 1'
   },
   {
     id: '3',
@@ -39,7 +41,8 @@ export const SEED_PRODUCTS: Product[] = [
     description: 'Premium matcha powder with steamed milk.',
     image: 'https://picsum.photos/202',
     barcode: '10003',
-    itemsPerCase: 24
+    itemsPerCase: 24,
+    zone: 'Counter'
   },
   {
     id: '4',
@@ -51,7 +54,8 @@ export const SEED_PRODUCTS: Product[] = [
     description: 'Sourdough bread topped with fresh avocado and spices.',
     image: 'https://picsum.photos/203',
     barcode: '10004',
-    itemsPerCase: 1
+    itemsPerCase: 1,
+    zone: 'Kitchen'
   },
   {
     id: '5',
@@ -63,6 +67,7 @@ export const SEED_PRODUCTS: Product[] = [
     description: 'Eco-friendly thermal cup.',
     image: 'https://picsum.photos/204',
     barcode: '10005',
-    itemsPerCase: 6
+    itemsPerCase: 6,
+    zone: 'Aisle 1'
   }
 ];

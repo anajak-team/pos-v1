@@ -8,10 +8,11 @@ import { TRANSLATIONS } from '../translations';
 interface LoginViewProps {
   onLogin: (user: User, rememberMe: boolean) => void;
   onBack?: () => void;
+  onSignUpClick?: () => void;
   settings: StoreSettings | null;
 }
 
-export const LoginView: React.FC<LoginViewProps> = ({ onLogin, onBack, settings }) => {
+export const LoginView: React.FC<LoginViewProps> = ({ onLogin, onBack, onSignUpClick, settings }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -163,6 +164,19 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin, onBack, settings 
                 </>
               )}
             </button>
+            
+            <div className="text-center mt-6 pt-4 border-t border-slate-200 dark:border-white/10">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                    New customer? {' '}
+                    <button 
+                        type="button" 
+                        onClick={onSignUpClick}
+                        className="text-primary font-bold hover:underline focus:outline-none"
+                    >
+                        Create an account
+                    </button>
+                </p>
+            </div>
           </form>
         </div>
       </div>
