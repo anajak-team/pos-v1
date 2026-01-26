@@ -62,30 +62,36 @@ const DEFAULT_SETTINGS: StoreSettings = {
                 }
             },
             {
-                id: 'features',
-                type: 'features',
-                label: 'Features Grid',
-                visible: true,
-                order: 2,
-                content: {
-                    items: [
-                        { icon: 'ShoppingCart', title: 'Smart POS', desc: 'Fast, intuitive checkout with barcode scanning and multiple payment methods.', color: 'blue' },
-                        { icon: 'Package', title: 'Inventory Control', desc: 'Track stock in real-time, manage suppliers, and get low-stock alerts.', color: 'emerald' },
-                        { icon: 'BarChart3', title: 'AI Analytics', desc: 'Gemini-powered insights to uncover trends and optimize your revenue.', color: 'purple' },
-                        { icon: 'Wrench', title: 'Service & Repairs', desc: 'Built-in ticketing system to manage customer repairs and service orders.', color: 'amber' }
-                    ]
-                }
-            },
-            {
                 id: 'video',
                 type: 'video',
                 label: 'Video Showcase',
                 visible: true,
+                order: 2,
+                content: {
+                    title: 'Why using QR code as menu?',
+                    subtitle: 'Using QR codes as menus offers several advantages. Firstly, it eliminates the need for physical menus, reducing the risk of spreading germs.',
+                    videoUrl: 'https://www.youtube.com/embed/D0cgsCA9tRY',
+                    overlayTitle: 'What is ANAJAK POS?',
+                    overlaySubtitle: 'Modernize your restaurant with QR ordering and digital management.',
+                    layout: 'classic',
+                    features: [
+                        { title: 'Manage restaurant information', desc: 'Easily update your restaurant logo, name and support multi language', icon: 'Sliders' },
+                        { title: 'Manage products categorize', desc: 'Group products into categories so customers can find them easily.', icon: 'LayoutGrid' }
+                    ]
+                }
+            },
+            {
+                id: 'features',
+                type: 'features',
+                label: 'Features Grid',
+                visible: true,
                 order: 3,
                 content: {
-                    title: 'See It In Action',
-                    subtitle: 'Watch how ANAJAK POS transforms retail operations.',
-                    videoUrl: 'https://www.youtube.com/embed/D0cgsCA9tRY'
+                    items: [
+                        { icon: 'Rocket', title: 'Manage products', desc: 'Our platform allows you to easily manage your product and make changes on the go.', color: 'red' },
+                        { icon: 'QrCode', title: 'Digital QR menu', desc: 'Generate unique QR codes for your restaurant that instantly show your digital menu.', color: 'red' },
+                        { icon: 'Languages', title: 'Multi-language menu', desc: 'Allow customers to view the menu in their preferred language, improving accessibility.', color: 'red' },
+                    ]
                 }
             },
             {
@@ -287,8 +293,6 @@ export const getTransactions = async (): Promise<Transaction[]> => {
 };
 
 export const saveTransaction = async (transaction: Transaction): Promise<Transaction> => {
-    // Optimization: Sanitize items to remove large base64 images from transaction history
-    // This prevents hitting database payload limits and speeds up history loading
     const cleanItems = transaction.items.map(item => {
         if (item.image && item.image.startsWith('data:')) {
             const { image, ...rest } = item;
@@ -310,13 +314,12 @@ export const saveTransaction = async (transaction: Transaction): Promise<Transac
         return newTransaction as Transaction;
     }
 
-    // Deep copy to ensure no undefined values are passed (sanitize for Supabase)
     const payload = JSON.parse(JSON.stringify(newTransaction));
 
     const { data, error } = await supabase.from('transactions').insert(payload).select().single();
     if (error) {
         console.error("Error saving transaction:", error);
-        throw new Error(error.message); // Throw actual error message for UI
+        throw new Error(error.message);
     }
     return data;
 };
@@ -351,7 +354,6 @@ export const saveSettings = async (settings: StoreSettings): Promise<StoreSettin
 export const getUsers = async (): Promise<StoredUser[]> => {
     if (isDemo()) return getDemoLocal('users', DEFAULT_USERS);
     const { data, error } = await supabase.from('users').select('*');
-    // If Supabase fails or returns empty, fallback to DEFAULT_USERS so login works
     if (error || !data || data.length === 0) {
         try {
             if (data && data.length === 0) {
@@ -404,13 +406,11 @@ export const deleteUser = async (userId: string): Promise<void> => {
 };
 
 export const registerCustomer = async (customerData: { name: string; email: string; phone: string; password: string; }): Promise<StoredUser> => {
-    // 1. Check if user email already exists
     const users = await getUsers();
     if (users.find(u => u.email.toLowerCase() === customerData.email.toLowerCase())) {
         throw new Error('Email already registered');
     }
 
-    // 2. Create the User record (for Login)
     const newUser: Omit<StoredUser, 'id'> = {
         name: customerData.name,
         email: customerData.email,
@@ -419,7 +419,6 @@ export const registerCustomer = async (customerData: { name: string; email: stri
         avatar: customerData.name.charAt(0).toUpperCase()
     };
     
-    // 3. Create or Link the Customer record (for Data)
     const customers = await getCustomers();
     const existingCustomer = customers.find(c => 
         (c.email && c.email.toLowerCase() === customerData.email.toLowerCase()) || 
@@ -438,7 +437,6 @@ export const registerCustomer = async (customerData: { name: string; email: stri
         });
     }
 
-    // 4. Save User
     return await addUser(newUser);
 };
 

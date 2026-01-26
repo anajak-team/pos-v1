@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Store, ArrowRight, ShoppingCart, BarChart3, Wrench, ShieldCheck, Zap, Package, Globe, Gift, Search, Loader2, Check, ExternalLink, Play, Building, ArrowLeft, CreditCard, Lock, Mail, User as UserIcon, X, Tag, Box, Crown, LogOut, ChevronRight, Receipt, Calendar, ShoppingBag, History, Settings, Sliders, LayoutGrid, Rocket, QrCode, Languages } from 'lucide-react';
 import { StoreSettings, LandingPageSection, Product, RepairTicket, User, Customer, Transaction } from '../types';
@@ -242,28 +243,168 @@ const UsersSection = ({ content }: any) => (
     </section>
 );
 
-const PreviewSection = ({ content, products, settings }: any) => {
-    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+const ProductDetailsModal = ({ product, onClose, currency }: { product: Product, onClose: () => void, currency: string }) => {
+    if (!product) return null;
+
     return (
-        <section className="pb-20 px-6">
-            <div className="max-w-6xl mx-auto bg-white/30 dark:bg-slate-900/40 backdrop-blur-2xl rounded-[2.5rem] border border-white/40 dark:border-white/10 shadow-2xl p-6 md:p-10">
-                <div className="text-center mb-8">
-                    <h2 className="text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-100 mb-2">{content.title || 'Live Inventory'}</h2>
-                    <p className="text-slate-600 dark:text-slate-400">Real-time availability from our showroom</p>
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+            <div className="bg-white/90 dark:bg-slate-900/95 backdrop-blur-2xl rounded-[2rem] shadow-2xl w-full max-w-lg border border-white/20 dark:border-white/10 overflow-hidden relative flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                {/* Close Button */}
+                <button onClick={onClose} className="absolute top-4 right-4 z-10 p-2 bg-black/10 dark:bg-white/10 rounded-full text-slate-600 dark:text-slate-300 hover:bg-black/20 dark:hover:bg-white/20 transition-colors">
+                    <X size={20} />
+                </button>
+
+                {/* Product Image */}
+                <div className="h-64 sm:h-72 w-full bg-slate-100 dark:bg-slate-950 relative shrink-0">
+                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                    <div className="absolute bottom-4 left-4 flex gap-2">
+                        <span className="px-3 py-1.5 rounded-xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-xs font-bold shadow-sm flex items-center gap-1.5">
+                            <Tag size={14} className="text-primary"/> {product.category}
+                        </span>
+                        {product.stock > 0 ? (
+                            <span className="px-3 py-1.5 rounded-xl bg-emerald-500/90 backdrop-blur-md text-white text-xs font-bold shadow-sm flex items-center gap-1.5">
+                                <Box size={14} /> In Stock: {product.stock}
+                            </span>
+                        ) : (
+                            <span className="px-3 py-1.5 rounded-xl bg-red-500/90 backdrop-blur-md text-white text-xs font-bold shadow-sm">
+                                Out of Stock
+                            </span>
+                        )}
+                    </div>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-                    {products?.slice(0, 8).map((product: Product) => (
-                        <div key={product.id} className="bg-white/40 dark:bg-slate-800/40 backdrop-blur-sm rounded-2xl p-3 shadow-sm border border-white/40 dark:border-white/10 flex flex-col group hover:shadow-md transition-all">
-                            <div className="relative aspect-square rounded-xl overflow-hidden mb-3 bg-slate-100 dark:bg-slate-900">
-                                <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                            </div>
-                            <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm truncate mb-1">{product.name}</h3>
-                            <span className="font-bold text-primary">{settings?.currency}{product.price.toFixed(2)}</span>
+
+                {/* Content */}
+                <div className="p-6 sm:p-8 overflow-y-auto">
+                    <div className="flex justify-between items-start mb-4">
+                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white leading-tight">{product.name}</h2>
+                        <span className="text-2xl font-extrabold text-primary shrink-0 ml-4">{currency}{product.price.toFixed(2)}</span>
+                    </div>
+                    
+                    <div className="space-y-4">
+                        <div>
+                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Description</h4>
+                            <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-sm">
+                                {product.description || 'No description available for this product.'}
+                            </p>
                         </div>
-                    ))}
+                        
+                        {product.barcode && (
+                            <div className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 flex items-center justify-between">
+                                <span className="text-xs font-bold text-slate-500">Item Code</span>
+                                <span className="font-mono text-sm font-medium text-slate-700 dark:text-slate-300">{product.barcode}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="p-4 border-t border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/20">
+                    <button onClick={onClose} className="w-full py-3 bg-primary text-white rounded-xl font-bold shadow-lg hover:bg-blue-600 transition-colors">
+                        Close Details
+                    </button>
                 </div>
             </div>
-        </section>
+        </div>
+    );
+};
+
+const PreviewSection = ({ content, products, settings }: any) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('All');
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+    // Extract unique categories
+    const categories = ['All', ...Array.from(new Set((products || []).map((p: Product) => p.category)))];
+
+    const filteredProducts = (products || []).filter((product: Product) => {
+        const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
+        return matchesSearch && matchesCategory;
+    });
+
+    return (
+    <section className="pb-20 px-6">
+        <div className="max-w-6xl mx-auto bg-white/30 dark:bg-slate-900/40 backdrop-blur-2xl rounded-[2.5rem] border border-white/40 dark:border-white/10 shadow-2xl p-6 md:p-10 transition-transform duration-700">
+           <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center p-3 bg-white/20 backdrop-blur-md rounded-2xl mb-4 border border-white/20 shadow-sm">
+                  <Store size={24} className="text-primary" />
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-100 mb-2">{content.title || 'Live Inventory'}</h2>
+              <p className="text-slate-600 dark:text-slate-400">Real-time availability from our showroom</p>
+           </div>
+
+           {/* Search and Filters */}
+           <div className="flex flex-col md:flex-row gap-4 mb-8 justify-between items-center">
+                <div className="relative w-full max-w-xs md:max-w-sm group">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={18} />
+                    <input 
+                        type="text" 
+                        placeholder="Search products..." 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-white/30 dark:border-white/10 focus:bg-white/80 dark:focus:bg-slate-800/80 focus:border-primary/50 outline-none transition-all text-slate-800 dark:text-slate-100 placeholder:text-slate-400 shadow-sm"
+                    />
+                </div>
+                <div className="flex gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 no-scrollbar">
+                    {categories.map((cat: any) => (
+                        <button 
+                            key={cat}
+                            onClick={() => setSelectedCategory(cat)}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${selectedCategory === cat ? 'bg-primary text-white border-primary shadow-lg shadow-primary/25' : 'bg-white/40 dark:bg-white/5 border-white/20 text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-white/10'}`}
+                        >
+                            {cat}
+                        </button>
+                    ))}
+                </div>
+           </div>
+
+           {filteredProducts.length === 0 ? (
+               <div className="text-center py-20 opacity-50">
+                   <Package size={48} className="mx-auto mb-2"/>
+                   <p>No products found matching your search</p>
+               </div>
+           ) : (
+               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                  {filteredProducts.slice(0, 12).map((product: Product) => (
+                      <div 
+                        key={product.id} 
+                        onClick={() => setSelectedProduct(product)}
+                        className="bg-white/40 dark:bg-slate-800/40 backdrop-blur-sm rounded-2xl p-3 shadow-sm border border-white/40 dark:border-white/10 flex flex-col group hover:shadow-md transition-all cursor-pointer"
+                      >
+                          <div className="relative aspect-square rounded-xl overflow-hidden mb-3 bg-slate-100 dark:bg-slate-900">
+                              <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                              <div className="absolute top-2 right-2">
+                                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full backdrop-blur-md border border-white/20 shadow-sm ${product.stock > 0 ? 'bg-emerald-500/90 text-white' : 'bg-red-500/90 text-white'}`}>
+                                      {product.stock > 0 ? `${product.stock} in stock` : 'Out of Stock'}
+                                  </span>
+                              </div>
+                          </div>
+                          <div className="mt-auto">
+                              <div className="mb-1.5">
+                                  <span className="inline-block px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-[10px] font-bold text-slate-500 dark:text-slate-300 uppercase tracking-wide">
+                                      {product.category}
+                                  </span>
+                              </div>
+                              <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm truncate mb-1" title={product.name}>{product.name}</h3>
+                              <div className="flex items-center justify-between">
+                                  <span className="font-bold text-primary">{settings?.currency || '$'}{product.price.toFixed(2)}</span>
+                              </div>
+                          </div>
+                      </div>
+                  ))}
+               </div>
+           )}
+        </div>
+        
+        {/* Product Details Modal */}
+        {selectedProduct && (
+            <ProductDetailsModal 
+                product={selectedProduct} 
+                onClose={() => setSelectedProduct(null)} 
+                currency={settings?.currency || '$'} 
+            />
+        )}
+    </section>
     );
 };
 
