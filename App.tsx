@@ -529,6 +529,7 @@ export const App = () => {
   const [completedShift, setCompletedShift] = useState<Shift | null>(null);
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
+  const [viewTransaction, setViewTransaction] = useState<Transaction | null>(null);
   
   const { showToast } = useToast();
 
@@ -605,7 +606,45 @@ export const App = () => {
     localStorage.removeItem('pos_session_view');
     localStorage.removeItem('pos_session_customer_data');
     
+    // If we were in demo mode, clear it and reload to reset state/connections
+    if (localStorage.getItem('nexus_demo_mode')) {
+        localStorage.removeItem('nexus_demo_mode');
+        window.location.reload();
+        return;
+    }
+    
     setView('DASHBOARD'); // Navigates to Landing Page because user is null
+  };
+
+  const handleViewDemo = async () => {
+      localStorage.setItem('nexus_demo_mode', 'true');
+      
+      // Refresh all data to use demo/local storage
+      const loadedSettings = await api.getSettings();
+      setSettings(loadedSettings);
+      
+      setProducts(await api.getProducts());
+      setTransactions(await api.getTransactions());
+      setUsers(await api.getUsers());
+      setShifts(await api.getShifts());
+      setActiveShift(await api.getActiveShift());
+      setCustomers(await api.getCustomers());
+      setCategories(await api.getCategories());
+      setExpenses(await api.getExpenses());
+      setExpenseCategories(await api.getExpenseCategories());
+      setRepairs(await api.getRepairs());
+      setPurchaseOrders(await api.getPurchaseOrders());
+
+      const demoUser: User = {
+          id: 'demo-manager',
+          name: 'Demo Manager',
+          email: 'demo@anajak.com',
+          role: 'Manager',
+          avatar: 'D'
+      };
+      setCurrentUser(demoUser);
+      setView('DASHBOARD');
+      showToast('Entered Demo Mode - Data is local only', 'success');
   };
 
   const handleStartShift = async (amount: number) => {
@@ -741,7 +780,7 @@ export const App = () => {
       if (view === 'LANDING_BUILDER') {
           return <LandingPageBuilderView settings={settings} onSave={(s) => { api.saveSettings(s).then(setSettings); }} onBack={() => setView('DASHBOARD')} />;
       }
-      return <LandingPage onGetStarted={() => setView('LOGIN')} onViewDemo={() => {}} settings={settings} products={products} />;
+      return <LandingPage onGetStarted={() => setView('LOGIN')} onViewDemo={handleViewDemo} settings={settings} products={products} />;
   }
 
   // --- Customer View Logic ---
@@ -770,9 +809,9 @@ export const App = () => {
   const renderView = () => {
       switch (view) {
           case 'DASHBOARD': return <DashboardView transactions={transactions} isDarkMode={settings.theme === 'dark'} currentUser={currentUser} expenses={expenses} products={products} settings={settings} />;
-          case 'POS': return <PosView products={products} onCompleteTransaction={handleTransaction} onPrint={() => {}} settings={settings} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} currentUser={currentUser} onOpenProductModal={(p) => { setProductToEdit(p); setProductModalOpen(true); }} categories={categories} customers={customers} onAddCustomer={async (c) => await api.addCustomer(c)} />;
+          case 'POS': return <PosView products={products} onCompleteTransaction={handleTransaction} onPrint={(t) => setViewTransaction(t)} settings={settings} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} currentUser={currentUser} onOpenProductModal={(p) => { setProductToEdit(p); setProductModalOpen(true); }} categories={categories} customers={customers} onAddCustomer={async (c) => await api.addCustomer(c)} />;
           case 'INVENTORY': return <InventoryView products={products} onDeleteProduct={handleDeleteProduct} onUpdateProduct={handleUpdateProduct} onImportProducts={async (newProds) => { await api.saveProducts(newProds); setProducts(await api.getProducts()); }} settings={settings} currentUser={currentUser} onOpenProductModal={(p) => { setProductToEdit(p); setProductModalOpen(true); }} />;
-          case 'TRANSACTIONS': return <TransactionsHistory transactions={transactions} currency={settings.currency} onPrint={() => {}} onReturn={() => {}} onView={() => {}} settings={settings} />;
+          case 'TRANSACTIONS': return <TransactionsHistory transactions={transactions} currency={settings.currency} onPrint={(t) => setViewTransaction(t)} onReturn={() => {}} onView={(t) => setViewTransaction(t)} settings={settings} />;
           case 'SETTINGS': return <SettingsView settings={settings} onSave={async (s) => { await api.saveSettings(s); setSettings(s); document.documentElement.classList.toggle('dark', s.theme === 'dark'); showToast('Settings saved', 'success'); }} transactions={transactions} currentUser={currentUser} categories={categories} onUpdateCategories={async (c) => { await api.saveCategories(c); setCategories(c); }} onRenameCategory={()=>{}} users={users} onAddUser={async (u) => { const n = await api.addUser(u); setUsers([...users, n]); }} onUpdateUser={async (u) => { await api.updateUser(u); setUsers(users.map(us => us.id === u.id ? u : us)); }} onDeleteUser={async (id) => { await api.deleteUser(id); setUsers(users.filter(u => u.id !== id)); }} customers={customers} onAddCustomer={async (c) => { const n = await api.addCustomer(c); setCustomers([...customers, n]); }} onUpdateCustomer={async (c) => { await api.updateCustomer(c); setCustomers(customers.map(cu => cu.id === c.id ? c : cu)); }} onDeleteCustomer={async (id) => { await api.deleteCustomer(id); setCustomers(customers.filter(c => c.id !== id)); }} onNavigate={setView} />;
           case 'PURCHASES': return <PurchaseView orders={purchaseOrders} products={products} settings={settings} onCreateOrder={async (o) => { const n = await api.savePurchaseOrder(o); setPurchaseOrders([n, ...purchaseOrders]); }} onReceiveOrder={async (id) => { const o = purchaseOrders.find(po => po.id === id); if(o) { const u = await api.savePurchaseOrder({...o, status: 'Received'}); setPurchaseOrders(purchaseOrders.map(p => p.id === id ? u : p)); o.items.forEach(async i => { const p = products.find(prod => prod.id === i.productId); if(p) { const updated = await api.updateProduct({...p, stock: p.stock + i.quantity}); setProducts(prev => prev.map(pr => pr.id === updated.id ? updated : pr)); } }); showToast('Order received, inventory updated', 'success'); } }} currentUser={currentUser} />;
           case 'EXPENSES': return <ExpensesView expenses={expenses} categories={expenseCategories} onAddExpense={handleAddExpense} onDeleteExpense={handleDeleteExpense} onUpdateCategories={async (c) => { await api.saveExpenseCategories(c); setExpenseCategories(c); }} settings={settings} currentUser={currentUser} />;
@@ -849,6 +888,13 @@ export const App = () => {
             productToEdit={productToEdit} 
             categories={categories} 
         />
+        {viewTransaction && settings && (
+            <Invoice 
+                transaction={viewTransaction} 
+                settings={settings} 
+                onClose={() => setViewTransaction(null)} 
+            />
+        )}
     </Layout>
   );
 };
