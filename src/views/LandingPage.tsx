@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Store, ArrowRight, ShoppingCart, BarChart3, Wrench, ShieldCheck, Zap, Package, Globe, Gift, Search, Loader2, Check, ExternalLink, Play, Building, ArrowLeft, CreditCard, Lock, Mail, User as UserIcon, X, Tag, Box, Crown, LogOut, ChevronRight, Receipt, Calendar, ShoppingBag, History, Settings, Sliders, LayoutGrid, Rocket, QrCode, Languages } from 'lucide-react';
+import { Store, ArrowRight, ShoppingCart, BarChart3, Wrench, ShieldCheck, Zap, Package, Globe, Gift, Search, Loader2, Check, ExternalLink, Play, Building, ArrowLeft, CreditCard, Lock, Mail, User as UserIcon, X, Tag, Box, Crown, LogOut, ChevronRight, Receipt, Calendar, ShoppingBag, History, Settings, Sliders, LayoutGrid, Rocket, QrCode, Languages, MapPin } from 'lucide-react';
 import { StoreSettings, LandingPageSection, Product, RepairTicket, User, Customer, Transaction } from '../types';
 import { Invoice } from '../components/Invoice';
 
@@ -243,6 +243,7 @@ const UsersSection = ({ content }: any) => (
     </section>
 );
 
+// --- Product Details Modal Component ---
 const ProductDetailsModal = ({ product, onClose, currency }: { product: Product, onClose: () => void, currency: string }) => {
     if (!product) return null;
 
@@ -294,6 +295,12 @@ const ProductDetailsModal = ({ product, onClose, currency }: { product: Product,
                                 <span className="font-mono text-sm font-medium text-slate-700 dark:text-slate-300">{product.barcode}</span>
                             </div>
                         )}
+                        {product.zone && (
+                            <div className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 flex items-center justify-between">
+                                <span className="text-xs font-bold text-slate-500">Location</span>
+                                <span className="font-medium text-sm text-slate-700 dark:text-slate-300 flex items-center gap-1"><MapPin size={14}/> {product.zone}</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -308,15 +315,19 @@ const ProductDetailsModal = ({ product, onClose, currency }: { product: Product,
     );
 };
 
+// --- Preview Section with Search and Filters ---
 const PreviewSection = ({ content, products, settings }: any) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-    // Extract unique categories
-    const categories = ['All', ...Array.from(new Set((products || []).map((p: Product) => p.category)))];
+    // Safeguard products prop
+    const safeProducts = Array.isArray(products) ? products : [];
 
-    const filteredProducts = (products || []).filter((product: Product) => {
+    // Extract unique categories
+    const categories = ['All', ...Array.from(new Set(safeProducts.map((p: Product) => p.category)))];
+
+    const filteredProducts = safeProducts.filter((product: Product) => {
         const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
         return matchesSearch && matchesCategory;
@@ -378,6 +389,11 @@ const PreviewSection = ({ content, products, settings }: any) => {
                                       {product.stock > 0 ? `${product.stock} in stock` : 'Out of Stock'}
                                   </span>
                               </div>
+                              {product.zone && (
+                                  <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded text-[10px] font-bold text-white flex items-center gap-1 shadow-sm border border-white/10">
+                                      <MapPin size={10} /> {product.zone}
+                                  </div>
+                              )}
                           </div>
                           <div className="mt-auto">
                               <div className="mb-1.5">
