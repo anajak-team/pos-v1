@@ -200,6 +200,50 @@ export const LandingPageBuilderView: React.FC<LandingPageBuilderProps> = ({ sett
                       </div>
                   </div>
               );
+          case 'features':
+              return (
+                  <div className="space-y-4">
+                      <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">Layout Style</label>
+                          <select className={commonInputClass} value={section.content.layout || 'grid'} onChange={(e) => handleUpdateContent(section.id, { layout: e.target.value })}>
+                              <option value="grid">Grid (4 Columns)</option>
+                              <option value="list">Vertical List (Focused)</option>
+                              <option value="minimal">Minimal Icons (Compact)</option>
+                          </select>
+                      </div>
+                      <div className="flex justify-between items-center mb-2 pt-4 border-t border-slate-200 dark:border-white/10">
+                          <h4 className="font-bold text-sm">Feature Items</h4>
+                          <button onClick={() => handleUpdateContent(section.id, { items: [...(section.content.items || []), { title: 'New Feature', desc: 'Description', icon: 'Zap', color: 'blue' }] })} className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors flex items-center gap-1 font-bold"><Plus size={14} /> Add Feature</button>
+                      </div>
+                      <div className="space-y-4">
+                          {(section.content.items || []).map((item: any, idx: number) => (
+                              <div key={idx} className="p-4 bg-slate-50 dark:bg-black/20 rounded-2xl border border-slate-200 dark:border-white/5 relative group shadow-sm">
+                                  <button onClick={() => { const newItems = [...section.content.items]; newItems.splice(idx, 1); handleUpdateContent(section.id, { items: newItems }); }} className="absolute top-3 right-3 p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16} /></button>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3 pr-8">
+                                      <InputGroup label="Title" value={item.title} onChange={(v) => { const newItems = [...section.content.items]; newItems[idx].title = v; handleUpdateContent(section.id, { items: newItems }); }} />
+                                      <div className="space-y-1.5">
+                                          <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">Icon</label>
+                                          <select className={commonInputClass} value={item.icon} onChange={(e) => { const newItems = [...section.content.items]; newItems[idx].icon = e.target.value; handleUpdateContent(section.id, { items: newItems }); }}>
+                                              {['Rocket', 'QrCode', 'Languages', 'Store', 'Package', 'ShieldCheck', 'Zap', 'Globe', 'Gift', 'Settings', 'ShoppingCart', 'BarChart3', 'Wrench', 'Sliders', 'LayoutGrid'].map(ic => <option key={ic} value={ic}>{ic}</option>)}
+                                          </select>
+                                      </div>
+                                  </div>
+                                  <div className="space-y-1.5">
+                                      <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">Color Palette</label>
+                                      <div className="flex gap-2">
+                                          {['blue', 'emerald', 'purple', 'amber', 'red'].map(color => (
+                                              <button key={color} type="button" onClick={() => { const newItems = [...section.content.items]; newItems[idx].color = color; handleUpdateContent(section.id, { items: newItems }); }} className={`w-8 h-8 rounded-full border-2 transition-all ${item.color === color ? 'border-primary scale-110 shadow-lg' : 'border-transparent opacity-60'}`} style={{ backgroundColor: color === 'emerald' ? '#10b981' : color === 'amber' ? '#f59e0b' : color === 'red' ? '#ef4444' : color === 'purple' ? '#8b5cf6' : '#3b82f6' }} />
+                                          ))}
+                                      </div>
+                                  </div>
+                                  <div className="mt-3">
+                                      <InputGroup label="Description" value={item.desc} onChange={(v) => { const newItems = [...section.content.items]; newItems[idx].desc = v; handleUpdateContent(section.id, { items: newItems }); }} />
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+              );
           case 'subscription':
               return (
                   <div className="space-y-4">
