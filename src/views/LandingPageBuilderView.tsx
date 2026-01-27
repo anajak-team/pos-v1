@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { StoreSettings, LandingPageSection } from '../types';
-import { ArrowLeft, Globe, Gift, Eye, Shield, ArrowUp, ArrowDown, EyeOff, Trash2, Plus, Save, Wrench, CreditCard, Video, Users, User, Layout } from 'lucide-react';
+import { ArrowLeft, Globe, Gift, Eye, Shield, ArrowUp, ArrowDown, EyeOff, Trash2, Plus, Save, Wrench, CreditCard, Video, Users, User, Layout, GripVertical, Check } from 'lucide-react';
 
 interface LandingPageBuilderProps {
   settings: StoreSettings;
@@ -24,9 +24,47 @@ const InputGroup: React.FC<{ label: string; value: string; onChange: (v: string)
 
 const commonInputClass = "w-full p-3 rounded-2xl bg-white/50 dark:bg-black/20 border border-white/30 dark:border-white/10 focus:bg-white/80 dark:focus:bg-black/40 focus:border-primary/50 outline-none transition-all text-slate-800 dark:text-white placeholder:text-slate-400 shadow-inner text-sm";
 
+const FeaturesListEditor = ({ features, onChange }: { features: string[], onChange: (features: string[]) => void }) => {
+    return (
+        <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">Features List</label>
+            {features.map((feature, idx) => (
+                <div key={idx} className="flex gap-2">
+                    <input 
+                        className={commonInputClass + " py-2 text-xs"}
+                        value={feature}
+                        onChange={(e) => {
+                            const newFeatures = [...features];
+                            newFeatures[idx] = e.target.value;
+                            onChange(newFeatures);
+                        }}
+                        placeholder="Feature description"
+                    />
+                    <button 
+                        onClick={() => {
+                            const newFeatures = features.filter((_, i) => i !== idx);
+                            onChange(newFeatures);
+                        }}
+                        className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                    >
+                        <Trash2 size={14} />
+                    </button>
+                </div>
+            ))}
+            <button 
+                onClick={() => onChange([...features, 'New Feature'])}
+                className="text-xs text-primary font-bold flex items-center gap-1 hover:underline ml-1"
+            >
+                <Plus size={12} /> Add Feature
+            </button>
+        </div>
+    );
+};
+
 export const LandingPageBuilderView: React.FC<LandingPageBuilderProps> = ({ settings, onSave, onBack }) => {
   const [localSettings, setLocalSettings] = useState<StoreSettings>(settings);
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+  const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
 
   // Helper to update sections safely
   const updateSections = (newSections: LandingPageSection[]) => {
@@ -37,6 +75,33 @@ export const LandingPageBuilderView: React.FC<LandingPageBuilderProps> = ({ sett
               sections: newSections
           }
       }));
+  };
+
+  const handleDragStart = (index: number) => {
+      setDraggedItemIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+      e.preventDefault();
+  };
+
+  const handleDrop = (targetIndex: number) => {
+      if (draggedItemIndex === null) return;
+      if (draggedItemIndex === targetIndex) return;
+
+      const sections = [...(localSettings.landingPage?.sections || [])].sort((a, b) => a.order - b.order);
+      const itemToMove = sections[draggedItemIndex];
+      
+      // Remove from old position
+      sections.splice(draggedItemIndex, 1);
+      // Insert at new position
+      sections.splice(targetIndex, 0, itemToMove);
+      
+      // Reassign order based on new index
+      const updatedSections = sections.map((s, i) => ({ ...s, order: i }));
+      
+      updateSections(updatedSections);
+      setDraggedItemIndex(null);
   };
 
   const handleMoveSection = (index: number, direction: 'up' | 'down') => {
@@ -342,12 +407,100 @@ export const LandingPageBuilderView: React.FC<LandingPageBuilderProps> = ({ sett
                   <div className="space-y-4">
                       <InputGroup label="Title" value={section.content.title} onChange={(v) => handleUpdateContent(section.id, { title: v })} />
                       <InputGroup label="Subtitle" value={section.content.subtitle} onChange={(v) => handleUpdateContent(section.id, { subtitle: v })} />
+                      
+                      <div className="pt-4 border-t border-slate-200 dark:border-white/10">
+                          <div className="flex justify-between items-center mb-3">
+                              <h4 className="font-bold text-sm">Pricing Plans</h4>
+                              <button 
+                                  onClick={() => handleUpdateContent(section.id, { 
+                                      plans: [...(section.content.plans || []), { 
+                                          name: 'New Plan', 
+                                          price: '$0', 
+                                          period: '/mo', 
+                                          features: ['Feature 1'], 
+                                          buttonText: 'Choose', 
+                                          recommended: false 
+                                      }] 
+                                  })}
+                                  className="text-xs bg-primary/10 text-primary px-2 py-1 rounded hover:bg-primary/20 transition-colors flex items-center gap-1 font-bold"
+                              >
+                                  <Plus size={12} /> Add Plan
+                              </button>
+                          </div>
+                          
+                          <div className="space-y-4">
+                              {(section.content.plans || []).map((plan: any, idx: number) => (
+                                  <div key={idx} className="p-4 bg-slate-50 dark:bg-black/20 rounded-xl border border-slate-200 dark:border-white/5 relative group">
+                                      <button 
+                                          onClick={() => {
+                                              const newPlans = [...section.content.plans];
+                                              newPlans.splice(idx, 1);
+                                              handleUpdateContent(section.id, { plans: newPlans });
+                                          }}
+                                          className="absolute top-2 right-2 p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all"
+                                      >
+                                          <Trash2 size={14} />
+                                      </button>
+                                      
+                                      <div className="grid grid-cols-2 gap-3 mb-3">
+                                          <InputGroup label="Plan Name" value={plan.name} onChange={(v) => {
+                                              const newPlans = [...section.content.plans];
+                                              newPlans[idx].name = v;
+                                              handleUpdateContent(section.id, { plans: newPlans });
+                                          }} />
+                                          <div className="flex items-center gap-2 mt-6">
+                                              <input 
+                                                  type="checkbox" 
+                                                  checked={plan.recommended} 
+                                                  onChange={(e) => {
+                                                      const newPlans = [...section.content.plans];
+                                                      newPlans[idx].recommended = e.target.checked;
+                                                      handleUpdateContent(section.id, { plans: newPlans });
+                                                  }}
+                                                  className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                                              />
+                                              <label className="text-xs font-bold text-slate-500 uppercase">Recommended</label>
+                                          </div>
+                                      </div>
+                                      
+                                      <div className="grid grid-cols-2 gap-3 mb-3">
+                                          <InputGroup label="Price" value={plan.price} onChange={(v) => {
+                                              const newPlans = [...section.content.plans];
+                                              newPlans[idx].price = v;
+                                              handleUpdateContent(section.id, { plans: newPlans });
+                                          }} />
+                                          <InputGroup label="Period" value={plan.period} onChange={(v) => {
+                                              const newPlans = [...section.content.plans];
+                                              newPlans[idx].period = v;
+                                              handleUpdateContent(section.id, { plans: newPlans });
+                                          }} />
+                                      </div>
+
+                                      <InputGroup label="Button Text" value={plan.buttonText} onChange={(v) => {
+                                          const newPlans = [...section.content.plans];
+                                          newPlans[idx].buttonText = v;
+                                          handleUpdateContent(section.id, { plans: newPlans });
+                                      }} className="mb-3" />
+
+                                      <FeaturesListEditor 
+                                          features={plan.features || []} 
+                                          onChange={(newFeatures) => {
+                                              const newPlans = [...section.content.plans];
+                                              newPlans[idx].features = newFeatures;
+                                              handleUpdateContent(section.id, { plans: newPlans });
+                                          }}
+                                      />
+                                  </div>
+                              ))}
+                          </div>
+                      </div>
                   </div>
               );
           case 'preview':
               return (
                   <div className="space-y-4">
                       <InputGroup label="Section Title" value={section.content.title} onChange={(v) => handleUpdateContent(section.id, { title: v })} />
+                      <InputGroup label="Subtitle" value={section.content.subtitle} onChange={(v) => handleUpdateContent(section.id, { subtitle: v })} />
                       <p className="text-xs text-slate-500">This section displays a live preview of your product inventory with search and category filters.</p>
                   </div>
               );
@@ -356,6 +509,7 @@ export const LandingPageBuilderView: React.FC<LandingPageBuilderProps> = ({ sett
                   <div className="space-y-4">
                       <InputGroup label="Title" value={section.content.title} onChange={(v) => handleUpdateContent(section.id, { title: v })} />
                       <InputGroup label="Subtitle" value={section.content.subtitle} onChange={(v) => handleUpdateContent(section.id, { subtitle: v })} />
+                      <InputGroup label="Input Placeholder" value={section.content.placeholder} onChange={(v) => handleUpdateContent(section.id, { placeholder: v })} placeholder="Enter Ticket ID..." />
                   </div>
               );
           case 'customer_dashboard':
@@ -420,23 +574,14 @@ export const LandingPageBuilderView: React.FC<LandingPageBuilderProps> = ({ sett
                           <div 
                               key={section.id} 
                               className={`rounded-xl border transition-all ${editingSectionId === section.id ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500/50 shadow-md' : 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-700'}`}
+                              draggable
+                              onDragStart={() => handleDragStart(index)}
+                              onDragOver={(e) => handleDragOver(e, index)}
+                              onDrop={() => handleDrop(index)}
                           >
                               <div className="p-3 flex items-center gap-3">
-                                  <div className="flex flex-col gap-1 text-slate-400">
-                                      <button 
-                                          disabled={index === 0} 
-                                          onClick={(e) => { e.stopPropagation(); handleMoveSection(index, 'up'); }}
-                                          className="hover:text-slate-600 dark:hover:text-slate-200 disabled:opacity-30"
-                                      >
-                                          <ArrowUp size={14} />
-                                      </button>
-                                      <button 
-                                          disabled={index === sortedSections.length - 1} 
-                                          onClick={(e) => { e.stopPropagation(); handleMoveSection(index, 'down'); }}
-                                          className="hover:text-slate-600 dark:hover:text-slate-200 disabled:opacity-30"
-                                      >
-                                          <ArrowDown size={14} />
-                                      </button>
+                                  <div className="cursor-grab text-slate-300 hover:text-slate-500 active:cursor-grabbing p-1">
+                                      <GripVertical size={16} />
                                   </div>
                                   
                                   <div 

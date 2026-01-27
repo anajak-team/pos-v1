@@ -341,7 +341,7 @@ const PreviewSection = ({ content, products, settings }: any) => {
                   <Store size={24} className="text-primary" />
               </div>
               <h2 className="text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-100 mb-2">{content.title || 'Live Inventory'}</h2>
-              <p className="text-slate-600 dark:text-slate-400">Real-time availability from our showroom</p>
+              <p className="text-slate-600 dark:text-slate-400">{content.subtitle || 'Real-time availability from our showroom'}</p>
            </div>
 
            {/* Search and Filters */}
@@ -433,7 +433,7 @@ const RepairSection = ({ content }: any) => (
                 <p className="text-slate-600 dark:text-slate-400 max-w-lg mx-auto">{content.subtitle}</p>
             </div>
             <div className="max-w-md mx-auto relative mb-8">
-                <input type="text" placeholder="Enter Ticket ID..." className="w-full pl-6 pr-14 py-4 rounded-2xl bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-white/10 focus:bg-white/90 dark:focus:bg-slate-800/90 outline-none transition-all text-slate-800 dark:text-slate-100 shadow-inner text-lg font-medium" />
+                <input type="text" placeholder={content.placeholder || "Enter Ticket ID..."} className="w-full pl-6 pr-14 py-4 rounded-2xl bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-white/10 focus:bg-white/90 dark:focus:bg-slate-800/90 outline-none transition-all text-slate-800 dark:text-slate-100 shadow-inner text-lg font-medium" />
                 <button className="absolute right-2 top-2 bottom-2 aspect-square bg-amber-500 hover:bg-amber-600 text-white rounded-xl shadow-lg flex items-center justify-center transition-all active:scale-95"><Search size={24} /></button>
             </div>
         </div>
