@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Store, ArrowRight, ShoppingCart, BarChart3, Wrench, ShieldCheck, Zap, Package, Globe, Gift, Search, Loader2, Check, ExternalLink, Play, Building, ArrowLeft, CreditCard, Lock, Mail, User as UserIcon, X, Tag, Box, Crown, LogOut, ChevronRight, Receipt, Calendar, ShoppingBag, History, Settings, Sliders, LayoutGrid, Rocket, QrCode, Languages } from 'lucide-react';
+import { Store, ArrowRight, ShoppingCart, BarChart3, Wrench, ShieldCheck, Zap, Package, Globe, Gift, Search, Loader2, Check, ExternalLink, Play, Building, ArrowLeft, CreditCard, Lock, Mail, User as UserIcon, X, Tag, Box, Crown, LogOut, ChevronRight, Receipt, Calendar, ShoppingBag, History, Settings, Sliders, LayoutGrid, Rocket, QrCode, Languages, MapPin } from 'lucide-react';
 import { StoreSettings, LandingPageSection, Product, RepairTicket, User, Customer, Transaction } from '../types';
 import { getRepairs } from '../services/storageService';
 import { Invoice } from '../components/Invoice';
@@ -762,61 +762,29 @@ const ProductDetailsModal = ({ product, onClose, currency }: { product: Product,
 
     return (
         <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
-            <div className="bg-white/90 dark:bg-slate-900/95 backdrop-blur-2xl rounded-[2rem] shadow-2xl w-full max-w-lg border border-white/20 dark:border-white/10 overflow-hidden relative flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
-                {/* Close Button */}
-                <button onClick={onClose} className="absolute top-4 right-4 z-10 p-2 bg-black/10 dark:bg-white/10 rounded-full text-slate-600 dark:text-slate-300 hover:bg-black/20 dark:hover:bg-white/20 transition-colors">
-                    <X size={20} />
-                </button>
-
-                {/* Product Image */}
-                <div className="h-64 sm:h-72 w-full bg-slate-100 dark:bg-slate-950 relative shrink-0">
+            <div className="bg-white/90 dark:bg-slate-900/95 backdrop-blur-2xl rounded-[3rem] shadow-2xl w-full max-w-lg border border-white/20 dark:border-white/10 overflow-hidden relative flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                <button onClick={onClose} className="absolute top-6 right-6 z-10 p-2 bg-black/10 dark:bg-white/10 rounded-full text-slate-600 dark:text-slate-300 hover:bg-black/20 dark:hover:bg-white/20 transition-colors"><X size={24} /></button>
+                <div className="h-64 sm:h-80 w-full bg-slate-100 dark:bg-slate-950 relative shrink-0">
                     <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                    <div className="absolute bottom-4 left-4 flex gap-2">
-                        <span className="px-3 py-1.5 rounded-xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-xs font-bold shadow-sm flex items-center gap-1.5">
-                            <Tag size={14} className="text-primary"/> {product.category}
-                        </span>
-                        {product.stock > 0 ? (
-                            <span className="px-3 py-1.5 rounded-xl bg-emerald-500/90 backdrop-blur-md text-white text-xs font-bold shadow-sm flex items-center gap-1.5">
-                                <Box size={14} /> In Stock: {product.stock}
-                            </span>
-                        ) : (
-                            <span className="px-3 py-1.5 rounded-xl bg-red-500/90 backdrop-blur-md text-white text-xs font-bold shadow-sm">
-                                Out of Stock
-                            </span>
-                        )}
+                    <div className="absolute bottom-6 left-6 flex gap-3">
+                        <span className="px-4 py-2 rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-xs font-bold shadow-lg border border-white/20 flex items-center gap-2"><Tag size={14} className="text-primary"/> {product.category}</span>
+                        {product.stock > 0 ? (<span className="px-4 py-2 rounded-2xl bg-emerald-500/90 backdrop-blur-md text-white text-xs font-bold shadow-lg flex items-center gap-2"><Box size={14} /> In Stock: {product.stock}</span>) : (<span className="px-4 py-2 rounded-2xl bg-red-500/90 backdrop-blur-md text-white text-xs font-bold shadow-lg">Out of Stock</span>)}
                     </div>
                 </div>
-
-                {/* Content */}
-                <div className="p-6 sm:p-8 overflow-y-auto">
-                    <div className="flex justify-between items-start mb-4">
-                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white leading-tight">{product.name}</h2>
-                        <span className="text-2xl font-extrabold text-primary shrink-0 ml-4">{currency}{product.price.toFixed(2)}</span>
+                <div className="p-8 sm:p-10 overflow-y-auto">
+                    <div className="flex justify-between items-start mb-6">
+                        <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white leading-tight">{product.name}</h2>
+                        <span className="text-3xl font-black text-primary shrink-0 ml-6">{currency}{product.price.toFixed(2)}</span>
                     </div>
-                    
-                    <div className="space-y-4">
-                        <div>
-                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Description</h4>
-                            <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-sm">
-                                {product.description || 'No description available for this product.'}
-                            </p>
+                    <div className="space-y-6">
+                        <div><h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Description</h4><p className="text-slate-600 dark:text-slate-300 leading-relaxed text-base">{product.description || 'No description available.'}</p></div>
+                        <div className="space-y-3">
+                            {product.barcode && (<div className="p-4 bg-slate-100/50 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10 flex items-center justify-between"><span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Item Code</span><span className="font-mono text-sm font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 px-3 py-1 rounded-lg border border-white/20 shadow-sm">{product.barcode}</span></div>)}
+                            {product.zone && (<div className="p-4 bg-slate-100/50 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10 flex items-center justify-between"><span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Location</span><span className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5"><MapPin size={16} className="text-primary"/> {product.zone}</span></div>)}
                         </div>
-                        
-                        {product.barcode && (
-                            <div className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 flex items-center justify-between">
-                                <span className="text-xs font-bold text-slate-500">Item Code</span>
-                                <span className="font-mono text-sm font-medium text-slate-700 dark:text-slate-300">{product.barcode}</span>
-                            </div>
-                        )}
                     </div>
                 </div>
-
-                {/* Footer */}
-                <div className="p-4 border-t border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/20">
-                    <button onClick={onClose} className="w-full py-3 bg-primary text-white rounded-xl font-bold shadow-lg hover:bg-blue-600 transition-colors">
-                        Close Details
-                    </button>
-                </div>
+                <div className="p-6 border-t border-slate-100 dark:border-white/10 bg-slate-50/50 dark:bg-black/20"><button onClick={onClose} className="w-full py-4 bg-primary text-white rounded-2xl font-extrabold shadow-xl shadow-primary/20 hover:bg-blue-600 transition-all active:scale-95">Return to Gallery</button></div>
             </div>
         </div>
     );
@@ -892,6 +860,11 @@ const PreviewSection: React.FC<PreviewSectionProps> = ({ content, products, sett
                                       {product.stock > 0 ? `${product.stock} in stock` : 'Out of Stock'}
                                   </span>
                               </div>
+                               {product.zone && (
+                                <div className="absolute top-2.5 left-2.5 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded text-[8px] font-bold text-white flex items-center gap-1 shadow-sm border border-white/10">
+                                    <MapPin size={8} /> {product.zone}
+                                </div>
+                              )}
                           </div>
                           <div className="mt-auto">
                               <div className="mb-1.5">

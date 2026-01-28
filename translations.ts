@@ -33,6 +33,8 @@ export const TRANSLATIONS = {
     CONFIRM: 'Confirm',
     BACK: 'Back',
     NEXT: 'Next',
+    ZONE: 'Zone',
+    LOCATION: 'Location',
     
     // Dashboard
     WELCOME: 'Welcome',
@@ -237,6 +239,8 @@ export const TRANSLATIONS = {
     CONFIRM: 'យល់ព្រម',
     BACK: 'ត្រឡប់',
     NEXT: 'បន្ទាប់',
+    ZONE: 'តំបន់',
+    LOCATION: 'ទីតាំង',
     
     // Dashboard
     WELCOME: 'សូមស្វាគមន៍',
@@ -441,6 +445,8 @@ export const TRANSLATIONS = {
     CONFIRM: '确认',
     BACK: '返回',
     NEXT: '下一步',
+    ZONE: '区域',
+    LOCATION: '位置',
     
     // Dashboard
     WELCOME: '欢迎',

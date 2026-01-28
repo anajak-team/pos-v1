@@ -270,6 +270,7 @@ const ProductDetailsModal = ({ product, onClose, currency }: { product: Product,
                     <div className="space-y-6">
                         <div><h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Description</h4><p className="text-slate-600 dark:text-slate-300 leading-relaxed text-base">{product.description || 'No description available.'}</p></div>
                         {product.barcode && (<div className="p-4 bg-slate-100/50 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10 flex items-center justify-between"><span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Item Code</span><span className="font-mono text-sm font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 px-3 py-1 rounded-lg border border-white/20 shadow-sm">{product.barcode}</span></div>)}
+                        {product.zone && (<div className="p-4 bg-slate-100/50 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10 flex items-center justify-between"><span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Store Location</span><span className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5"><MapPin size={16} className="text-primary"/> {product.zone}</span></div>)}
                     </div>
                 </div>
                 <div className="p-6 border-t border-slate-100 dark:border-white/10 bg-slate-50/50 dark:bg-black/20"><button onClick={onClose} className="w-full py-4 bg-primary text-white rounded-2xl font-extrabold shadow-xl shadow-primary/20 hover:bg-blue-600 transition-all active:scale-95">Return to Gallery</button></div>
@@ -316,6 +317,13 @@ const PreviewSection = ({ content, products, settings }: any) => {
                           <div className="relative aspect-square rounded-2xl overflow-hidden mb-5 bg-slate-100 dark:bg-slate-900 border border-white/10">
                               <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                               <div className="absolute top-3 right-3"><span className={`text-[10px] font-black px-3 py-1.5 rounded-full backdrop-blur-md border border-white/30 shadow-lg ${product.stock > 0 ? 'bg-emerald-500/80 text-white' : 'bg-red-500/80 text-white'}`}>{product.stock > 0 ? `${product.stock} in stock` : 'Out of Stock'}</span></div>
+                              <div className="absolute bottom-3 left-3">
+                                {product.zone && (
+                                    <span className="text-[9px] font-black px-2 py-1 rounded-full backdrop-blur-md border border-white/30 shadow-lg bg-black/40 text-white flex items-center gap-1">
+                                        <MapPin size={8} /> {product.zone}
+                                    </span>
+                                )}
+                              </div>
                           </div>
                           <div className="mt-auto px-1">
                               <div className="mb-2"><span className="inline-block px-3 py-1 rounded-lg bg-slate-100/80 dark:bg-slate-700/80 text-[10px] font-black text-slate-500 dark:text-slate-300 uppercase tracking-widest border border-white/20">{product.category}</span></div>

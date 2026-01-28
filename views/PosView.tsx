@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Product, CartItem, StoreSettings, User, Transaction, Customer } from '../types';
 import { ProductCard } from '../components/ProductCard';
-import { Search, Trash2, Plus, Minus, CreditCard, Banknote, Smartphone, ShoppingCart, ArrowRight, X, Package, Sparkles, ScanBarcode, Loader2, CheckCircle2, Printer, AlertTriangle, ShoppingBasket, Tag, Crown, Image as ImageIcon } from 'lucide-react';
+import { Search, Trash2, Plus, Minus, CreditCard, Banknote, Smartphone, ShoppingCart, ArrowRight, X, Package, Sparkles, ScanBarcode, Loader2, CheckCircle2, Printer, AlertTriangle, ShoppingBasket, Tag, Crown, Image as ImageIcon, MapPin, Star } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { useAlert } from '../components/Alert';
 import { suggestUpsell } from '../services/geminiService';
@@ -32,8 +31,15 @@ const CartItemRow: React.FC<CartItemRowProps> = ({ item, currency, onUpdateQty, 
         </div>
         <div className="min-w-0 flex-1">
             <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm truncate">{item.name}</h4>
-            <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                {currency}{item.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <div className="flex items-center gap-2">
+                <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    {currency}{item.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+                {item.zone && (
+                    <div className="text-[9px] font-bold px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-md flex items-center gap-1 border border-slate-200 dark:border-white/5">
+                        <MapPin size={8} /> {item.zone}
+                    </div>
+                )}
             </div>
         </div>
       </div>
@@ -358,6 +364,7 @@ const CartPanel: React.FC<CartPanelProps> = (props) => {
 
 interface PosViewProps {
   products: Product[];
+  transactions: Transaction[];
   onCompleteTransaction: (transaction: Transaction) => void;
   onPrint: (transaction: Transaction) => void;
   settings: StoreSettings;
@@ -372,6 +379,7 @@ interface PosViewProps {
 
 export const PosView: React.FC<PosViewProps> = ({
   products,
+  transactions,
   onCompleteTransaction,
   onPrint,
   settings,
@@ -425,6 +433,27 @@ export const PosView: React.FC<PosViewProps> = ({
     return TRANSLATIONS[lang]?.[key] || TRANSLATIONS.en[key];
   };
 
+  const topSellerProducts = useMemo(() => {
+    if (!transactions || transactions.length === 0) return [];
+    const productCounts = new Map<string, number>();
+    transactions.forEach(transaction => {
+        if (transaction.type === 'sale') {
+            transaction.items.forEach(item => {
+                const currentCount = productCounts.get(item.id) || 0;
+                productCounts.set(item.id, currentCount + item.quantity);
+            });
+        }
+    });
+    const sortedProductIds = Array.from(productCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 12)
+        .map(([productId]) => productId);
+    
+    return sortedProductIds
+        .map(id => products.find(p => p.id === id))
+        .filter((p): p is Product => !!p);
+  }, [transactions, products]);
+
   useEffect(() => {
     if (cart.length > prevCartItemsRef.current.length) {
         cartEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -469,15 +498,29 @@ export const PosView: React.FC<PosViewProps> = ({
   }, [isScannerOpen, isQuickAddOpen, isCustomerModalOpen, showCheckout]);
 
   const filteredProducts = useMemo(() => {
-    return products.filter(p => {
-      const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || 
-                            (p.barcode && p.barcode.includes(search)) || 
-                            (p.zone && p.zone.toLowerCase().includes(search.toLowerCase())); // Search by Zone
-      const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
-      const matchesStock = !settings.hideOutOfStockProducts || p.stock > 0;
-      return matchesSearch && matchesCategory && matchesStock;
-    });
-  }, [products, search, selectedCategory, settings.hideOutOfStockProducts]);
+    let productList: Product[];
+
+    if (selectedCategory === 'Top Sellers') {
+        productList = topSellerProducts;
+    } else {
+        productList = products.filter(p => {
+            const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
+            const matchesStock = !settings.hideOutOfStockProducts || p.stock > 0;
+            return matchesCategory && matchesStock;
+        });
+    }
+
+    if (!search) {
+        return productList;
+    }
+
+    return productList.filter(p => 
+        p.name.toLowerCase().includes(search.toLowerCase()) || 
+        (p.barcode && p.barcode.includes(search)) || 
+        (p.zone && p.zone.toLowerCase().includes(search.toLowerCase()))
+    );
+  }, [products, topSellerProducts, search, selectedCategory, settings.hideOutOfStockProducts]);
+
 
   const addToCart = (product: Product) => {
     if (completed) {
@@ -875,6 +918,8 @@ export const PosView: React.FC<PosViewProps> = ({
     totalPaid,
     onClose: () => { if (!completed) setShowCheckout(false); }
   };
+  
+  const displayCategories = ['Top Sellers', 'All', ...categories];
 
   return (
     <div className="flex flex-col lg:flex-row h-full gap-4 relative">
@@ -902,16 +947,17 @@ export const PosView: React.FC<PosViewProps> = ({
            </div>
            
            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-              {['All', ...categories].map(cat => (
+              {displayCategories.map(cat => (
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
-                  className={`shrink-0 px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
+                  className={`shrink-0 px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all flex items-center justify-center ${
                     selectedCategory === cat 
                       ? 'bg-primary text-white shadow-lg shadow-primary/30' 
                       : 'bg-white/40 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-white/10 border border-white/10'
                   }`}
                 >
+                  {cat === 'Top Sellers' && <Star size={14} className={`mr-1.5 -mt-0.5 ${selectedCategory === 'Top Sellers' ? 'fill-current' : 'fill-amber-400 text-amber-400'}`} />}
                   {cat}
                 </button>
               ))}
@@ -1058,7 +1104,7 @@ export const PosView: React.FC<PosViewProps> = ({
       
       {isQuickAddOpen && (
         <div className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-            <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-2xl w-full max-w-md border border-white/20">
+            <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-2xl w-full max-md border border-white/20">
                 <div className="mb-6">
                     <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">Unrecognized Item</h3>
                     <div className="flex items-center gap-2 p-3 bg-slate-100 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-white/5">
