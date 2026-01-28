@@ -113,10 +113,12 @@ const DEFAULT_SETTINGS: StoreSettings = {
                 content: {
                     title: 'Trusted by Industry Leaders',
                     users: [
-                        { name: 'Coffee House', logo: '' },
-                        { name: 'Tech Haven', logo: '' },
-                        { name: 'Urban Style', logo: '' },
-                        { name: 'Green Market', logo: '' }
+                        { name: 'Brew & Co', logo: 'https://img.icons8.com/color/144/starbucks.png' },
+                        { name: 'Tech Sphere', logo: 'https://img.icons8.com/color/144/apple-logo.png' },
+                        { name: 'Urban Threads', logo: 'https://img.icons8.com/color/144/nike.png' },
+                        { name: 'Daily Fresh', logo: 'https://img.icons8.com/color/144/whole-foods.png' },
+                        { name: 'Cyber Repair', logo: 'https://img.icons8.com/color/144/samsung.png' },
+                        { name: 'Global Goods', logo: 'https://img.icons8.com/color/144/amazon.png' }
                     ]
                 }
             },
