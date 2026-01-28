@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { StoreSettings, LandingPageSection } from '../types';
 import { ArrowLeft, Globe, Gift, Eye, Shield, ArrowUp, ArrowDown, EyeOff, Trash2, Plus, Save, Wrench, CreditCard, Video, Users, User, Layout } from 'lucide-react';
@@ -222,12 +221,13 @@ export const LandingPageBuilderView: React.FC<LandingPageBuilderProps> = ({ sett
                               value={section.content.layout || 'grid'}
                               onChange={(e) => handleUpdateContent(section.id, { layout: e.target.value })}
                           >
-                              <option value="grid">Grid Cards (Default)</option>
+                              <option value="grid">Grid (3 Columns)</option>
+                              <option value="grid-4-col">Grid (4 Columns)</option>
                               <option value="list">Vertical List</option>
                               <option value="minimal">Minimal Icons</option>
                           </select>
                       </div>
-                      <div className="flex justify-between items-center mb-2">
+                      <div className="flex justify-between items-center mb-2 pt-4 border-t border-slate-200 dark:border-white/10">
                           <h4 className="font-bold text-sm">Feature Cards</h4>
                           <button 
                               onClick={() => handleUpdateContent(section.id, { items: [...(section.content.items || []), { title: 'New Feature', desc: 'Description', icon: 'Gift', color: 'blue' }] })}

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Store, ArrowRight, ShoppingCart, BarChart3, Wrench, ShieldCheck, Zap, Package, Globe, Gift, Search, Loader2, Check, ExternalLink, Play, Building, ArrowLeft, CreditCard, Lock, Mail, User as UserIcon, X, Tag, Box, Crown, LogOut, ChevronRight, Receipt, Calendar, ShoppingBag, History, Settings, Sliders, LayoutGrid, Rocket, QrCode, Languages } from 'lucide-react';
 import { StoreSettings, LandingPageSection, Product, RepairTicket, User, Customer, Transaction } from '../types';
@@ -433,7 +432,20 @@ const FeaturesSection: React.FC<FeaturesSectionProps> = ({ content }) => {
                             />
                         ))}
                     </div>
-                ) : (
+                ) : layout === 'grid-4-col' ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {(content.items || []).map((item: any, i: number) => (
+                             <FeatureCard 
+                                key={i}
+                                iconName={item.icon} 
+                                title={item.title} 
+                                desc={item.desc}
+                                color={item.color || 'red'}
+                                layout="grid"
+                            />
+                        ))}
+                    </div>
+                ) : ( // Default 'grid' is 3 columns
                     <div className="flex flex-wrap justify-center gap-6">
                         {(content.items || []).map((item: any, i: number) => (
                             <div key={i} className="w-full md:w-[calc(50%-12px)] lg:w-[calc(33.33%-16px)] flex-grow-0">

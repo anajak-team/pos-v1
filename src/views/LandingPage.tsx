@@ -69,7 +69,7 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ iconName, title, desc, color,
       );
   }
 
-  // Grid (Default - Refined Professional)
+  // Grid (Default - Professional 4-Column Card)
   return (
     <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-sm border border-white/40 dark:border-white/10 hover:shadow-2xl hover:shadow-primary/5 hover:-translate-y-2 transition-all duration-500 group h-full flex flex-col items-start text-left">
       <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 ${colorClasses[color] || 'bg-slate-100 text-slate-600 border-slate-200'} group-hover:scale-110 transition-transform duration-500 backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border`}>
@@ -467,7 +467,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onViewDe
                   case 'users': return <UsersSection key={section.id} content={section.content} />;
                   case 'preview': return <PreviewSection key={section.id} content={section.content} products={products} settings={settings} />;
                   case 'repair': return <RepairSection key={section.id} content={section.content} />;
-                  case 'subscription': return <SubscriptionSection key={section.id} content={section.content} />;
+                  case 'subscription': return <SubscriptionSection key={section.id} content={section.content} onSelectPlan={() => {}} />;
                   case 'footer': return <FooterSection key={section.id} content={section.content} storeName={storeName} />;
                   default: return null;
               }

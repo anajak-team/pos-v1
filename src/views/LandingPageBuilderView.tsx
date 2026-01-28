@@ -251,8 +251,8 @@ export const LandingPageBuilderView: React.FC<LandingPageBuilderProps> = ({ sett
                       <InputGroup label="Subtitle" value={section.content.subtitle} onChange={(v) => handleUpdateContent(section.id, { subtitle: v })} />
                       <div className="pt-4 border-t border-slate-200 dark:border-white/10">
                           <div className="flex justify-between items-center mb-3">
-                              <h4 className="font-bold text-sm">Pricing Plans</h4>
-                              <button onClick={() => handleUpdateContent(section.id, { plans: [...(section.content.plans || []), { name: 'New Plan', price: '$0', period: '/mo', features: ['Free support'], buttonText: 'Buy', recommended: false }] })} className="text-xs bg-primary/10 text-primary px-2 py-1 rounded hover:bg-primary/20 transition-colors flex items-center gap-1 font-bold"><Plus size={12} /> Add Plan</button>
+                              <h4 className="font-bold text-sm text-slate-800 dark:text-slate-100">Pricing Plans</h4>
+                              <button onClick={() => handleUpdateContent(section.id, { plans: [...(section.content.plans || []), { name: 'Pro', price: '$29', period: '/mo', features: ['All access'], buttonText: 'Buy Now', recommended: false }] })} className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors flex items-center gap-1 font-bold"><PlusCircle size={14} /> Add Plan</button>
                           </div>
                           <div className="space-y-6">
                               {(section.content.plans || []).map((plan: any, idx: number) => (
@@ -269,6 +269,7 @@ export const LandingPageBuilderView: React.FC<LandingPageBuilderProps> = ({ sett
                                           <InputGroup label="Price" value={plan.price} onChange={(v) => { const newPlans = [...section.content.plans]; newPlans[idx].price = v; handleUpdateContent(section.id, { plans: newPlans }); }} />
                                           <InputGroup label="Period" value={plan.period} onChange={(v) => { const newPlans = [...section.content.plans]; newPlans[idx].period = v; handleUpdateContent(section.id, { plans: newPlans }); }} />
                                       </div>
+                                      <InputGroup label="Button Text" value={plan.buttonText} onChange={(v) => { const newPlans = [...section.content.plans]; newPlans[idx].buttonText = v; handleUpdateContent(section.id, { plans: newPlans }); }} className="mb-3" />
                                       <FeaturesListEditor features={plan.features || []} onChange={(newFeatures) => { const newPlans = [...section.content.plans]; newPlans[idx].features = newFeatures; handleUpdateContent(section.id, { plans: newPlans }); }} />
                                   </div>
                               ))}
