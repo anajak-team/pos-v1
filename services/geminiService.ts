@@ -1,11 +1,11 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { Transaction, Product, Expense } from '../types';
 
 // FIX: Initialize GoogleGenAI with API key directly from environment variables as per guidelines.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-const MODEL_FLASH = 'gemini-2.5-flash';
+// Using gemini-3-flash-preview for general text tasks
+const MODEL_NAME = 'gemini-3-flash-preview';
 
 export const generateSalesInsight = async (transactions: Transaction[]): Promise<string> => {
   // FIX: Removed API key check as per guidelines assuming it's always available.
@@ -26,9 +26,10 @@ export const generateSalesInsight = async (transactions: Transaction[]): Promise
 
   try {
     const response = await ai.models.generateContent({
-      model: MODEL_FLASH,
+      model: MODEL_NAME,
       contents: prompt,
     });
+    // Accessing response.text directly as per guidelines
     return response.text || "No insights available.";
   } catch (error) {
     console.error("Gemini Sales Insight Error:", error);
@@ -43,7 +44,7 @@ export const generateProductDescription = async (name: string, category: string)
 
   try {
     const response = await ai.models.generateContent({
-      model: MODEL_FLASH,
+      model: MODEL_NAME,
       contents: prompt,
     });
     return response.text?.trim() || "Premium quality product.";
@@ -65,7 +66,7 @@ export const suggestUpsell = async (cartItems: string[]): Promise<string> => {
 
     try {
         const response = await ai.models.generateContent({
-            model: MODEL_FLASH,
+            model: MODEL_NAME,
             contents: prompt,
         });
         return response.text?.trim() || "";
@@ -116,7 +117,7 @@ export const generateProfitForecast = async (
 
   try {
     const response = await ai.models.generateContent({
-      model: MODEL_FLASH,
+      model: MODEL_NAME,
       contents: prompt,
     });
     return response.text?.trim() || "Insufficient data for forecast.";

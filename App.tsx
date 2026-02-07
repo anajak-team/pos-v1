@@ -747,6 +747,11 @@ export const App = () => {
       setExpenses(expenses.filter(e => e.id !== id));
   };
 
+  const handleUpdateRepair = async (r: RepairTicket) => {
+    const updatedRepair = await api.updateRepair(r);
+    setRepairs(repairs.map(rep => (rep.id === r.id ? updatedRepair : rep)));
+  };
+
   // Toggle Theme Logic (Reused for Customer View)
   const toggleTheme = () => {
     if (!settings) return;
@@ -815,7 +820,7 @@ export const App = () => {
           case 'PURCHASES': return <PurchaseView orders={purchaseOrders} products={products} settings={settings} onCreateOrder={async (o) => { const n = await api.savePurchaseOrder(o); setPurchaseOrders([n, ...purchaseOrders]); }} onReceiveOrder={async (id) => { const o = purchaseOrders.find(po => po.id === id); if(o) { const u = await api.savePurchaseOrder({...o, status: 'Received'}); setPurchaseOrders(purchaseOrders.map(p => p.id === id ? u : p)); o.items.forEach(async i => { const p = products.find(prod => prod.id === i.productId); if(p) { const updated = await api.updateProduct({...p, stock: p.stock + i.quantity}); setProducts(prev => prev.map(pr => pr.id === updated.id ? updated : pr)); } }); showToast('Order received, inventory updated', 'success'); } }} currentUser={currentUser} />;
           case 'EXPENSES': return <ExpensesView expenses={expenses} categories={expenseCategories} onAddExpense={handleAddExpense} onDeleteExpense={handleDeleteExpense} onUpdateCategories={async (c) => { await api.saveExpenseCategories(c); setExpenseCategories(c); }} settings={settings} currentUser={currentUser} />;
           case 'REPORTS': return <ReportsView transactions={transactions} expenses={expenses} settings={settings} currentUser={currentUser} />;
-          case 'REPAIRS': return <RepairsView repairs={repairs} customers={customers} onAddRepair={async (r) => { const n = await api.addRepair(r); setRepairs([n, ...repairs]); }} onUpdateRepair={async (r) => { const u = await api.updateRepair(r); setRepairs(repairs.map(rep => rep.id === r.id ? u : rep)); }} onDeleteRepair={async (id) => { await api.deleteRepair(id); setRepairs(repairs.filter(r => r.id !== id)); }} settings={settings} currentUser={currentUser} />;
+          case 'REPAIRS': return <RepairsView repairs={repairs} customers={customers} onAddRepair={async (r) => { const n = await api.addRepair(r); setRepairs([n, ...repairs]); }} onUpdateRepair={handleUpdateRepair} onDeleteRepair={async (id) => { await api.deleteRepair(id); setRepairs(repairs.filter(r => r.id !== id)); }} settings={settings} currentUser={currentUser} />;
           case 'LANDING_BUILDER': return <LandingPageBuilderView settings={settings} onSave={async (s) => { await api.saveSettings(s); setSettings(s); showToast('Landing page updated', 'success'); }} onBack={() => setView('SETTINGS')} />;
           default: return <DashboardView transactions={transactions} isDarkMode={settings.theme === 'dark'} currentUser={currentUser} expenses={expenses} products={products} settings={settings} />;
       }

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Customer, Transaction, RepairTicket, StoreSettings, User } from '../types';
 import { Crown, Package, History, Wrench, LogOut, Receipt, Calendar, Smartphone, ShoppingBag, Clock, Store, ChevronRight, User as UserIcon, Moon, Sun, Globe, CheckCircle2, AlertCircle, X } from 'lucide-react';
@@ -64,7 +63,7 @@ export const CustomerDashboardView: React.FC<CustomerDashboardProps> = ({
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-slate-50 dark:bg-slate-950 font-sans transition-colors duration-300">
+    <div className="min-h-screen w-full flex flex-col bg-transparent font-sans transition-colors duration-300">
         
         {/* Navbar */}
         <nav className="fixed w-full z-50 px-6 py-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-white/20 dark:border-white/5 transition-all">

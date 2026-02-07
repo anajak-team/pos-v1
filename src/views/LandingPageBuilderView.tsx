@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { StoreSettings, LandingPageSection } from '../types';
-import { ArrowLeft, Globe, Gift, Eye, Shield, ArrowUp, ArrowDown, EyeOff, Trash2, Plus, Save, Wrench, CreditCard, Video, Users, User, Layout, GripVertical, Check, PlusCircle } from 'lucide-react';
+import { ArrowLeft, Globe, Gift, Eye, Shield, EyeOff, Trash2, Plus, Save, Wrench, CreditCard, Video, Users, User, Layout, GripVertical, Check, PlusCircle, Sparkles } from 'lucide-react';
 
 interface LandingPageBuilderProps {
   settings: StoreSettings;
@@ -86,17 +85,19 @@ export const LandingPageBuilderView: React.FC<LandingPageBuilderProps> = ({ sett
           hero: { title: 'New Title', titleGradient: 'New Gradient', subtitle: 'New Subtitle', ctaPrimary: 'Get Started', layout: 'centered' },
           features: { items: [{ title: 'New Feature', desc: 'Description', icon: 'Zap', color: 'blue' }], layout: 'grid' },
           subscription: { title: 'Pricing Plans', subtitle: 'Choose your plan', plans: [{ name: 'Pro', price: '$29', period: '/mo', features: ['All access'], buttonText: 'Buy Now', recommended: true }] },
-          video: { title: 'Watch Now', videoUrl: '', overlayTitle: 'Video Title' },
-          users: { title: 'Our Partners', users: [] },
+          video: { title: 'Watch Now', videoUrl: '', overlayTitle: 'Video Title', overlaySubtitle: 'A short description' },
+          users: { title: 'Our Partners', users: [{name: 'Partner', logo: ''}] },
           preview: { title: 'Live Preview', subtitle: 'View items' },
           repair: { title: 'Repair Status', subtitle: 'Track your device' },
-          footer: { copyright: '© All rights reserved' }
+          customer_dashboard: { title: 'Your Dashboard', subtitle: 'Track your points, orders, and repairs.' },
+          loyalty: { badge: 'Rewards Program', title: 'Turn Shopping into Rewards', subtitle: 'Earn points on every purchase and unlock exclusive benefits.' },
+          footer: { copyright: `© ${new Date().getFullYear()} ${settings.storeName}. All rights reserved.` }
       };
 
       const newSection: LandingPageSection = {
           id: newId,
           type,
-          label: `New ${type.charAt(0).toUpperCase() + type.slice(1)}`,
+          label: `New ${type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ')}`,
           visible: true,
           order: sections.length,
           content: defaultContent[type] || {}
@@ -113,36 +114,6 @@ export const LandingPageBuilderView: React.FC<LandingPageBuilderProps> = ({ sett
       if (editingSectionId === id) setEditingSectionId(null);
   };
 
-  const handleDragStart = (index: number) => {
-      setDraggedItemIndex(index);
-  };
-
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-      e.preventDefault();
-      setDragOverIndex(index);
-  };
-
-  const handleDrop = (targetIndex: number) => {
-      if (draggedItemIndex === null) return;
-      if (draggedItemIndex === targetIndex) {
-          setDraggedItemIndex(null);
-          setDragOverIndex(null);
-          return;
-      }
-
-      const sections = [...(localSettings.landingPage?.sections || [])].sort((a, b) => a.order - b.order);
-      const itemToMove = sections[draggedItemIndex];
-      
-      sections.splice(draggedItemIndex, 1);
-      sections.splice(targetIndex, 0, itemToMove);
-      
-      const updatedSections = sections.map((s, i) => ({ ...s, order: i }));
-      
-      updateSections(updatedSections);
-      setDraggedItemIndex(null);
-      setDragOverIndex(null);
-  };
-
   const handleToggleVisibility = (id: string) => {
       const sections = (localSettings.landingPage?.sections || []).map(s => 
           s.id === id ? { ...s, visible: !s.visible } : s
@@ -157,6 +128,49 @@ export const LandingPageBuilderView: React.FC<LandingPageBuilderProps> = ({ sett
       updateSections(sections);
   };
 
+  // --- Drag and Drop Handlers ---
+  const handleDragStart = (index: number) => {
+      setDraggedItemIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+      e.preventDefault();
+      if (draggedItemIndex !== null) {
+          setDragOverIndex(index);
+      }
+  };
+
+  const handleDragLeave = () => {
+      setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+      setDraggedItemIndex(null);
+      setDragOverIndex(null);
+  };
+
+  const handleDrop = (targetIndex: number) => {
+      if (draggedItemIndex === null || draggedItemIndex === targetIndex) {
+          setDraggedItemIndex(null);
+          setDragOverIndex(null);
+          return;
+      }
+
+      const sections = [...(localSettings.landingPage?.sections || [])].sort((a, b) => a.order - b.order);
+      const itemToMove = sections[draggedItemIndex];
+      
+      sections.splice(draggedItemIndex, 1);
+      sections.splice(targetIndex, 0, itemToMove);
+      
+      const updatedSections = sections.map((s, i) => ({ ...s, order: i }));
+      
+      updateSections(updatedSections);
+      
+      setDraggedItemIndex(null);
+      setDragOverIndex(null);
+  };
+
+
   const sortedSections = [...(localSettings.landingPage?.sections || [])].sort((a, b) => a.order - b.order);
 
   const getSectionIcon = (type: string) => {
@@ -170,6 +184,7 @@ export const LandingPageBuilderView: React.FC<LandingPageBuilderProps> = ({ sett
           case 'video': return Video;
           case 'users': return Users;
           case 'customer_dashboard': return User;
+          case 'loyalty': return Sparkles;
           default: return Layout;
       }
   };
@@ -206,7 +221,8 @@ export const LandingPageBuilderView: React.FC<LandingPageBuilderProps> = ({ sett
                       <div className="space-y-1.5">
                           <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">Layout Style</label>
                           <select className={commonInputClass} value={section.content.layout || 'grid'} onChange={(e) => handleUpdateContent(section.id, { layout: e.target.value })}>
-                              <option value="grid">Grid (4 Columns)</option>
+                              <option value="grid-4-col">Grid (4 Columns)</option>
+                              <option value="grid">Grid (3 Columns)</option>
                               <option value="list">Vertical List (Focused)</option>
                               <option value="minimal">Minimal Icons (Compact)</option>
                           </select>
@@ -215,9 +231,9 @@ export const LandingPageBuilderView: React.FC<LandingPageBuilderProps> = ({ sett
                           <h4 className="font-bold text-sm">Feature Items</h4>
                           <button onClick={() => handleUpdateContent(section.id, { items: [...(section.content.items || []), { title: 'New Feature', desc: 'Description', icon: 'Zap', color: 'blue' }] })} className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors flex items-center gap-1 font-bold"><Plus size={14} /> Add Feature</button>
                       </div>
-                      <div className="space-y-4">
+                      <div className="space-y-4 max-h-96 overflow-y-auto">
                           {(section.content.items || []).map((item: any, idx: number) => (
-                              <div key={idx} className="p-4 bg-slate-50 dark:bg-black/20 rounded-2xl border border-slate-200 dark:border-white/5 relative group shadow-sm">
+                              <div key={idx} className="p-4 bg-slate-50 dark:bg-black/20 rounded-2xl border border-white/30 dark:border-white/5 relative group shadow-sm">
                                   <button onClick={() => { const newItems = [...section.content.items]; newItems.splice(idx, 1); handleUpdateContent(section.id, { items: newItems }); }} className="absolute top-3 right-3 p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16} /></button>
                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3 pr-8">
                                       <InputGroup label="Title" value={item.title} onChange={(v) => { const newItems = [...section.content.items]; newItems[idx].title = v; handleUpdateContent(section.id, { items: newItems }); }} />
@@ -244,6 +260,17 @@ export const LandingPageBuilderView: React.FC<LandingPageBuilderProps> = ({ sett
                       </div>
                   </div>
               );
+          case 'loyalty':
+              return (
+                  <div className="space-y-4">
+                      <InputGroup label="Badge Text" value={section.content.badge} onChange={(v) => handleUpdateContent(section.id, { badge: v })} />
+                      <InputGroup label="Main Title" value={section.content.title} onChange={(v) => handleUpdateContent(section.id, { title: v })} />
+                      <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-500 uppercase ml-1">Subtitle / Description</label>
+                          <textarea className={commonInputClass} rows={3} value={section.content.subtitle} onChange={(e) => handleUpdateContent(section.id, { subtitle: e.target.value })} />
+                      </div>
+                  </div>
+              );
           case 'subscription':
               return (
                   <div className="space-y-4">
@@ -254,9 +281,9 @@ export const LandingPageBuilderView: React.FC<LandingPageBuilderProps> = ({ sett
                               <h4 className="font-bold text-sm text-slate-800 dark:text-slate-100">Pricing Plans</h4>
                               <button onClick={() => handleUpdateContent(section.id, { plans: [...(section.content.plans || []), { name: 'Pro', price: '$29', period: '/mo', features: ['All access'], buttonText: 'Buy Now', recommended: false }] })} className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors flex items-center gap-1 font-bold"><PlusCircle size={14} /> Add Plan</button>
                           </div>
-                          <div className="space-y-6">
+                          <div className="space-y-6 max-h-96 overflow-y-auto">
                               {(section.content.plans || []).map((plan: any, idx: number) => (
-                                  <div key={idx} className="p-4 bg-slate-50 dark:bg-black/20 rounded-xl border border-slate-200 dark:border-white/5 relative group shadow-sm">
+                                  <div key={idx} className="p-4 bg-slate-50 dark:bg-black/20 rounded-xl border border-white/20 dark:border-white/5 relative group shadow-sm">
                                       <button onClick={() => { const newPlans = [...section.content.plans]; newPlans.splice(idx, 1); handleUpdateContent(section.id, { plans: newPlans }); }} className="absolute top-2 right-2 p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={14} /></button>
                                       <div className="grid grid-cols-2 gap-3 mb-3">
                                           <InputGroup label="Plan Name" value={plan.name} onChange={(v) => { const newPlans = [...section.content.plans]; newPlans[idx].name = v; handleUpdateContent(section.id, { plans: newPlans }); }} />
@@ -277,12 +304,59 @@ export const LandingPageBuilderView: React.FC<LandingPageBuilderProps> = ({ sett
                       </div>
                   </div>
               );
+          case 'video':
+              return (
+                  <div className="space-y-4">
+                      <InputGroup label="Section Title" value={section.content.title} onChange={(v) => handleUpdateContent(section.id, { title: v })} />
+                      <InputGroup label="Subtitle" value={section.content.subtitle} onChange={(v) => handleUpdateContent(section.id, { subtitle: v })} />
+                      <InputGroup label="YouTube/Vimeo URL" value={section.content.videoUrl} onChange={(v) => handleUpdateContent(section.id, { videoUrl: v })} />
+                      <InputGroup label="Video Overlay Title" value={section.content.overlayTitle} onChange={(v) => handleUpdateContent(section.id, { overlayTitle: v })} />
+                      <InputGroup label="Video Overlay Subtitle" value={section.content.overlaySubtitle} onChange={(v) => handleUpdateContent(section.id, { overlaySubtitle: v })} />
+                      <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">Layout Style</label>
+                          <select className={commonInputClass} value={section.content.layout || 'classic'} onChange={(e) => handleUpdateContent(section.id, { layout: e.target.value })}>
+                              <option value="classic">Classic (Video Left, List Right)</option>
+                              <option value="reversed">Reversed (List Left, Video Right)</option>
+                              <option value="full">Cinematic (Video Top, Grid Bottom)</option>
+                              <option value="modern">Modern (Video Left, Grid Right)</option>
+                              <option value="minimal">Minimal (Video Center, Row Bottom)</option>
+                              <option value="mixed">Mixed (Video + List Top, Grid Bottom)</option>
+                              <option value="mixed_2r_3b">Mixed 2 (Video Left, 2 Cards Right, 3 Cards Bottom)</option>
+                          </select>
+                      </div>
+                  </div>
+              );
+          case 'users':
+              return (
+                  <div className="space-y-4">
+                      <InputGroup label="Section Title" value={section.content.title} onChange={(v) => handleUpdateContent(section.id, { title: v })} />
+                      <div className="flex justify-between items-center mb-2 pt-4 border-t border-slate-200 dark:border-white/10">
+                          <h4 className="font-bold text-sm">Users/Partners</h4>
+                          <button onClick={() => handleUpdateContent(section.id, { users: [...(section.content.users || []), { name: 'New Partner', logo: '' }] })} className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors flex items-center gap-1 font-bold"><Plus size={14} /> Add Partner</button>
+                      </div>
+                      <div className="space-y-3 max-h-96 overflow-y-auto">
+                          {(section.content.users || []).map((user: any, idx: number) => (
+                              <div key={idx} className="p-3 bg-slate-50 dark:bg-black/20 rounded-xl border border-white/20 dark:border-white/5 flex gap-3 items-center">
+                                  <InputGroup label="Name" value={user.name} onChange={(v) => { const newUsers = [...section.content.users]; newUsers[idx].name = v; handleUpdateContent(section.id, { users: newUsers }); }} />
+                                  <InputGroup label="Logo URL" value={user.logo} onChange={(v) => { const newUsers = [...section.content.users]; newUsers[idx].logo = v; handleUpdateContent(section.id, { users: newUsers }); }} />
+                                  <button onClick={() => { const newUsers = [...section.content.users]; newUsers.splice(idx, 1); handleUpdateContent(section.id, { users: newUsers }); }} className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg self-end mb-2"><Trash2 size={16} /></button>
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+              );
+          case 'footer':
+              return (
+                  <div className="space-y-4">
+                      <InputGroup label="Copyright Text" value={section.content.copyright} onChange={(v) => handleUpdateContent(section.id, { copyright: v })} />
+                  </div>
+              );
           default:
               return (
                   <div className="space-y-4">
                       {section.content.title !== undefined && <InputGroup label="Title" value={section.content.title} onChange={(v) => handleUpdateContent(section.id, { title: v })} />}
                       {section.content.subtitle !== undefined && <InputGroup label="Subtitle" value={section.content.subtitle} onChange={(v) => handleUpdateContent(section.id, { subtitle: v })} />}
-                      <p className="text-xs text-slate-400 italic mt-2">Edit content for this {section.type} section.</p>
+                      <p className="text-xs text-slate-400 italic mt-2">No specific editor for this section type.</p>
                   </div>
               );
       }
@@ -306,31 +380,40 @@ export const LandingPageBuilderView: React.FC<LandingPageBuilderProps> = ({ sett
                       <button onClick={() => setShowAddMenu(!showAddMenu)} className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition-colors"><PlusCircle size={20} /></button>
                       {showAddMenu && (
                           <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden animate-fade-in">
-                              {['hero', 'features', 'video', 'preview', 'users', 'repair', 'subscription'].map(type => (
-                                  <button key={type} onClick={() => handleAddSection(type as any)} className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-white/5 capitalize text-slate-700 dark:text-slate-200">{type}</button>
+                              {['hero', 'loyalty', 'features', 'video', 'preview', 'users', 'repair', 'subscription', 'footer', 'customer_dashboard'].map(type => (
+                                  <button key={type} onClick={() => handleAddSection(type as any)} className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-white/5 capitalize text-slate-700 dark:text-slate-200">{type.replace('_', ' ')}</button>
                               ))}
                           </div>
                       )}
                   </div>
               </div>
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
+              <div 
+                className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar"
+                onDragLeave={handleDragLeave}
+                onDragEnd={handleDragEnd}
+              >
                   {sortedSections.map((section, index) => {
                       const Icon = getSectionIcon(section.type);
                       const isDragging = draggedItemIndex === index;
-                      const isOver = dragOverIndex === index && draggedItemIndex !== index;
+                      const isOver = dragOverIndex === index && draggedItemIndex !== null;
                       return (
-                          <div key={section.id}>
-                              {isOver && <div className="h-1 bg-primary/40 rounded-full mb-2 animate-pulse"></div>}
+                          <div key={section.id} >
+                              {isOver && draggedItemIndex !== null && draggedItemIndex < index && <div className="h-1 bg-primary/40 rounded-full my-1 animate-pulse"></div>}
                               <div 
-                                  className={`group rounded-xl border transition-all ${editingSectionId === section.id ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500/50 shadow-md scale-[1.02]' : 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 hover:border-blue-300'} ${isDragging ? 'opacity-40 grayscale' : ''}`}
-                                  draggable onDragStart={() => handleDragStart(index)} onDragOver={(e) => handleDragOver(e, index)} onDrop={() => handleDrop(index)}
+                                  draggable
+                                  onDragStart={() => handleDragStart(index)}
+                                  onDragOver={(e) => handleDragOver(e, index)}
+                                  onDrop={() => handleDrop(index)}
+                                  className={`group rounded-xl border transition-all ${editingSectionId === section.id ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500/50 shadow-md scale-[1.02]' : 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 hover:border-blue-300'} ${isDragging ? 'opacity-30' : ''}`}
                               >
                                   <div className="p-3 flex items-center gap-3">
-                                      <div className="cursor-grab text-slate-300 hover:text-slate-500 active:cursor-grabbing p-1"><GripVertical size={16} /></div>
+                                      <div className="cursor-grab text-slate-300 hover:text-slate-500 active:cursor-grabbing p-1">
+                                          <GripVertical size={16} />
+                                      </div>
                                       <div className="flex-1 cursor-pointer" onClick={() => setEditingSectionId(section.id)}>
                                           <div className="flex items-center gap-2 mb-1">
                                               <Icon size={16} className={editingSectionId === section.id ? 'text-primary' : 'text-slate-500'} />
-                                              <span className="font-bold text-sm text-slate-800 dark:text-slate-200">{section.label}</span>
+                                              <span className={`font-bold text-sm text-slate-800 dark:text-slate-200`}>{section.label}</span>
                                           </div>
                                           <p className="text-[10px] text-slate-500 truncate capitalize">{section.type.replace('_', ' ')}</p>
                                       </div>
@@ -340,12 +423,12 @@ export const LandingPageBuilderView: React.FC<LandingPageBuilderProps> = ({ sett
                                       </div>
                                   </div>
                               </div>
+                               {isOver && draggedItemIndex !== null && draggedItemIndex > index && <div className="h-1 bg-primary/40 rounded-full mt-2 animate-pulse"></div>}
                           </div>
                       );
                   })}
               </div>
           </div>
-
           <div className="flex-1 bg-slate-50 dark:bg-black/20 overflow-y-auto p-8 no-scrollbar">
               {editingSectionId ? (
                   <div className="max-w-2xl mx-auto animate-view-fade-in">

@@ -1,4 +1,3 @@
-
 import { Product, Transaction, StoreSettings, PurchaseOrder, StoredUser, Shift, Customer, Supplier, User, CartItem, Expense, RepairTicket } from '../types';
 import { SEED_PRODUCTS } from '../constants';
 import { supabase } from './supabaseClient';
@@ -62,11 +61,22 @@ const DEFAULT_SETTINGS: StoreSettings = {
                 }
             },
             {
+                id: 'loyalty',
+                type: 'loyalty',
+                label: 'Loyalty Rewards',
+                visible: true,
+                order: 2,
+                content: {
+                    title: 'Rewards Program',
+                    subtitle: 'Earn points on every purchase and unlock exclusive benefits.'
+                }
+            },
+            {
                 id: 'video',
                 type: 'video',
                 label: 'Video Showcase',
                 visible: true,
-                order: 2,
+                order: 3,
                 content: {
                     title: 'Why using QR code as menu?',
                     subtitle: 'Using QR codes as menus offers several advantages. Firstly, it eliminates the need for physical menus, reducing the risk of spreading germs.',
@@ -85,7 +95,7 @@ const DEFAULT_SETTINGS: StoreSettings = {
                 type: 'features',
                 label: 'Features Grid',
                 visible: true,
-                order: 3,
+                order: 4,
                 content: {
                     items: [
                         { icon: 'Rocket', title: 'Manage products', desc: 'Our platform allows you to easily manage your product and make changes on the go.', color: 'red' },
@@ -99,7 +109,7 @@ const DEFAULT_SETTINGS: StoreSettings = {
                 type: 'preview',
                 label: 'App Preview',
                 visible: true,
-                order: 4,
+                order: 5,
                 content: {
                     title: 'Interactive Dashboard Preview'
                 }
@@ -109,7 +119,7 @@ const DEFAULT_SETTINGS: StoreSettings = {
                 type: 'users',
                 label: 'Our Users',
                 visible: true,
-                order: 5,
+                order: 6,
                 content: {
                     title: 'Trusted by Industry Leaders',
                     users: [
@@ -127,7 +137,7 @@ const DEFAULT_SETTINGS: StoreSettings = {
                 type: 'repair',
                 label: 'Repair Tracker',
                 visible: true,
-                order: 6,
+                order: 7,
                 content: {
                     title: 'Track Your Repair',
                     subtitle: 'Enter your ticket number or phone number to check status.'
@@ -138,7 +148,7 @@ const DEFAULT_SETTINGS: StoreSettings = {
                 type: 'subscription',
                 label: 'Pricing Plans',
                 visible: true,
-                order: 7,
+                order: 8,
                 content: {
                     title: 'Simple Pricing',
                     subtitle: 'Choose the plan that fits your business needs.',
@@ -154,7 +164,7 @@ const DEFAULT_SETTINGS: StoreSettings = {
                 type: 'footer',
                 label: 'Footer',
                 visible: true,
-                order: 8,
+                order: 9,
                 content: {
                     copyright: 'ANAJAK POS Systems. All rights reserved.'
                 }

@@ -76,7 +76,7 @@ export interface PrinterConfig {
 
 export interface LandingPageSection {
   id: string;
-  type: 'hero' | 'features' | 'preview' | 'footer' | 'repair' | 'subscription' | 'video' | 'users' | 'customer_dashboard';
+  type: 'hero' | 'features' | 'preview' | 'footer' | 'repair' | 'subscription' | 'video' | 'users' | 'customer_dashboard' | 'loyalty';
   label: string; // Display name for Admin UI
   visible: boolean;
   order: number;

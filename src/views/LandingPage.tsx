@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Store, ArrowRight, ShoppingCart, BarChart3, Wrench, ShieldCheck, Zap, Package, Globe, Gift, Search, Loader2, Check, ExternalLink, Play, Building, ArrowLeft, CreditCard, Lock, Mail, User as UserIcon, X, Tag, Box, Crown, LogOut, ChevronRight, Receipt, Calendar, ShoppingBag, History, Settings, Sliders, LayoutGrid, Rocket, QrCode, Languages, MapPin } from 'lucide-react';
+import { Store, ArrowRight, ShoppingCart, BarChart3, Wrench, ShieldCheck, Zap, Package, Globe, Gift, Search, Loader2, Check, ExternalLink, Play, Building, ArrowLeft, CreditCard, Lock, Mail, User as UserIcon, X, Tag, Box, Crown, LogOut, ChevronRight, Receipt, Calendar, ShoppingBag, History, Settings, Sliders, LayoutGrid, Rocket, QrCode, Languages, MapPin, Sparkles } from 'lucide-react';
 import { StoreSettings, LandingPageSection, Product, RepairTicket, User, Customer, Transaction } from '../types';
 import { Invoice } from '../components/Invoice';
 
@@ -14,14 +13,89 @@ interface LandingPageProps {
   transactions?: Transaction[];
   repairs?: RepairTicket[];
   onLogout?: () => void;
-  onToggleTheme?: () => void;
-  isDarkMode?: boolean;
-  onToggleLanguage?: () => void;
-  currentLanguage?: string;
 }
 
 const ICON_MAP: Record<string, any> = {
     ShoppingCart, Package, BarChart3, Wrench, Zap, ShieldCheck, Globe, Store, Gift, Settings, Sliders, LayoutGrid, Rocket, QrCode, Languages
+};
+
+// --- Loyalty Section ---
+const LoyaltySection = ({ content, settings, customerData, onGetStarted }: any) => {
+    const isLogged = !!customerData;
+    const rate = settings?.loyaltyRate || 1;
+    const currency = settings?.currency || '$';
+
+    return (
+        <section className="py-24 px-6 relative overflow-hidden">
+            <div className="max-w-5xl mx-auto">
+                <div className="bg-gradient-to-br from-amber-500/10 to-orange-600/10 dark:from-amber-500/5 dark:to-orange-900/10 rounded-[3rem] p-10 md:p-16 border border-amber-500/20 backdrop-blur-xl relative shadow-2xl">
+                    <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                        <Crown size={200} className="text-amber-500 rotate-12" />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                        <div className="space-y-6">
+                            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase tracking-[0.2em] border border-amber-500/30">
+                                <Sparkles size={14} className="fill-current" />
+                                {content.badge || 'Rewards Program'}
+                            </div>
+                            <h2 className="text-4xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white leading-none">
+                                {content.title || 'Turn Shopping into Rewards'}
+                            </h2>
+                            <p className="text-lg text-slate-600 dark:text-slate-300 font-medium opacity-90">
+                                {content.subtitle || `Join our exclusive rewards program and start earning points with every purchase. Redeem points for discounts, exclusive offers, and more.`}
+                            </p>
+                            
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
+                                <div className="bg-white/60 dark:bg-white/5 p-5 rounded-2xl border border-white/40 dark:border-white/10 shadow-sm">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="p-2 bg-amber-500/10 text-amber-600 rounded-lg"><Gift size={18} /></div>
+                                        <span className="font-black text-xs uppercase tracking-widest text-slate-500">Easy Earning</span>
+                                    </div>
+                                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200">Earn {rate} points for every {currency}1.00 spent.</p>
+                                </div>
+                                <div className="bg-white/60 dark:bg-white/5 p-5 rounded-2xl border border-white/40 dark:border-white/10 shadow-sm">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="p-2 bg-emerald-500/10 text-emerald-600 rounded-lg"><Check size={18} strokeWidth={3} /></div>
+                                        <span className="font-black text-xs uppercase tracking-widest text-slate-500">No Expiry</span>
+                                    </div>
+                                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200">Your points are yours forever. No rush to redeem.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="relative">
+                            {isLogged ? (
+                                <div className="bg-white/80 dark:bg-slate-900/80 rounded-[2.5rem] p-10 border-2 border-amber-500/30 shadow-2xl text-center transform transition-all hover:scale-105 duration-500">
+                                    <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-amber-500/20">
+                                        <Crown size={40} className="text-amber-500 fill-amber-500" />
+                                    </div>
+                                    <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 mb-2">Your Current Balance</p>
+                                    <div className="text-6xl font-black text-slate-900 dark:text-white mb-2 tracking-tighter">
+                                        {(customerData.points || 0).toLocaleString()}
+                                    </div>
+                                    <p className="text-sm font-bold text-primary mb-6 uppercase tracking-widest">Points</p>
+                                    <div className="h-2 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden mb-6">
+                                        <div className="h-full bg-gradient-to-r from-amber-500 to-orange-600 w-[85%] rounded-full shadow-[0_0_15px_rgba(245,158,11,0.5)]"></div>
+                                    </div>
+                                    <p className="text-xs text-slate-500 font-medium">Next Milestone: 10,000 Points</p>
+                                </div>
+                            ) : (
+                                <div className="bg-slate-900 dark:bg-black rounded-[2.5rem] p-10 border border-white/10 shadow-2xl text-center text-white">
+                                    <Crown size={48} className="mx-auto mb-6 text-amber-400" />
+                                    <h3 className="text-2xl font-black mb-4">Start Earning Today</h3>
+                                    <p className="text-slate-400 mb-8 font-medium">Create a free account to track your points and unlock exclusive rewards.</p>
+                                    <button onClick={() => onGetStarted()} className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-slate-900 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-amber-500/20 transition-all active:scale-95">
+                                        Sign Up Now
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    );
 };
 
 // --- Feature Card Component ---
@@ -69,7 +143,6 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ iconName, title, desc, color,
       );
   }
 
-  // Grid (Default - Professional 4-Column Card)
   return (
     <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-sm border border-white/40 dark:border-white/10 hover:shadow-2xl hover:shadow-primary/5 hover:-translate-y-2 transition-all duration-500 group h-full flex flex-col items-start text-left">
       <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 ${colorClasses[color] || 'bg-slate-100 text-slate-600 border-slate-200'} group-hover:scale-110 transition-transform duration-500 backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border`}>
@@ -81,7 +154,7 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ iconName, title, desc, color,
   );
 };
 
-// --- Sections ---
+// --- Remaining Sections ---
 
 const HeroSection = ({ content, onGetStarted, onViewDemo }: any) => {
     const layout = content.layout || 'centered';
@@ -391,12 +464,18 @@ const FooterSection = ({ content, storeName }: any) => (
 const CustomerDashboardSection = ({ currentUser, customerData, settings, transactions, repairs, content, onViewTransaction }: any) => {
     const totalSpent = customerData.totalSpent || 0;
     const points = customerData.points || 0;
-    const myRepairs = repairs ? repairs.filter((r: RepairTicket) => r.customerId === customerData.id) : [];
-    const activeRepairs = myRepairs.filter((r: RepairTicket) => r.status !== 'Completed' && r.status !== 'Cancelled');
+    
+    const myTransactions = transactions ? transactions.filter((t: Transaction) => t.customerId === customerData.id && t.type === 'sale') : [];
+    const myRepairs = repairs ? repairs.filter((r: RepairTicket) => r.customerId === customerData.id && r.status === 'Completed') : [];
+    const activeRepairs = repairs ? repairs.filter((r: RepairTicket) => r.customerId === customerData.id && r.status !== 'Completed' && r.status !== 'Cancelled') : [];
+
+    const purchasePoints = myTransactions.reduce((acc: number, t: Transaction) => acc + Math.floor(t.total * (settings.loyaltyRate || 0)), 0);
+    const repairPoints = myRepairs.reduce((acc: number, r: RepairTicket) => acc + Math.floor(r.estimatedCost * (settings.repairLoyaltyRate || settings.loyaltyRate || 0)), 0);
+
     return (
         <section className="py-12 px-6">
             <div className="max-w-7xl mx-auto space-y-12">
-                <div className="relative bg-gradient-to-r from-indigo-600 to-purple-700 rounded-[3rem] p-8 md:p-16 text-white shadow-2xl overflow-hidden">
+                <div className="relative bg-gradient-to-r from-indigo-600 to-purple-700 rounded-[3rem] p-8 md:p-12 text-white shadow-2xl overflow-hidden">
                     <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
                     <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-10">
                         <div className="text-center md:text-left space-y-3">
@@ -405,8 +484,30 @@ const CustomerDashboardSection = ({ currentUser, customerData, settings, transac
                             <p className="text-indigo-100 text-xl font-medium max-w-md opacity-80">{content.subtitle || 'Track your points, orders, and repairs.'}</p>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-6">
-                            <div className="bg-white/10 backdrop-blur-2xl border border-white/20 p-8 rounded-[2rem] min-w-[240px] text-center shadow-2xl"><p className="text-xs font-black uppercase tracking-[0.2em] text-indigo-200 mb-2">{content.pointsLabel || 'Loyalty Points'}</p><div className="text-5xl font-black mb-1 drop-shadow-lg flex items-center justify-center gap-3"><Crown size={36} className="text-yellow-400 fill-yellow-400"/>{points.toLocaleString()}</div></div>
-                            <div className="bg-white/10 backdrop-blur-2xl border border-white/20 p-8 rounded-[2rem] min-w-[240px] text-center shadow-2xl"><p className="text-xs font-black uppercase tracking-[0.2em] text-indigo-200 mb-2">{content.spentLabel || 'Lifetime Spent'}</p><div className="text-5xl font-black mb-1 drop-shadow-lg">{settings.currency}{totalSpent.toLocaleString()}</div></div>
+                            <div className="bg-white/10 backdrop-blur-2xl border border-white/20 p-8 rounded-[2rem] min-w-[320px] shadow-2xl space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-xs font-black uppercase tracking-[0.2em] text-indigo-200">{content.pointsLabel || 'Loyalty Points'}</p>
+                                    <div className="text-3xl font-black drop-shadow-lg flex items-center gap-2">
+                                        <Crown size={24} className="text-yellow-400 fill-yellow-400"/>
+                                        {points.toLocaleString()}
+                                    </div>
+                                </div>
+                                <div className="space-y-2 text-sm pt-4 border-t border-white/10">
+                                    <div className="flex justify-between">
+                                        <span className="text-indigo-200">From Purchases:</span>
+                                        <span className="font-bold">{purchasePoints.toLocaleString()} pts</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-indigo-200">From Repairs:</span>
+                                        <span className="font-bold">{repairPoints.toLocaleString()} pts</span>
+                                    </div>
+                                    <div className="flex justify-between pt-2 mt-2 border-t border-white/10">
+                                        <span className="text-indigo-100 font-bold">Total Earned:</span>
+                                        <span className="font-extrabold text-white">{(purchasePoints + repairPoints).toLocaleString()} pts</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-white/10 backdrop-blur-2xl border border-white/20 p-8 rounded-[2rem] min-w-[240px] text-center shadow-2xl"><p className="text-xs font-black uppercase tracking-[0.2em] text-indigo-200 mb-2">{content.spentLabel || 'Lifetime Spent'}</p><div className="text-5xl font-black mb-1 drop-shadow-lg">{settings.currency}{totalSpent.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</div></div>
                         </div>
                     </div>
                 </div>
@@ -414,7 +515,7 @@ const CustomerDashboardSection = ({ currentUser, customerData, settings, transac
                     <div>
                         <div className="flex items-center gap-4 mb-8"><div className="p-3 bg-primary/10 rounded-2xl text-primary"><History size={28} /></div><h3 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Recent Purchases</h3></div>
                         <div className="space-y-4">
-                            {transactions.slice(0, 3).map((t: Transaction) => (
+                            {myTransactions.slice(0, 3).map((t: Transaction) => (
                                 <div key={t.id} onClick={() => onViewTransaction(t)} className="group bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-[2rem] p-6 border border-white/40 dark:border-white/10 shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all cursor-pointer flex items-center justify-between gap-4">
                                     <div className="flex items-center gap-5">
                                         <div className="w-14 h-14 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-900 dark:text-white font-black text-sm shadow-sm border border-slate-100 dark:border-white/5">{new Date(t.date).getDate()}</div>
@@ -467,15 +568,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onViewDe
           {sortedSections.map((section: LandingPageSection) => {
               if (!section.visible) return null;
               if (section.type === 'customer_dashboard' && !isCustomerLoggedIn) return null;
-              if (section.type === 'customer_dashboard' && isCustomerLoggedIn) return <CustomerDashboardSection key={section.id} currentUser={currentUser} customerData={customerData} settings={settings} transactions={transactions} repairs={repairs} content={section.content} onViewTransaction={setViewTransaction} />;
+              if (section.type === 'customer_dashboard' && isCustomerLoggedIn) return <CustomerDashboardSection key={section.id} currentUser={currentUser} customerData={customerData} settings={settings!} transactions={transactions} repairs={repairs} content={section.content} onViewTransaction={setViewTransaction} />;
+              
               switch (section.type) {
+                  case 'loyalty': return <LoyaltySection key={section.id} content={section.content} settings={settings} customerData={customerData} onGetStarted={onGetStarted} />;
                   case 'hero': return <HeroSection key={section.id} content={section.content} onGetStarted={onGetStarted} onViewDemo={onViewDemo} />;
                   case 'features': return <FeaturesSection key={section.id} content={section.content} />;
                   case 'video': return <VideoSection key={section.id} content={section.content} />;
                   case 'users': return <UsersSection key={section.id} content={section.content} />;
                   case 'preview': return <PreviewSection key={section.id} content={section.content} products={products} settings={settings} />;
                   case 'repair': return <RepairSection key={section.id} content={section.content} />;
-                  case 'subscription': return <SubscriptionSection key={section.id} content={section.content} onSelectPlan={() => {}} />;
+                  case 'subscription': return <SubscriptionSection key={section.id} content={section.content} />;
                   case 'footer': return <FooterSection key={section.id} content={section.content} storeName={storeName} />;
                   default: return null;
               }

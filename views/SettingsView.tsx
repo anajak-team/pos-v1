@@ -1,5 +1,5 @@
-
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { StoreSettings, Transaction, PrinterConfig, User, StoredUser, Customer, ViewState } from '../types';
 import { Save, Store, Receipt, Database, Percent, Download, AlertTriangle, Volume2, VolumeX, Printer, Plus, Trash2, Wifi, RefreshCw, Loader2, Moon, Sun, Users, Shield, UserPlus, Lock, Mail, FileJson, Coins, Contact, Search, Tag, Upload, Edit, Wallet, Check, X, Crown, Gift, Globe, Layout, ArrowRight, EyeOff, Package, TestTube, FileText } from 'lucide-react';
 import { useToast } from '../components/Toast';
@@ -371,7 +371,17 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                         <div className="flex items-center gap-3"><div className={`p-2 rounded-xl ${formData.enableLoyalty !== false ? 'bg-amber-500/20 text-amber-600' : 'bg-slate-200 text-slate-500'}`}><Crown size={20} /></div><span className="font-bold text-sm text-slate-700 dark:text-slate-200">Enable Customer Loyalty</span></div>
                         <button onClick={() => handleChange('enableLoyalty', !(formData.enableLoyalty !== false))} className={`w-12 h-6 rounded-full transition-colors relative ${formData.enableLoyalty !== false ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'}`}><div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${formData.enableLoyalty !== false ? 'translate-x-6' : ''}`} /></button>
                     </div>
-                    {formData.enableLoyalty !== false && (<div className="space-y-1.5 animate-fade-in"><label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide ml-1">Earning Rate</label><div className="flex items-center gap-3 bg-white/50 dark:bg-black/20 p-3 rounded-2xl border border-white/30 dark:border-white/10"><span className="text-sm text-slate-600 dark:text-slate-300 font-medium">Earn</span><input type="number" min="0.1" step="0.1" className="w-20 p-2 text-center bg-white dark:bg-slate-800 rounded-lg font-bold border border-slate-200 dark:border-slate-700 outline-none focus:border-amber-500" value={formData.loyaltyRate || 1} onChange={(e) => handleChange('loyaltyRate', parseFloat(e.target.value) || 0)} /><span className="text-sm text-slate-600 dark:text-slate-300 font-medium">point(s) per {formData.currency}1 spent</span></div></div>)}
+                    {formData.enableLoyalty !== false && (
+                        <div className="space-y-3 animate-fade-in">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide ml-1">Purchase Earning Rate</label>
+                                <div className="flex items-center gap-3 bg-white/50 dark:bg-black/20 p-3 rounded-2xl border border-white/30 dark:border-white/10">
+                                    <span className="text-sm text-slate-600 dark:text-slate-300 font-medium">Earn points per {formData.currency}1 spent</span>
+                                    <input type="number" min="0" step="0.01" className="w-24 p-2 text-right bg-white dark:bg-slate-800 rounded-lg font-bold border border-slate-200 dark:border-slate-700 outline-none focus:border-amber-500" value={formData.loyaltyRate || 0} onChange={(e) => handleChange('loyaltyRate', parseFloat(e.target.value) || 0)} />
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </SectionCard>
           </>
@@ -413,20 +423,20 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                     </div>
                     
                     <div className="bg-white/30 dark:bg-black/10 p-3 rounded-xl space-y-2">
-                        <input placeholder="Printer Name (e.g. Counter)" className={commonInputClass + " py-2 text-xs"} value={newPrinter.name} onChange={e => setNewPrinter({...newPrinter, name: e.target.value})} />
+                        <input placeholder="Printer Name (e.g. Counter)" className="w-full p-2 text-xs rounded-lg bg-white/50 dark:bg-black/30 border border-white/30 dark:border-white/10" value={newPrinter.name} onChange={e => setNewPrinter({...newPrinter, name: e.target.value})} />
                         <div className="flex gap-2">
-                            <input placeholder="IP / URL" className={commonInputClass + " py-2 text-xs flex-1"} value={newPrinter.address} onChange={e => setNewPrinter({...newPrinter, address: e.target.value})} />
-                            <select className={commonInputClass + " py-2 text-xs w-24"} value={newPrinter.type} onChange={e => setNewPrinter({...newPrinter, type: e.target.value as any})}>
+                            <input placeholder="IP / URL" className="flex-1 p-2 text-xs rounded-lg bg-white/50 dark:bg-black/30 border border-white/30 dark:border-white/10" value={newPrinter.address} onChange={e => setNewPrinter({...newPrinter, address: e.target.value})} />
+                            <select className="p-2 text-xs rounded-lg bg-white/50 dark:bg-black/30 border border-white/30 dark:border-white/10 w-24" value={newPrinter.type} onChange={e => setNewPrinter({...newPrinter, type: e.target.value as any})}>
                                 <option value="receipt">Receipt</option>
                                 <option value="kitchen">Kitchen</option>
                             </select>
                         </div>
                         <div className="flex gap-2 items-center">
-                             <select className={commonInputClass + " py-2 text-xs flex-1"} value={newPrinter.paperWidth} onChange={e => setNewPrinter({...newPrinter, paperWidth: e.target.value as any})}>
+                             <select className="flex-1 p-2 text-xs rounded-lg bg-white/50 dark:bg-black/30 border border-white/30 dark:border-white/10" value={newPrinter.paperWidth} onChange={e => setNewPrinter({...newPrinter, paperWidth: e.target.value as any})}>
                                 <option value="80mm">80mm Paper</option>
                                 <option value="58mm">58mm Paper</option>
                             </select>
-                            <button onClick={handleAddPrinter} className="flex-1 py-2 bg-orange-500 text-white rounded-xl text-xs font-bold hover:bg-orange-600 transition-colors shadow-md">Add Printer</button>
+                            <button onClick={handleAddPrinter} className="flex-1 py-2 bg-orange-500 text-white rounded-lg text-xs font-bold hover:bg-orange-600 transition-colors shadow-md">Add Printer</button>
                         </div>
                     </div>
                 </div>
