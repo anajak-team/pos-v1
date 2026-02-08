@@ -971,7 +971,7 @@ export const PosView: React.FC<PosViewProps> = ({
                 <p>No products found</p>
              </div>
            ) : (
-             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-3 pb-24 lg:pb-4">
+             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 pb-24 lg:pb-4">
                 {filteredProducts.map(product => (
                    <ProductCard 
                       key={product.id} 
