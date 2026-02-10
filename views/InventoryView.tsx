@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Product, StoreSettings, User } from '../types';
@@ -229,7 +228,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
     if (permission === 'granted') { showToast('Notifications enabled', 'success'); }
   };
 
-  const filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || (p.barcode && p.barcode.includes(search)) || (p.zone && p.zone.toLowerCase().includes(search.toLowerCase())));
+  const lowerSearch = search.toLowerCase();
+  const filtered = products.filter(p => 
+      p.name.toLowerCase().includes(lowerSearch) || 
+      (p.barcode && p.barcode.includes(search)) ||
+      (p.description && p.description.toLowerCase().includes(lowerSearch)) ||
+      (p.zone && p.zone.toLowerCase().includes(lowerSearch))
+  );
   const lowStockItems = products.filter(p => p.stock <= lowStockThreshold);
 
   useEffect(() => {

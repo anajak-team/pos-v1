@@ -359,7 +359,11 @@ const PreviewSection = ({ content, products, settings }: any) => {
     const safeProducts = Array.isArray(products) ? products : [];
     const categories = ['All', ...Array.from(new Set(safeProducts.map((p: Product) => p.category)))];
     const filteredProducts = safeProducts.filter((product: Product) => {
-        const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const lowerSearch = searchTerm.toLowerCase();
+        const matchesSearch = product.name.toLowerCase().includes(lowerSearch) ||
+            (product.barcode && product.barcode.includes(searchTerm)) ||
+            (product.description && product.description.toLowerCase().includes(lowerSearch)) ||
+            (product.zone && product.zone.toLowerCase().includes(lowerSearch));
         const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
         return matchesSearch && matchesCategory;
     });

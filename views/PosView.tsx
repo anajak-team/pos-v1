@@ -514,10 +514,12 @@ export const PosView: React.FC<PosViewProps> = ({
         return productList;
     }
 
+    const lowerSearch = search.toLowerCase();
     return productList.filter(p => 
-        p.name.toLowerCase().includes(search.toLowerCase()) || 
+        p.name.toLowerCase().includes(lowerSearch) || 
         (p.barcode && p.barcode.includes(search)) || 
-        (p.zone && p.zone.toLowerCase().includes(search.toLowerCase()))
+        (p.description && p.description.toLowerCase().includes(lowerSearch)) ||
+        (p.zone && p.zone.toLowerCase().includes(lowerSearch))
     );
   }, [products, topSellerProducts, search, selectedCategory, settings.hideOutOfStockProducts]);
 
