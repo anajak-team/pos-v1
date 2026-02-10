@@ -551,15 +551,15 @@ export const updateCustomerStats = async (customerId: string, transactionTotal: 
         if (idx !== -1) {
             const customer = customers[idx];
             const settings = await getSettings();
-            const pointsEarned = (settings.enableLoyalty !== false) ? Math.floor(transactionTotal * (settings.loyaltyRate || 1)) : 0;
+            const pointsChange = (settings.enableLoyalty !== false) ? Math.floor(transactionTotal * (settings.loyaltyRate || 1)) : 0;
             const currentPoints = customer.points || 0;
             
-            const newPoints = Math.max(0, currentPoints + pointsEarned - pointsRedeemed);
+            const newPoints = Math.max(0, currentPoints + pointsChange - pointsRedeemed);
 
             customers[idx] = {
                 ...customer,
                 totalSpent: (customer.totalSpent || 0) + transactionTotal,
-                visits: (customer.visits || 0) + 1,
+                visits: (customer.visits || 0) + (transactionTotal > 0 ? 1 : 0),
                 lastVisit: new Date().toISOString(),
                 points: newPoints
             };
@@ -572,16 +572,16 @@ export const updateCustomerStats = async (customerId: string, transactionTotal: 
     if (!customer) return;
 
     const settings = await getSettings();
-    const pointsEarned = (settings.enableLoyalty !== false) 
+    const pointsChange = (settings.enableLoyalty !== false) 
         ? Math.floor(transactionTotal * (settings.loyaltyRate || 1)) 
         : 0;
     
     const currentPoints = customer.points || 0;
-    const newPoints = Math.max(0, currentPoints + pointsEarned - pointsRedeemed);
+    const newPoints = Math.max(0, currentPoints + pointsChange - pointsRedeemed);
 
     const updates = {
         totalSpent: (customer.totalSpent || 0) + transactionTotal,
-        visits: (customer.visits || 0) + 1,
+        visits: (customer.visits || 0) + (transactionTotal > 0 ? 1 : 0),
         lastVisit: new Date().toISOString(),
         points: newPoints
     };

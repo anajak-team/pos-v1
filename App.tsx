@@ -21,6 +21,7 @@ import { ViewState, Product, Transaction, StoreSettings, PurchaseOrder, User, Sh
 import * as api from './services/storageService';
 import { FileText, Printer, Wand2, ScanBarcode, Box, Image as ImageIcon, Upload, X, Check, ZoomIn, ZoomOut, Move, Save, Loader2, Minus, Plus, Undo2, Eye, Camera, CheckCircle2, AlertTriangle, MapPin, Trash2, ArrowLeft } from 'lucide-react';
 import { useToast } from './components/Toast';
+import { useAlert } from './components/Alert';
 import { generateProductDescription } from './services/geminiService';
 import { TRANSLATIONS } from './translations';
 
@@ -531,6 +532,7 @@ export const App = () => {
   const [viewTransaction, setViewTransaction] = useState<Transaction | null>(null);
   
   const { showToast } = useToast();
+  const { showConfirm } = useAlert();
 
   useEffect(() => {
     const init = async () => {
@@ -737,6 +739,72 @@ export const App = () => {
       }
   };
 
+  const handleReturn = async (originalTransaction: Transaction) => {
+    if (originalTransaction.type !== 'sale') {
+      showToast('Only sale transactions can be refunded.', 'error');
+      return;
+    }
+
+    const alreadyRefunded = transactions.some(t => t.originalTransactionId === originalTransaction.id);
+    if (alreadyRefunded) {
+      showToast('This transaction has already been refunded.', 'error');
+      return;
+    }
+
+    const isConfirmed = await showConfirm({
+      title: 'Refund Transaction',
+      message: `Are you sure you want to refund this transaction for ${settings?.currency}${originalTransaction.total.toFixed(2)}? This will restock items.`,
+      variant: 'danger',
+      confirmText: 'Confirm Refund',
+    });
+
+    if (!isConfirmed) return;
+
+    const returnTransaction: Transaction = {
+      ...originalTransaction,
+      id: `ret-${Date.now()}`,
+      date: new Date().toISOString(),
+      type: 'return',
+      originalTransactionId: originalTransaction.id,
+    };
+
+    try {
+      const savedReturn = await api.saveTransaction(returnTransaction);
+      setTransactions(prev => [savedReturn, ...prev]);
+
+      const stockUpdates = returnTransaction.items.map(async item => {
+        const product = products.find(p => p.id === item.id);
+        if (product) {
+          return await api.updateProduct({ ...product, stock: product.stock + item.quantity });
+        }
+      });
+      const updatedProducts = (await Promise.all(stockUpdates)).filter(Boolean) as Product[];
+      setProducts(prev => prev.map(p => updatedProducts.find(up => up.id === p.id) || p));
+
+      if (activeShift) {
+        const returnAmount = returnTransaction.total;
+        const shiftUpdate: Partial<Shift> = {
+          id: activeShift.id,
+          cashSales: activeShift.cashSales - (returnTransaction.paymentMethod === 'cash' ? returnAmount : 0),
+          cardSales: activeShift.cardSales - (returnTransaction.paymentMethod === 'card' ? returnAmount : 0),
+          digitalSales: activeShift.digitalSales - (returnTransaction.paymentMethod === 'digital' ? returnAmount : 0),
+        };
+        const updatedShift = await api.saveShift(shiftUpdate);
+        setActiveShift(updatedShift);
+      }
+
+      if (returnTransaction.customerId) {
+        await api.updateCustomerStats(returnTransaction.customerId, -returnTransaction.total);
+        setCustomers(await api.getCustomers());
+      }
+      
+      showToast('Transaction refunded successfully', 'success');
+    } catch (error) {
+      console.error("Refund failed:", error);
+      showToast('Failed to process refund.', 'error');
+    }
+  };
+
   const handleAddExpense = async (expense: Omit<Expense, 'id'>) => {
       const newExpense = await api.addExpense(expense);
       setExpenses([...expenses, newExpense]);
@@ -815,7 +883,7 @@ export const App = () => {
           case 'DASHBOARD': return <DashboardView transactions={transactions} isDarkMode={settings.theme === 'dark'} currentUser={currentUser} expenses={expenses} products={products} settings={settings} />;
           case 'POS': return <PosView products={products} transactions={transactions} onCompleteTransaction={handleTransaction} onPrint={(t) => setViewTransaction(t)} settings={settings} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} currentUser={currentUser} onOpenProductModal={(p) => { setProductToEdit(p); setProductModalOpen(true); }} categories={categories} customers={customers} onAddCustomer={async (c) => await api.addCustomer(c)} />;
           case 'INVENTORY': return <InventoryView products={products} onDeleteProduct={handleDeleteProduct} onUpdateProduct={handleUpdateProduct} onImportProducts={async (newProds) => { await api.saveProducts(newProds); setProducts(await api.getProducts()); }} settings={settings} currentUser={currentUser} onOpenProductModal={(p) => { setProductToEdit(p); setProductModalOpen(true); }} />;
-          case 'TRANSACTIONS': return <TransactionsHistory transactions={transactions} currency={settings.currency} onPrint={(t) => setViewTransaction(t)} onReturn={() => {}} onView={(t) => setViewTransaction(t)} settings={settings} />;
+          case 'TRANSACTIONS': return <TransactionsHistory transactions={transactions} currency={settings.currency} onPrint={(t) => setViewTransaction(t)} onReturn={handleReturn} onView={(t) => setViewTransaction(t)} settings={settings} />;
           case 'SETTINGS': return <SettingsView settings={settings} onSave={async (s) => { await api.saveSettings(s); setSettings(s); document.documentElement.classList.toggle('dark', s.theme === 'dark'); showToast('Settings saved', 'success'); }} transactions={transactions} currentUser={currentUser} categories={categories} onUpdateCategories={async (c) => { await api.saveCategories(c); setCategories(c); }} onRenameCategory={()=>{}} users={users} onAddUser={async (u) => { const n = await api.addUser(u); setUsers([...users, n]); }} onUpdateUser={async (u) => { await api.updateUser(u); setUsers(users.map(us => us.id === u.id ? u : us)); }} onDeleteUser={async (id) => { await api.deleteUser(id); setUsers(users.filter(u => u.id !== id)); }} customers={customers} onAddCustomer={async (c) => { const n = await api.addCustomer(c); setCustomers([...customers, n]); }} onUpdateCustomer={async (c) => { await api.updateCustomer(c); setCustomers(customers.map(cu => cu.id === c.id ? c : cu)); }} onDeleteCustomer={async (id) => { await api.deleteCustomer(id); setCustomers(customers.filter(c => c.id !== id)); }} onNavigate={setView} />;
           case 'PURCHASES': return <PurchaseView orders={purchaseOrders} products={products} settings={settings} onCreateOrder={async (o) => { const n = await api.savePurchaseOrder(o); setPurchaseOrders([n, ...purchaseOrders]); }} onReceiveOrder={async (id) => { const o = purchaseOrders.find(po => po.id === id); if(o) { const u = await api.savePurchaseOrder({...o, status: 'Received'}); setPurchaseOrders(purchaseOrders.map(p => p.id === id ? u : p)); o.items.forEach(async i => { const p = products.find(prod => prod.id === i.productId); if(p) { const updated = await api.updateProduct({...p, stock: p.stock + i.quantity}); setProducts(prev => prev.map(pr => pr.id === updated.id ? updated : pr)); } }); showToast('Order received, inventory updated', 'success'); } }} currentUser={currentUser} />;
           case 'EXPENSES': return <ExpensesView expenses={expenses} categories={expenseCategories} onAddExpense={handleAddExpense} onDeleteExpense={handleDeleteExpense} onUpdateCategories={async (c) => { await api.saveExpenseCategories(c); setExpenseCategories(c); }} settings={settings} currentUser={currentUser} />;
