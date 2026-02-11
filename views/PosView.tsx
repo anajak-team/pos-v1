@@ -26,8 +26,12 @@ const CartItemRow: React.FC<CartItemRowProps> = ({ item, currency, onUpdateQty, 
         ${isExiting ? 'opacity-0 translate-x-10' : 'opacity-100 translate-x-0'}
     `}>
       <div className="flex items-center gap-3 overflow-hidden flex-1">
-        <div className="w-12 h-12 rounded-xl bg-white dark:bg-white/10 shrink-0 overflow-hidden relative border border-white/20">
+        <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800/50 shrink-0 overflow-hidden relative border border-white/20 flex items-center justify-center">
+          {item.image ? (
             <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+          ) : (
+            <ImageIcon className="w-6 h-6 text-slate-300 dark:text-slate-600" strokeWidth={1.5} />
+          )}
         </div>
         <div className="min-w-0 flex-1">
             <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm truncate">{item.name}</h4>
@@ -839,7 +843,7 @@ export const PosView: React.FC<PosViewProps> = ({
         stock: Number(quickAddForm.stock) || 0,
         barcode: unrecognizedBarcode,
         description: 'Quick added from POS',
-        image: `https://picsum.photos/200?random=${Date.now()}`
+        image: ''
       };
       try {
         const newProduct = await onAddProduct(newProductData);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Product, StoreSettings, User } from '../types';
-import { Plus, Trash2, RefreshCw, Search, AlertTriangle, Bell, Lock, Box, Edit, ScanBarcode, DollarSign, Download, Upload, Printer, X, QrCode, Type, Minimize, MapPin, CheckSquare, Square } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Search, AlertTriangle, Bell, Lock, Box, Edit, ScanBarcode, DollarSign, Download, Upload, Printer, X, QrCode, Type, Minimize, MapPin, CheckSquare, Square, Image as ImageIcon } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { useAlert } from '../components/Alert';
 import QRCode from 'qrcode';
@@ -474,7 +474,18 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
                             {isSelected ? <CheckSquare size={18}/> : <Square size={18}/>}
                         </button>
                     </td>
-                    <td className="p-4"><div className="flex items-center gap-3 min-w-[200px]"><img src={product.image} className="w-10 h-10 rounded-xl object-cover bg-white/20 shadow-sm" alt="" /><div><div className="font-bold text-slate-900 dark:text-slate-100 line-clamp-1">{product.name}</div><div className="text-slate-500 text-xs truncate max-w-[150px]">{product.description}</div></div></div></td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-3 min-w-[200px]">
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/50 flex items-center justify-center shrink-0 shadow-sm">
+                          {product.image ? (
+                            <img src={product.image} className="w-full h-full rounded-xl object-cover" alt={product.name} />
+                          ) : (
+                            <ImageIcon className="w-5 h-5 text-slate-300 dark:text-slate-600" strokeWidth={1.5} />
+                          )}
+                        </div>
+                        <div><div className="font-bold text-slate-900 dark:text-slate-100 line-clamp-1">{product.name}</div><div className="text-slate-500 text-xs truncate max-w-[150px]">{product.description}</div></div>
+                      </div>
+                    </td>
                     <td className="p-4">{product.barcode ? (<span className="font-mono text-xs bg-white/50 dark:bg-white/10 border border-white/20 px-2 py-1 rounded-lg text-slate-600 dark:text-slate-400 flex items-center w-fit gap-1"><ScanBarcode size={12} /> {product.barcode}</span>) : <span className="text-slate-300 text-xs italic">None</span>}</td>
                     <td className="p-4"><span className="px-3 py-1 rounded-lg bg-white/50 dark:bg-white/10 border border-white/20 text-slate-600 dark:text-slate-300 text-xs font-bold">{product.category}</span></td>
                     <td className="p-4"><span className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">{product.zone ? <><MapPin size={12} /> {product.zone}</> : '-'}</span></td>
@@ -500,7 +511,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
                        <button onClick={() => toggleSelection(product.id)} className={`self-start mt-3 ${isSelected ? 'text-primary' : 'text-slate-300'}`}>
                            {isSelected ? <CheckSquare size={20}/> : <Square size={20}/>}
                        </button>
-                       <img src={product.image} className="w-12 h-12 rounded-lg object-cover bg-white/20 shadow-sm" alt="" />
+                       <div className="w-12 h-12 rounded-lg bg-slate-100 dark:bg-slate-800/50 flex items-center justify-center shrink-0 shadow-sm">
+                         {product.image ? (
+                           <img src={product.image} className="w-full h-full rounded-lg object-cover" alt={product.name} />
+                         ) : (
+                           <ImageIcon className="w-6 h-6 text-slate-300 dark:text-slate-600" strokeWidth={1.5} />
+                         )}
+                       </div>
                        <div className="flex-1 min-w-0">
                            <div className="flex justify-between items-start">
                                <h4 className="font-bold text-slate-900 dark:text-slate-100 line-clamp-1 text-sm">{product.name}</h4>

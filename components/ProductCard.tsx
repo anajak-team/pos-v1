@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { Product } from '../types';
-import { Plus, Package, MapPin } from 'lucide-react';
+import { Plus, Package, MapPin, Image as ImageIcon } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
@@ -18,12 +17,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAdd, curren
     >
       {/* Mobile: Super Compact Image (h-24), Tablet/Desktop: Standard Compact (h-28) */}
       <div className="h-24 sm:h-28 relative overflow-hidden p-1.5 shrink-0">
-        <img 
-          src={product.image} 
-          alt={product.name} 
-          className="w-full h-full object-cover rounded-lg shadow-sm transform group-hover:scale-105 transition-transform duration-500 bg-white/10"
-          loading="lazy"
-        />
+        {product.image ? (
+          <img 
+            src={product.image} 
+            alt={product.name} 
+            className="w-full h-full object-cover rounded-lg shadow-sm transform group-hover:scale-105 transition-transform duration-500 bg-white/10"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full rounded-lg bg-slate-100 dark:bg-slate-800/50 flex items-center justify-center">
+            <ImageIcon className="w-8 h-8 text-slate-300 dark:text-slate-600" strokeWidth={1.5} />
+          </div>
+        )}
         {product.zone && (
             <div className="absolute top-2.5 left-2.5 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded text-[8px] font-bold text-white flex items-center gap-1 shadow-sm border border-white/10">
                 <MapPin size={8} /> {product.zone}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Store, ArrowRight, ShoppingCart, BarChart3, Wrench, ShieldCheck, Zap, Package, Globe, Gift, Search, Loader2, Check, ExternalLink, Play, Building, ArrowLeft, CreditCard, Lock, Mail, User as UserIcon, X, Tag, Box, Crown, LogOut, ChevronRight, Receipt, Calendar, ShoppingBag, History, Settings, Sliders, LayoutGrid, Rocket, QrCode, Languages, MapPin, Sparkles } from 'lucide-react';
+import { Store, ArrowRight, ShoppingCart, BarChart3, Wrench, ShieldCheck, Zap, Package, Globe, Gift, Search, Loader2, Check, ExternalLink, Play, Building, ArrowLeft, CreditCard, Lock, Mail, User as UserIcon, X, Tag, Box, Crown, LogOut, ChevronRight, Receipt, Calendar, ShoppingBag, History, Settings, Sliders, LayoutGrid, Rocket, QrCode, Languages, MapPin, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { StoreSettings, LandingPageSection, Product, RepairTicket, User, Customer, Transaction } from '../types';
 import { Invoice } from '../components/Invoice';
 
@@ -329,7 +329,13 @@ const ProductDetailsModal = ({ product, onClose, currency }: { product: Product,
             <div className="bg-white/90 dark:bg-slate-900/95 backdrop-blur-2xl rounded-[3rem] shadow-2xl w-full max-w-lg border border-white/20 dark:border-white/10 overflow-hidden relative flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
                 <button onClick={onClose} className="absolute top-6 right-6 z-10 p-2 bg-black/10 dark:bg-white/10 rounded-full text-slate-600 dark:text-slate-300 hover:bg-black/20 dark:hover:bg-white/20 transition-colors"><X size={24} /></button>
                 <div className="h-64 sm:h-80 w-full bg-slate-100 dark:bg-slate-950 relative shrink-0">
-                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                    {product.image ? (
+                        <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                            <ImageIcon className="w-24 h-24 text-slate-300 dark:text-slate-700" strokeWidth={1} />
+                        </div>
+                    )}
                     <div className="absolute bottom-6 left-6 flex gap-3">
                         <span className="px-4 py-2 rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-xs font-bold shadow-lg border border-white/20 flex items-center gap-2"><Tag size={14} className="text-primary"/> {product.category}</span>
                         {product.stock > 0 ? (<span className="px-4 py-2 rounded-2xl bg-emerald-500/90 backdrop-blur-md text-white text-xs font-bold shadow-lg flex items-center gap-2"><Box size={14} /> In Stock: {product.stock}</span>) : (<span className="px-4 py-2 rounded-2xl bg-red-500/90 backdrop-blur-md text-white text-xs font-bold shadow-lg">Out of Stock</span>)}
@@ -392,7 +398,13 @@ const PreviewSection = ({ content, products, settings }: any) => {
                   {filteredProducts.slice(0, 12).map((product: Product) => (
                       <div key={product.id} onClick={() => setSelectedProduct(product)} className="bg-white/60 dark:bg-slate-800/40 backdrop-blur-md rounded-[2rem] p-4 shadow-sm border border-white/50 dark:border-white/10 flex flex-col group hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 cursor-pointer">
                           <div className="relative aspect-square rounded-2xl overflow-hidden mb-5 bg-slate-100 dark:bg-slate-900 border border-white/10">
-                              <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                              {product.image ? (
+                                <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <ImageIcon className="w-1/3 h-1/3 text-slate-300 dark:text-slate-700" strokeWidth={1} />
+                                </div>
+                              )}
                               <div className="absolute top-3 right-3"><span className={`text-[10px] font-black px-3 py-1.5 rounded-full backdrop-blur-md border border-white/30 shadow-lg ${product.stock > 0 ? 'bg-emerald-500/80 text-white' : 'bg-red-500/80 text-white'}`}>{product.stock > 0 ? `${product.stock} in stock` : 'Out of Stock'}</span></div>
                               <div className="absolute bottom-3 left-3">
                                 {product.zone && (
