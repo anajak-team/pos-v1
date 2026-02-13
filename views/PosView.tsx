@@ -9,6 +9,7 @@ import { suggestUpsell } from '../services/geminiService';
 import { getCart, saveCart } from '../services/storageService';
 import { TRANSLATIONS } from '../translations';
 import { Invoice } from '../components/Invoice';
+import { sendSaleReport } from '../services/telegramService';
 
 interface CartItemRowProps {
   item: CartItem;
@@ -683,6 +684,12 @@ export const PosView: React.FC<PosViewProps> = ({
         type: 'sale',
     };
     onCompleteTransaction(transactionData);
+    
+    // Trigger Telegram Notification
+    if (settings.telegramBotToken && settings.telegramChatId) {
+        sendSaleReport(transactionData, settings);
+    }
+
     setLastTransaction(transactionData);
     playSystemSound('success');
     setCart([]);

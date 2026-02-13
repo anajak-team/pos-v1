@@ -108,6 +108,8 @@ export interface StoreSettings {
   showStockLevels?: boolean;
   landingPage: LandingPageConfig;
   language?: 'en' | 'km' | 'zh';
+  telegramBotToken?: string;
+  telegramChatId?: string;
 }
 
 export interface User {
