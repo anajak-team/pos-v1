@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Layout } from './components/Layout';
 import { LoginView } from './views/LoginView';
@@ -19,6 +20,7 @@ import { CloseShiftModal } from './components/CloseShiftModal';
 import { WalletModal } from './components/WalletModal';
 import { ViewState, Product, Transaction, StoreSettings, PurchaseOrder, User, Shift, Expense, CartItem, Customer, StoredUser, RepairTicket, CashMovement } from './types';
 import * as api from './services/storageService';
+import { sendShiftReport, sendProductReport, sendExpenseReport, sendRepairReport, sendPurchaseReport } from './services/telegramService';
 import { FileText, Printer, Wand2, ScanBarcode, Box, Image as ImageIcon, Upload, X, Check, ZoomIn, ZoomOut, Move, Save, Loader2, Minus, Plus, Undo2, Eye, Camera, CheckCircle2, AlertTriangle, MapPin, Trash2, ArrowLeft } from 'lucide-react';
 import { useToast } from './components/Toast';
 import { useAlert } from './components/Alert';
@@ -649,7 +651,7 @@ export const App = () => {
   };
 
   const handleStartShift = async (amount: number) => {
-    if (!currentUser) return;
+    if (!currentUser || !settings) return;
     try {
         const newShift = await api.saveShift({
             userId: currentUser.id,
@@ -664,6 +666,9 @@ export const App = () => {
         });
         setActiveShift(newShift);
         setShifts([newShift, ...shifts]);
+        
+        await sendShiftReport(newShift, 'OPEN', settings);
+        
         showToast('Shift started successfully', 'success');
     } catch (e) {
         showToast('Failed to start shift', 'error');
@@ -671,7 +676,7 @@ export const App = () => {
   };
 
   const handleCloseShift = async (countedCash: number) => {
-      if (!activeShift) return;
+      if (!activeShift || !settings) return;
       const closedShift = await api.saveShift({
           ...activeShift,
           endTime: new Date().toISOString(),
@@ -683,24 +688,33 @@ export const App = () => {
       setShifts(shifts.map(s => s.id === closedShift.id ? closedShift : s));
       setCompletedShift(closedShift);
       setIsCloseShiftModalOpen(false);
+      
+      await sendShiftReport(closedShift, 'CLOSED', settings);
   };
 
   const handleAddProduct = async (product: Partial<Product>) => {
+      if (!settings) return;
       const newProduct = await api.addProduct(product);
       setProducts([...products, newProduct]);
+      await sendProductReport(newProduct, 'ADD', settings);
       showToast('Product added successfully', 'success');
       return newProduct;
   };
 
   const handleUpdateProduct = async (product: Product) => {
+      if (!settings) return;
       const updated = await api.updateProduct(product);
       setProducts(products.map(p => p.id === updated.id ? updated : p));
+      await sendProductReport(updated, 'UPDATE', settings);
       showToast('Product updated', 'success');
   };
 
   const handleDeleteProduct = async (id: string) => {
+      if (!settings) return;
+      const product = products.find(p => p.id === id);
       await api.deleteProduct(id);
       setProducts(products.filter(p => p.id !== id));
+      if (product) await sendProductReport(product, 'DELETE', settings);
   };
 
   const handleTransaction = async (t: Transaction) => {
@@ -806,18 +820,39 @@ export const App = () => {
   };
 
   const handleAddExpense = async (expense: Omit<Expense, 'id'>) => {
+      if (!settings) return;
       const newExpense = await api.addExpense(expense);
       setExpenses([...expenses, newExpense]);
+      await sendExpenseReport(newExpense, 'ADD', settings);
   };
 
   const handleDeleteExpense = async (id: string) => {
+      if (!settings) return;
+      const expense = expenses.find(e => e.id === id);
       await api.deleteExpense(id);
       setExpenses(expenses.filter(e => e.id !== id));
+      if (expense) await sendExpenseReport(expense, 'DELETE', settings);
+  };
+
+  const handleAddRepair = async (repair: Omit<RepairTicket, 'id' | 'createdAt' | 'updatedAt'>) => {
+      if (!settings) return;
+      const newRepair = await api.addRepair(repair);
+      setRepairs([newRepair, ...repairs]);
+      await sendRepairReport(newRepair, 'CREATE', settings);
   };
 
   const handleUpdateRepair = async (r: RepairTicket) => {
+    if (!settings) return;
     const updatedRepair = await api.updateRepair(r);
     setRepairs(repairs.map(rep => (rep.id === r.id ? updatedRepair : rep)));
+    await sendRepairReport(updatedRepair, 'UPDATE', settings);
+  };
+
+  const handleCreatePurchaseOrder = async (order: PurchaseOrder) => {
+      if (!settings) return;
+      const newOrder = await api.savePurchaseOrder(order);
+      setPurchaseOrders([newOrder, ...purchaseOrders]);
+      await sendPurchaseReport(newOrder, settings);
   };
 
   // Toggle Theme Logic (Reused for Customer View)
@@ -885,10 +920,10 @@ export const App = () => {
           case 'INVENTORY': return <InventoryView products={products} onDeleteProduct={handleDeleteProduct} onUpdateProduct={handleUpdateProduct} onImportProducts={async (newProds) => { await api.saveProducts(newProds); setProducts(await api.getProducts()); }} settings={settings} currentUser={currentUser} onOpenProductModal={(p) => { setProductToEdit(p); setProductModalOpen(true); }} />;
           case 'TRANSACTIONS': return <TransactionsHistory transactions={transactions} currency={settings.currency} onPrint={(t) => setViewTransaction(t)} onReturn={handleReturn} onView={(t) => setViewTransaction(t)} settings={settings} />;
           case 'SETTINGS': return <SettingsView settings={settings} onSave={async (s) => { await api.saveSettings(s); setSettings(s); document.documentElement.classList.toggle('dark', s.theme === 'dark'); showToast('Settings saved', 'success'); }} transactions={transactions} currentUser={currentUser} categories={categories} onUpdateCategories={async (c) => { await api.saveCategories(c); setCategories(c); }} onRenameCategory={()=>{}} users={users} onAddUser={async (u) => { const n = await api.addUser(u); setUsers([...users, n]); }} onUpdateUser={async (u) => { await api.updateUser(u); setUsers(users.map(us => us.id === u.id ? u : us)); }} onDeleteUser={async (id) => { await api.deleteUser(id); setUsers(users.filter(u => u.id !== id)); }} customers={customers} onAddCustomer={async (c) => { const n = await api.addCustomer(c); setCustomers([...customers, n]); }} onUpdateCustomer={async (c) => { await api.updateCustomer(c); setCustomers(customers.map(cu => cu.id === c.id ? c : cu)); }} onDeleteCustomer={async (id) => { await api.deleteCustomer(id); setCustomers(customers.filter(c => c.id !== id)); }} onNavigate={setView} />;
-          case 'PURCHASES': return <PurchaseView orders={purchaseOrders} products={products} settings={settings} onCreateOrder={async (o) => { const n = await api.savePurchaseOrder(o); setPurchaseOrders([n, ...purchaseOrders]); }} onReceiveOrder={async (id) => { const o = purchaseOrders.find(po => po.id === id); if(o) { const u = await api.savePurchaseOrder({...o, status: 'Received'}); setPurchaseOrders(purchaseOrders.map(p => p.id === id ? u : p)); o.items.forEach(async i => { const p = products.find(prod => prod.id === i.productId); if(p) { const updated = await api.updateProduct({...p, stock: p.stock + i.quantity}); setProducts(prev => prev.map(pr => pr.id === updated.id ? updated : pr)); } }); showToast('Order received, inventory updated', 'success'); } }} currentUser={currentUser} />;
+          case 'PURCHASES': return <PurchaseView orders={purchaseOrders} products={products} settings={settings} onCreateOrder={handleCreatePurchaseOrder} onReceiveOrder={async (id) => { const o = purchaseOrders.find(po => po.id === id); if(o) { const u = await api.savePurchaseOrder({...o, status: 'Received'}); setPurchaseOrders(purchaseOrders.map(p => p.id === id ? u : p)); o.items.forEach(async i => { const p = products.find(prod => prod.id === i.productId); if(p) { const updated = await api.updateProduct({...p, stock: p.stock + i.quantity}); setProducts(prev => prev.map(pr => pr.id === updated.id ? updated : pr)); } }); showToast('Order received, inventory updated', 'success'); } }} currentUser={currentUser} />;
           case 'EXPENSES': return <ExpensesView expenses={expenses} categories={expenseCategories} onAddExpense={handleAddExpense} onDeleteExpense={handleDeleteExpense} onUpdateCategories={async (c) => { await api.saveExpenseCategories(c); setExpenseCategories(c); }} settings={settings} currentUser={currentUser} />;
           case 'REPORTS': return <ReportsView transactions={transactions} expenses={expenses} settings={settings} currentUser={currentUser} />;
-          case 'REPAIRS': return <RepairsView repairs={repairs} customers={customers} onAddRepair={async (r) => { const n = await api.addRepair(r); setRepairs([n, ...repairs]); }} onUpdateRepair={handleUpdateRepair} onDeleteRepair={async (id) => { await api.deleteRepair(id); setRepairs(repairs.filter(r => r.id !== id)); }} settings={settings} currentUser={currentUser} />;
+          case 'REPAIRS': return <RepairsView repairs={repairs} customers={customers} onAddRepair={handleAddRepair} onUpdateRepair={handleUpdateRepair} onDeleteRepair={async (id) => { await api.deleteRepair(id); setRepairs(repairs.filter(r => r.id !== id)); }} settings={settings} currentUser={currentUser} />;
           case 'LANDING_BUILDER': return <LandingPageBuilderView settings={settings} onSave={async (s) => { await api.saveSettings(s); setSettings(s); showToast('Landing page updated', 'success'); }} onBack={() => setView('SETTINGS')} />;
           default: return <DashboardView transactions={transactions} isDarkMode={settings.theme === 'dark'} currentUser={currentUser} expenses={expenses} products={products} settings={settings} />;
       }
