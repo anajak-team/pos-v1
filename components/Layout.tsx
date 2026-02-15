@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { ViewState, User } from '../types';
 import { LayoutDashboard, ShoppingCart, Package, History, Settings, Truck, LogOut, Wallet, Receipt, BarChart3, Wrench, MoreHorizontal, X, Moon, Sun, Globe } from 'lucide-react';
 import { TRANSLATIONS } from '../translations';
+import { FloatingWidget } from './FloatingWidget';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -57,6 +58,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
   const handleNavigate = (view: ViewState) => {
     onNavigate(view);
     setIsMobileMenuOpen(false);
+  };
+
+  // Handle actions from floating widget
+  const handleQuickAction = (action: string) => {
+      // Future logic can be added here if needed
+      // For now, most logic is direct navigation handled in the widget
   };
 
   return (
@@ -258,6 +265,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
           </div>
         </div>
       </main>
+      
+      {/* Floating Widget - Always visible on top of views */}
+      <FloatingWidget onNavigate={onNavigate} onQuickAction={handleQuickAction} />
     </div>
   );
 };
