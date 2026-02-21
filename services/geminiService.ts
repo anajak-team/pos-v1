@@ -2,7 +2,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Transaction, Product, Expense } from '../types';
 
 // FIX: Initialize GoogleGenAI with API key directly from environment variables as per guidelines.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || process.env.API_KEY });
 
 // Using gemini-3-flash-preview for general text tasks
 const MODEL_NAME = 'gemini-3-flash-preview';

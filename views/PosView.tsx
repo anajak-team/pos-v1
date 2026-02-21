@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom';
 import { Product, CartItem, StoreSettings, User, Transaction, Customer } from '../types';
 import { ProductCard } from '../components/ProductCard';
-import { Search, Trash2, Plus, Minus, CreditCard, Banknote, Smartphone, ShoppingCart, ArrowRight, X, Package, Sparkles, ScanBarcode, Loader2, CheckCircle2, Printer, AlertTriangle, ShoppingBasket, Tag, Crown, Image as ImageIcon, MapPin, Star } from 'lucide-react';
+import { Search, Trash2, Plus, Minus, CreditCard, Banknote, Smartphone, ShoppingCart, ArrowRight, X, Package, Sparkles, ScanBarcode, Loader2, CheckCircle2, Printer, AlertTriangle, ShoppingBasket, Tag, Crown, Image as ImageIcon, MapPin, Star, ArrowUpDown } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { useAlert } from '../components/Alert';
 import { suggestUpsell } from '../services/geminiService';
@@ -398,6 +398,7 @@ export const PosView: React.FC<PosViewProps> = ({
 }) => {
   const [cart, setCart] = useState<CartItem[]>(() => getCart());
   const [search, setSearch] = useState('');
+  const [sortOption, setSortOption] = useState<string>('name-asc');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'digital'>('cash');
   const [cashReceived, setCashReceived] = useState('');
@@ -515,18 +516,29 @@ export const PosView: React.FC<PosViewProps> = ({
         });
     }
 
-    if (!search) {
-        return productList;
+    let result = productList;
+    if (search) {
+        const lowerSearch = search.toLowerCase();
+        result = productList.filter(p => 
+            p.name.toLowerCase().includes(lowerSearch) || 
+            (p.barcode && p.barcode.includes(search)) || 
+            (p.description && p.description.toLowerCase().includes(lowerSearch)) ||
+            (p.zone && p.zone.toLowerCase().includes(lowerSearch))
+        );
     }
 
-    const lowerSearch = search.toLowerCase();
-    return productList.filter(p => 
-        p.name.toLowerCase().includes(lowerSearch) || 
-        (p.barcode && p.barcode.includes(search)) || 
-        (p.description && p.description.toLowerCase().includes(lowerSearch)) ||
-        (p.zone && p.zone.toLowerCase().includes(lowerSearch))
-    );
-  }, [products, topSellerProducts, search, selectedCategory, settings.hideOutOfStockProducts]);
+    return [...result].sort((a, b) => {
+        switch (sortOption) {
+            case 'name-asc': return a.name.localeCompare(b.name);
+            case 'name-desc': return b.name.localeCompare(a.name);
+            case 'price-asc': return a.price - b.price;
+            case 'price-desc': return b.price - a.price;
+            case 'stock-asc': return a.stock - b.stock;
+            case 'stock-desc': return b.stock - a.stock;
+            default: return 0;
+        }
+    });
+  }, [products, topSellerProducts, search, selectedCategory, settings.hideOutOfStockProducts, sortOption]);
 
 
   const addToCart = (product: Product) => {

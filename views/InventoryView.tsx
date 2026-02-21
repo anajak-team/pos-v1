@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Product, StoreSettings, User } from '../types';
-import { Plus, Trash2, RefreshCw, Search, AlertTriangle, Bell, Lock, Box, Edit, ScanBarcode, DollarSign, Download, Upload, Printer, X, QrCode, Type, Minimize, MapPin, CheckSquare, Square, Image as ImageIcon } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Search, AlertTriangle, Bell, Lock, Box, Edit, ScanBarcode, DollarSign, Download, Upload, Printer, X, QrCode, Type, Minimize, MapPin, CheckSquare, Square, Image as ImageIcon, ArrowUpDown } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { useAlert } from '../components/Alert';
 import QRCode from 'qrcode';
@@ -198,11 +198,86 @@ const BulkLabelPrint = ({ products, settings, onClose }: { products: Product[], 
     );
 };
 
+const ProductListPrint = ({ products, settings, onClose }: { products: Product[], settings: StoreSettings, onClose: () => void }) => {
+    return createPortal(
+        <div className="print-portal fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:bg-white print:block animate-fade-in">
+            <div className="relative flex flex-col items-center w-full max-w-5xl h-[85vh] print:w-full print:max-w-full print:h-auto print:static">
+                {/* Controls - Hidden on Print */}
+                <div className="flex justify-between items-center gap-4 mb-6 shrink-0 print:hidden w-full bg-slate-900/80 backdrop-blur-md p-4 rounded-2xl border border-white/10 shadow-xl">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white/10 rounded-lg">
+                            <Printer className="text-white" size={24} />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-white">Print Product List</h3>
+                            <p className="text-xs text-slate-400">{products.length} products</p>
+                        </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => window.print()} className="bg-primary text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg hover:bg-blue-600 transition-colors text-sm">
+                            <Printer size={16} /> Print
+                        </button>
+                        <button onClick={onClose} className="bg-white/10 text-white p-2.5 rounded-xl hover:bg-white/20 transition-colors">
+                            <X size={18} />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Printable Content */}
+                <div className="flex-1 w-full overflow-y-auto bg-white p-8 rounded-3xl print:p-0 print:overflow-visible shadow-xl text-black">
+                    <div className="mb-6 border-b border-black/10 pb-4">
+                        <h1 className="text-2xl font-bold text-black mb-1">{settings.storeName} - Inventory List</h1>
+                        <p className="text-sm text-gray-500">Generated on {new Date().toLocaleDateString()} at {new Date().toLocaleTimeString()}</p>
+                    </div>
+                    
+                    <table className="w-full text-left text-sm border-collapse">
+                        <thead>
+                            <tr className="border-b-2 border-black">
+                                <th className="py-2 font-bold">Name</th>
+                                <th className="py-2 font-bold">Barcode</th>
+                                <th className="py-2 font-bold">Category</th>
+                                <th className="py-2 font-bold">Zone</th>
+                                <th className="py-2 font-bold text-right">Price</th>
+                                <th className="py-2 font-bold text-right">Stock</th>
+                                <th className="py-2 font-bold text-right">Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {products.map((p, index) => (
+                                <tr key={p.id} className={`border-b border-gray-200 ${index % 2 === 0 ? 'bg-gray-50 print:bg-transparent' : ''}`}>
+                                    <td className="py-2 pr-2 font-medium">{p.name}</td>
+                                    <td className="py-2 pr-2 font-mono text-xs">{p.barcode || '-'}</td>
+                                    <td className="py-2 pr-2">{p.category}</td>
+                                    <td className="py-2 pr-2">{p.zone || '-'}</td>
+                                    <td className="py-2 pl-2 text-right">{settings.currency}{p.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                    <td className="py-2 pl-2 text-right">{p.stock}</td>
+                                    <td className="py-2 pl-2 text-right font-medium">{settings.currency}{(p.price * p.stock).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                        <tfoot>
+                            <tr className="border-t-2 border-black font-bold">
+                                <td colSpan={5} className="py-3 text-right">Total Inventory Value:</td>
+                                <td className="py-3 pl-2 text-right">{products.reduce((acc, p) => acc + p.stock, 0)} Units</td>
+                                <td className="py-3 pl-2 text-right">{settings.currency}{products.reduce((acc, p) => acc + (p.price * p.stock), 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>,
+        document.body
+    );
+};
+
 export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDeleteProduct, onUpdateProduct, onImportProducts, settings, currentUser, onOpenProductModal }) => {
   const [search, setSearch] = useState('');
+  const [sortOption, setSortOption] = useState<string>('name-asc');
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const [printingProduct, setPrintingProduct] = useState<Product | null>(null);
   const [isBulkPrintOpen, setIsBulkPrintOpen] = useState(false);
+  const [isListPrintOpen, setIsListPrintOpen] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -235,6 +310,19 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
       (p.description && p.description.toLowerCase().includes(lowerSearch)) ||
       (p.zone && p.zone.toLowerCase().includes(lowerSearch))
   );
+
+  const sortedProducts = [...filtered].sort((a, b) => {
+      switch (sortOption) {
+          case 'name-asc': return a.name.localeCompare(b.name);
+          case 'name-desc': return b.name.localeCompare(a.name);
+          case 'price-asc': return a.price - b.price;
+          case 'price-desc': return b.price - a.price;
+          case 'stock-asc': return a.stock - b.stock;
+          case 'stock-desc': return b.stock - a.stock;
+          default: return 0;
+      }
+  });
+
   const lowStockItems = products.filter(p => p.stock <= lowStockThreshold);
 
   useEffect(() => {
@@ -263,10 +351,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
   };
 
   const toggleAll = () => {
-    if (selectedProductIds.size === filtered.length && filtered.length > 0) {
+    if (selectedProductIds.size === sortedProducts.length && sortedProducts.length > 0) {
         setSelectedProductIds(new Set());
     } else {
-        setSelectedProductIds(new Set(filtered.map(p => p.id)));
+        setSelectedProductIds(new Set(sortedProducts.map(p => p.id)));
     }
   };
 
@@ -382,7 +470,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
       if (selectedProductIds.size > 0) {
           return products.filter(p => selectedProductIds.has(p.id));
       }
-      return filtered;
+      return sortedProducts;
   };
 
   return (
@@ -401,9 +489,14 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
           {!isStaff && (
             <>
                 {(products.length > 0) && (
-                    <button onClick={() => setIsBulkPrintOpen(true)} className={`px-3 py-2 rounded-xl font-bold text-sm shadow-sm border border-white/20 transition-colors flex items-center gap-2 ${selectedProductIds.size > 0 ? 'bg-primary text-white' : 'bg-white/60 dark:bg-white/10 text-slate-700 dark:text-slate-200 hover:bg-white/80 dark:hover:bg-white/20'}`}>
-                        <Printer size={16} /> <span className="hidden sm:inline">{selectedProductIds.size > 0 ? `Print Selected (${selectedProductIds.size})` : t('PRINT_ALL')}</span>
-                    </button>
+                    <>
+                        <button onClick={() => setIsListPrintOpen(true)} className="px-3 py-2 bg-white/60 dark:bg-white/10 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-sm shadow-sm border border-white/20 hover:bg-white/80 dark:hover:bg-white/20 transition-colors flex items-center gap-2">
+                            <Printer size={16} /> <span className="hidden sm:inline">Print List</span>
+                        </button>
+                        <button onClick={() => setIsBulkPrintOpen(true)} className={`px-3 py-2 rounded-xl font-bold text-sm shadow-sm border border-white/20 transition-colors flex items-center gap-2 ${selectedProductIds.size > 0 ? 'bg-primary text-white' : 'bg-white/60 dark:bg-white/10 text-slate-700 dark:text-slate-200 hover:bg-white/80 dark:hover:bg-white/20'}`}>
+                            <ScanBarcode size={16} /> <span className="hidden sm:inline">{selectedProductIds.size > 0 ? `Labels (${selectedProductIds.size})` : 'Print Labels'}</span>
+                        </button>
+                    </>
                 )}
                 <button onClick={handleExport} className="px-3 py-2 bg-white/60 dark:bg-white/10 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-sm shadow-sm border border-white/20 hover:bg-white/80 dark:hover:bg-white/20 transition-colors flex items-center gap-2">
                     <Download size={16} /> <span className="hidden sm:inline">{t('EXPORT')}</span>
@@ -440,6 +533,22 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
                <input type="text" placeholder={t('SEARCH_PLACEHOLDER')} className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-white/30 dark:border-white/10 text-sm focus:bg-white/80 dark:focus:bg-slate-800/80 focus:border-primary/50 outline-none transition-all text-slate-800 dark:text-slate-200" value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
+            
+            <div className="relative shrink-0">
+                <select 
+                    value={sortOption} 
+                    onChange={(e) => setSortOption(e.target.value)}
+                    className="appearance-none pl-9 pr-8 py-2.5 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-white/30 dark:border-white/10 text-sm focus:bg-white/80 dark:focus:bg-slate-800/80 focus:border-primary/50 outline-none transition-all text-slate-800 dark:text-slate-200 font-bold cursor-pointer"
+                >
+                    <option value="name-asc">Name (A-Z)</option>
+                    <option value="name-desc">Name (Z-A)</option>
+                    <option value="price-asc">Price (Low-High)</option>
+                    <option value="price-desc">Price (High-Low)</option>
+                    <option value="stock-asc">Stock (Low-High)</option>
+                    <option value="stock-desc">Stock (High-Low)</option>
+                </select>
+                <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={16} />
+            </div>
          </div>
 
          {/* Desktop Table View */}
@@ -463,7 +572,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/20 dark:divide-white/5">
-                {filtered.map(product => {
+                {sortedProducts.map(product => {
                   const isLow = product.stock <= lowStockThreshold;
                   const cases = product.itemsPerCase && product.itemsPerCase > 1 ? Math.floor(product.stock / product.itemsPerCase) : null;
                   const isSelected = selectedProductIds.has(product.id);
@@ -501,7 +610,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
 
          {/* Mobile Card View */}
          <div className="md:hidden p-3 space-y-3 bg-white/10 dark:bg-white/5">
-            {filtered.map(product => {
+            {sortedProducts.map(product => {
               const isLow = product.stock <= lowStockThreshold;
               const cases = product.itemsPerCase && product.itemsPerCase > 1 ? Math.floor(product.stock / product.itemsPerCase) : null;
               const isSelected = selectedProductIds.has(product.id);
@@ -542,7 +651,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
                 </div>
               );
             })}
-            {filtered.length === 0 && <div className="text-center text-slate-400 text-sm py-8">{t('NO_PRODUCTS')}</div>}
+            {sortedProducts.length === 0 && <div className="text-center text-slate-400 text-sm py-8">{t('NO_PRODUCTS')}</div>}
          </div>
       </div>
       
@@ -552,6 +661,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
 
       {isBulkPrintOpen && (
           <BulkLabelPrint products={getProductsForPrint()} settings={settings} onClose={() => setIsBulkPrintOpen(false)} />
+      )}
+
+      {isListPrintOpen && (
+          <ProductListPrint products={getProductsForPrint()} settings={settings} onClose={() => setIsListPrintOpen(false)} />
       )}
     </div>
   );
