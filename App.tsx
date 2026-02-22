@@ -693,7 +693,7 @@ export const App = () => {
   };
 
   const handleAddProduct = async (product: Partial<Product>) => {
-      if (!settings) return;
+      if (!settings) throw new Error("Settings not loaded");
       const newProduct = await api.addProduct(product);
       setProducts([...products, newProduct]);
       await sendProductReport(newProduct, 'ADD', settings);

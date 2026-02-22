@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom';
 import { Product, CartItem, StoreSettings, User, Transaction, Customer } from '../types';
 import { ProductCard } from '../components/ProductCard';
-import { Search, Trash2, Plus, Minus, CreditCard, Banknote, Smartphone, ShoppingCart, ArrowRight, X, Package, Sparkles, ScanBarcode, Loader2, CheckCircle2, Printer, AlertTriangle, ShoppingBasket, Tag, Crown, Image as ImageIcon, MapPin, Star, ArrowUpDown } from 'lucide-react';
+import { Search, Trash2, Plus, Minus, CreditCard, Banknote, Smartphone, ShoppingCart, ArrowRight, X, Package, Sparkles, ScanBarcode, Loader2, CheckCircle2, Printer, AlertTriangle, ShoppingBasket, Tag, Crown, Image as ImageIcon, MapPin, Star, ArrowUpDown, Briefcase, Gift } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { useAlert } from '../components/Alert';
 import { suggestUpsell } from '../services/geminiService';
@@ -16,11 +16,12 @@ interface CartItemRowProps {
   currency: string;
   onUpdateQty: (id: string, delta: number) => void;
   onRemove: (id: string) => void;
+  onToggleFree: (id: string) => void;
   isExiting: boolean;
   currentUser: User;
 }
 
-const CartItemRow: React.FC<CartItemRowProps> = ({ item, currency, onUpdateQty, onRemove, isExiting }) => {
+const CartItemRow: React.FC<CartItemRowProps> = ({ item, currency, onUpdateQty, onRemove, onToggleFree, isExiting }) => {
   return (
     <div className={`
         flex items-center justify-between p-3 bg-white/50 dark:bg-white/5 rounded-2xl border border-white/40 dark:border-white/10 shadow-sm transition-all duration-300
@@ -37,8 +38,8 @@ const CartItemRow: React.FC<CartItemRowProps> = ({ item, currency, onUpdateQty, 
         <div className="min-w-0 flex-1">
             <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm truncate">{item.name}</h4>
             <div className="flex items-center gap-2">
-                <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                    {currency}{item.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <div className={`text-xs font-medium ${item.price === 0 ? 'text-green-500 font-bold' : 'text-slate-500 dark:text-slate-400'}`}>
+                    {item.price === 0 ? 'FREE' : `${currency}${item.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                 </div>
                 {item.zone && (
                     <div className="text-[9px] font-bold px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-md flex items-center gap-1 border border-slate-200 dark:border-white/5">
@@ -71,6 +72,13 @@ const CartItemRow: React.FC<CartItemRowProps> = ({ item, currency, onUpdateQty, 
              </div>
         </div>
         <button 
+            onClick={() => onToggleFree(item.id)}
+            className={`w-8 h-8 flex items-center justify-center rounded-xl transition-colors shrink-0 ${item.price === 0 ? 'text-green-500 bg-green-500/10' : 'text-slate-400 hover:text-green-500 hover:bg-green-500/10'}`}
+            title="Toggle Free"
+        >
+            <Gift size={16} />
+        </button>
+        <button 
             onClick={() => onRemove(item.id)}
             className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-colors shrink-0"
         >
@@ -98,6 +106,7 @@ interface CartPanelProps {
   currentUser: User;
   updateQuantity: (id: string, delta: number) => void;
   removeFromCart: (id: string) => void;
+  onToggleFree: (id: string) => void;
   exitingItems: Set<string>;
   upsell: string;
   completed: boolean;
@@ -118,13 +127,13 @@ interface CartPanelProps {
   lastTransaction: Transaction | null;
   onPrint: (t: Transaction) => void;
   isMobile?: boolean;
-  cartEndRef: React.RefObject<HTMLDivElement | null>;
+  cartEndRef: React.RefObject<HTMLDivElement>;
   totalPaid: number;
   onClose?: () => void;
 }
 
 const CartPanel: React.FC<CartPanelProps> = (props) => {
-  const { cart, settings, subtotal, discountAmount, tax, total, change, changeSecondary, clearCart, setShowCheckout, selectedCustomer, setSelectedCustomer, setIsCustomerModalOpen, currentUser, updateQuantity, removeFromCart, exitingItems, upsell, completed, discount, setDiscount, discountType, setDiscountType, showDiscountInput, setShowDiscountInput, paymentMethod, setPaymentMethod, cashReceived, setCashReceived, cashReceivedSecondary, setCashReceivedSecondary, processing, handleCheckout, lastTransaction, onPrint, isMobile, cartEndRef, totalPaid, onClose } = props;
+  const { cart, settings, subtotal, discountAmount, tax, total, change, changeSecondary, clearCart, setShowCheckout, selectedCustomer, setSelectedCustomer, setIsCustomerModalOpen, currentUser, updateQuantity, removeFromCart, onToggleFree, exitingItems, upsell, completed, discount, setDiscount, discountType, setDiscountType, showDiscountInput, setShowDiscountInput, paymentMethod, setPaymentMethod, cashReceived, setCashReceived, cashReceivedSecondary, setCashReceivedSecondary, processing, handleCheckout, lastTransaction, onPrint, isMobile, cartEndRef, totalPaid, onClose } = props;
 
   const t = (key: keyof typeof TRANSLATIONS.en) => {
     const lang = settings?.language || 'en';
@@ -196,6 +205,7 @@ const CartPanel: React.FC<CartPanelProps> = (props) => {
                         currency={settings.currency} 
                         onUpdateQty={updateQuantity} 
                         onRemove={removeFromCart} 
+                        onToggleFree={onToggleFree}
                         isExiting={exitingItems.has(item.id)}
                         currentUser={currentUser}
                      />
@@ -382,6 +392,82 @@ interface PosViewProps {
   onAddCustomer: (customer: Omit<Customer, 'id'>) => Promise<Customer>;
 }
 
+const ServiceChargeModal = ({ isOpen, onClose, onConfirm, currency }: { isOpen: boolean, onClose: () => void, onConfirm: (name: string, price: number) => void, currency: string }) => {
+    const [description, setDescription] = useState('');
+    const [amount, setAmount] = useState('');
+
+    if (!isOpen) return null;
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (description && amount) {
+            onConfirm(description, parseFloat(amount));
+            setDescription('');
+            setAmount('');
+            onClose();
+        }
+    };
+
+    return createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+            <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-white/10">
+                <div className="p-6">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <Briefcase className="text-indigo-500" /> Add Service Charge
+                        </h2>
+                        <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                            <X size={24} />
+                        </button>
+                    </div>
+                    
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Description</label>
+                            <input 
+                                type="text" 
+                                value={description} 
+                                onChange={(e) => setDescription(e.target.value)} 
+                                className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all font-medium text-slate-900 dark:text-white"
+                                placeholder="e.g. Repair Service, Consultation"
+                                autoFocus
+                                required
+                            />
+                        </div>
+                        
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Amount ({currency})</label>
+                            <div className="relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">{currency}</span>
+                                <input 
+                                    type="number" 
+                                    value={amount} 
+                                    onChange={(e) => setAmount(e.target.value)} 
+                                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all font-bold text-lg text-slate-900 dark:text-white"
+                                    placeholder="0.00"
+                                    min="0"
+                                    step="0.01"
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 pt-4">
+                            <button type="button" onClick={onClose} className="flex-1 px-4 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                                Cancel
+                            </button>
+                            <button type="submit" className="flex-1 px-4 py-3 rounded-xl font-bold bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg shadow-indigo-500/30 transition-all transform active:scale-95">
+                                Add Charge
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>,
+        document.body
+    );
+};
+
 export const PosView: React.FC<PosViewProps> = ({
   products,
   transactions,
@@ -414,6 +500,7 @@ export const PosView: React.FC<PosViewProps> = ({
   const [lastScannedMsg, setLastScannedMsg] = useState<string | null>(null);
   const [unrecognizedBarcode, setUnrecognizedBarcode] = useState<string | null>(null);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [quickAddForm, setQuickAddForm] = useState<Partial<Product>>({ name: '', price: 0, category: 'Other', stock: 10 });
   const searchInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -541,13 +628,43 @@ export const PosView: React.FC<PosViewProps> = ({
   }, [products, topSellerProducts, search, selectedCategory, settings.hideOutOfStockProducts, sortOption]);
 
 
+  const handleAddService = (name: string, price: number) => {
+    const serviceItem: CartItem = {
+        id: `service-${Date.now()}`,
+        name: name,
+        price: price,
+        category: 'Service',
+        stock: 9999,
+        isService: true,
+        quantity: 1,
+        image: ''
+    };
+    setCart([...cart, serviceItem]);
+    setTimeout(() => showToast('Service charge added', 'success'), 0);
+  };
+
+  const toggleFree = (id: string) => {
+    setCart(prev => prev.map(item => {
+      if (item.id === id) {
+        if (item.price === 0 && item.originalPrice !== undefined) {
+          // Restore price
+          return { ...item, price: item.originalPrice, originalPrice: undefined };
+        } else if (item.price !== 0) {
+          // Make free
+          return { ...item, price: 0, originalPrice: item.price };
+        }
+      }
+      return item;
+    }));
+  };
+
   const addToCart = (product: Product) => {
     if (completed) {
-        showToast("Please click 'Next' to start a new order", "info");
+        setTimeout(() => showToast("Please click 'Next' to start a new order", "info"), 0);
         return;
     }
     if (product.stock <= 0) {
-      showToast('Item is out of stock', 'error');
+      setTimeout(() => showToast('Item is out of stock', 'error'), 0);
       playSystemSound('error');
       return;
     }
@@ -559,7 +676,7 @@ export const PosView: React.FC<PosViewProps> = ({
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
         if (existing.quantity >= product.stock) {
-            showToast('Cannot add more than available stock', 'error');
+            setTimeout(() => showToast('Cannot add more than available stock', 'error'), 0);
             return prev;
         }
         return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
@@ -567,7 +684,7 @@ export const PosView: React.FC<PosViewProps> = ({
       return [...prev, { ...product, quantity: 1 }];
     });
     if(product.stock <= 5) {
-        showToast(`Low stock: only ${product.stock} left`, 'info');
+        setTimeout(() => showToast(`Low stock: only ${product.stock} left`, 'info'), 0);
     }
   };
 
@@ -578,7 +695,7 @@ export const PosView: React.FC<PosViewProps> = ({
         if (newQty < 1) return item; 
         const product = products.find(p => p.id === id);
         if (product && newQty > product.stock) {
-            showToast('Not enough stock', 'error');
+            setTimeout(() => showToast('Not enough stock', 'error'), 0);
             return item;
         }
         return { ...item, quantity: newQty };
@@ -622,12 +739,12 @@ export const PosView: React.FC<PosViewProps> = ({
           if (productToAdd) {
               addToCart(productToAdd);
               setSearch(''); 
-              showToast(`Added: ${productToAdd.name}`, 'success');
+              setTimeout(() => showToast(`Added: ${productToAdd.name}`, 'success'), 0);
           } else {
               if (filteredProducts.length === 1) {
                   addToCart(filteredProducts[0]);
                   setSearch('');
-                  showToast(`Added: ${filteredProducts[0].name}`, 'success');
+                  setTimeout(() => showToast(`Added: ${filteredProducts[0].name}`, 'success'), 0);
               } else {
                   playSystemSound('error');
                   if (filteredProducts.length === 0) {
@@ -643,7 +760,7 @@ export const PosView: React.FC<PosViewProps> = ({
                               setIsQuickAddOpen(true);
                           }
                       } else {
-                          showToast('Product not found', 'error');
+                          setTimeout(() => showToast('Product not found', 'error'), 0);
                       }
                   }
               }
@@ -677,7 +794,7 @@ export const PosView: React.FC<PosViewProps> = ({
     if (cart.length === 0) return;
     if (paymentMethod === 'cash') {
         if (totalPaid < total - 0.01) { 
-            showToast('Insufficient cash received', 'error');
+            setTimeout(() => showToast('Insufficient cash received', 'error'), 0);
             return;
         }
     }
@@ -773,7 +890,7 @@ export const PosView: React.FC<PosViewProps> = ({
         }
     } catch (err) {
         console.error("Error scanning file", err);
-        showToast("No barcode found in image", "error");
+        setTimeout(() => showToast("No barcode found in image", "error"), 0);
     } finally {
         e.target.value = '';
         if (isScannerOpen) {
@@ -871,9 +988,9 @@ export const PosView: React.FC<PosViewProps> = ({
         setUnrecognizedBarcode(null);
         setQuickAddForm({ name: '', price: 0, category: 'Other', stock: 10 });
         playSystemSound('success');
-        showToast('Product created', 'success');
+        setTimeout(() => showToast('Product created', 'success'), 0);
       } catch (error) {
-        showToast('Failed to quick-add product.', 'error');
+        setTimeout(() => showToast('Failed to quick-add product.', 'error'), 0);
       }
     }
   };
@@ -895,9 +1012,9 @@ export const PosView: React.FC<PosViewProps> = ({
         setSelectedCustomer(newSavedCustomer); 
         setNewCustomer({ name: '', phone: '', email: '' }); 
         setIsCustomerModalOpen(false); 
-        showToast('Customer created', 'success'); 
+        setTimeout(() => showToast('Customer created', 'success'), 0); 
       } catch (e) {
-        showToast('Failed to create customer', 'error');
+        setTimeout(() => showToast('Failed to create customer', 'error'), 0);
       }
     } 
   };
@@ -920,6 +1037,7 @@ export const PosView: React.FC<PosViewProps> = ({
     currentUser,
     updateQuantity,
     removeFromCart,
+    onToggleFree: toggleFree,
     exitingItems,
     upsell,
     completed,
@@ -968,6 +1086,28 @@ export const PosView: React.FC<PosViewProps> = ({
                        <ScanBarcode size={18} />
                     </button>
                   </div>
+               </div>
+               
+               <div className="relative shrink-0 flex gap-2">
+                    <div className="relative h-full">
+                        <select 
+                            value={sortOption} 
+                            onChange={(e) => setSortOption(e.target.value)}
+                            className="appearance-none pl-9 pr-8 py-3 h-full rounded-2xl bg-white/60 dark:bg-slate-900/60 border border-white/20 dark:border-white/10 text-sm focus:bg-white/80 dark:focus:bg-slate-900/80 focus:border-primary/50 outline-none transition-all backdrop-blur-md shadow-sm text-slate-800 dark:text-white font-bold cursor-pointer"
+                        >
+                            <option value="name-asc">Name (A-Z)</option>
+                            <option value="name-desc">Name (Z-A)</option>
+                            <option value="price-asc">Price (Low-High)</option>
+                            <option value="price-desc">Price (High-Low)</option>
+                            <option value="stock-asc">Stock (Low-High)</option>
+                            <option value="stock-desc">Stock (High-Low)</option>
+                        </select>
+                        <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={16} />
+                    </div>
+
+                    <button onClick={() => setIsServiceModalOpen(true)} className="px-4 py-3 bg-indigo-500 text-white rounded-2xl font-bold text-sm shadow-sm hover:bg-indigo-600 transition-colors flex items-center gap-2 h-full shrink-0">
+                        <Briefcase size={18} /> <span className="hidden sm:inline">Service</span>
+                    </button>
                </div>
            </div>
            
@@ -1229,6 +1369,13 @@ export const PosView: React.FC<PosViewProps> = ({
             onClose={() => setShowReceipt(false)} 
           />
       )}
+
+      <ServiceChargeModal 
+        isOpen={isServiceModalOpen} 
+        onClose={() => setIsServiceModalOpen(false)} 
+        onConfirm={handleAddService} 
+        currency={settings.currency} 
+      />
     </div>
   );
 };

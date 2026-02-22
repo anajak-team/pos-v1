@@ -11,10 +11,12 @@ export interface Product {
   barcode?: string;
   itemsPerCase?: number;
   zone?: string; // Physical location (e.g., Aisle 1, Warehouse B)
+  isService?: boolean;
 }
 
 export interface CartItem extends Product {
   quantity: number;
+  originalPrice?: number;
 }
 
 export interface Transaction {

@@ -295,7 +295,7 @@ export const saveProducts = async (products: Product[]): Promise<void> => {
 
 // --- Transactions ---
 export const getTransactions = async (): Promise<Transaction[]> => {
-    if (isDemo()) return getDemoLocal('transactions', []);
+    if (isDemo()) return getDemoLocal<Transaction[]>('transactions', []);
     const { data, error } = await supabase.from('transactions').select('*').order('date', { ascending: false }).limit(2000);
     if (error) {
         console.error('Error fetching transactions:', error);
@@ -320,7 +320,7 @@ export const saveTransaction = async (transaction: Transaction): Promise<Transac
     };
 
     if (isDemo()) {
-        const transactions = getDemoLocal('transactions', []);
+        const transactions = getDemoLocal<Transaction[]>('transactions', []);
         transactions.unshift(newTransaction);
         saveDemoLocal('transactions', transactions);
         return newTransaction as Transaction;
@@ -519,7 +519,7 @@ export const getCustomers = async (): Promise<Customer[]> => {
 export const addCustomer = async (customer: Omit<Customer, 'id'>): Promise<Customer> => {
     const newCustomer = { ...customer, id: `cust-${Date.now()}`, points: customer.points || 0 };
     if (isDemo()) {
-        const customers = getDemoLocal('customers', []);
+        const customers = getDemoLocal<Customer[]>('customers', []);
         customers.push(newCustomer);
         saveDemoLocal('customers', customers);
         return newCustomer;
@@ -531,7 +531,7 @@ export const addCustomer = async (customer: Omit<Customer, 'id'>): Promise<Custo
 
 export const updateCustomer = async (customer: Customer): Promise<Customer> => {
     if (isDemo()) {
-        const customers = getDemoLocal('customers', []);
+        const customers = getDemoLocal<Customer[]>('customers', []);
         const index = customers.findIndex(c => c.id === customer.id);
         if (index !== -1) {
             customers[index] = customer;
@@ -591,7 +591,7 @@ export const updateCustomerStats = async (customerId: string, transactionTotal: 
 
 export const deleteCustomer = async (customerId: string): Promise<void> => {
     if (isDemo()) {
-        const customers = getDemoLocal('customers', []);
+        const customers = getDemoLocal<Customer[]>('customers', []);
         saveDemoLocal('customers', customers.filter(c => c.id !== customerId));
         return;
     }
@@ -601,7 +601,7 @@ export const deleteCustomer = async (customerId: string): Promise<void> => {
 
 // --- Suppliers ---
 export const getSuppliers = async (): Promise<Supplier[]> => {
-    if (isDemo()) return getDemoLocal('suppliers', []);
+    if (isDemo()) return getDemoLocal<Supplier[]>('suppliers', []);
     const { data, error } = await supabase.from('suppliers').select('*');
     if (error) return [];
     return data || [];
@@ -610,7 +610,7 @@ export const getSuppliers = async (): Promise<Supplier[]> => {
 export const addSupplier = async (supplier: Omit<Supplier, 'id'>): Promise<Supplier> => {
     const newSupplier = { ...supplier, id: `sup-${Date.now()}` };
     if (isDemo()) {
-        const suppliers = getDemoLocal('suppliers', []);
+        const suppliers = getDemoLocal<Supplier[]>('suppliers', []);
         suppliers.push(newSupplier);
         saveDemoLocal('suppliers', suppliers);
         return newSupplier;
@@ -622,7 +622,7 @@ export const addSupplier = async (supplier: Omit<Supplier, 'id'>): Promise<Suppl
 
 export const updateSupplier = async (supplier: Supplier): Promise<Supplier> => {
     if (isDemo()) {
-        const suppliers = getDemoLocal('suppliers', []);
+        const suppliers = getDemoLocal<Supplier[]>('suppliers', []);
         const idx = suppliers.findIndex(s => s.id === supplier.id);
         if (idx !== -1) {
             suppliers[idx] = supplier;
@@ -637,7 +637,7 @@ export const updateSupplier = async (supplier: Supplier): Promise<Supplier> => {
 
 export const deleteSupplier = async (supplierId: string): Promise<void> => {
     if (isDemo()) {
-        const suppliers = getDemoLocal('suppliers', []);
+        const suppliers = getDemoLocal<Supplier[]>('suppliers', []);
         saveDemoLocal('suppliers', suppliers.filter(s => s.id !== supplierId));
         return;
     }
@@ -656,7 +656,7 @@ export const saveCategories = async (categories: string[]): Promise<string[]> =>
 
 // --- Expenses ---
 export const getExpenses = async (): Promise<Expense[]> => {
-    if (isDemo()) return getDemoLocal('expenses', []);
+    if (isDemo()) return getDemoLocal<Expense[]>('expenses', []);
     const { data, error } = await supabase.from('expenses').select('*');
     if (error) return [];
     return data || [];
@@ -665,7 +665,7 @@ export const getExpenses = async (): Promise<Expense[]> => {
 export const addExpense = async (expense: Omit<Expense, 'id'>): Promise<Expense> => {
     const newExpense = { ...expense, id: `exp-${Date.now()}` };
     if (isDemo()) {
-        const expenses = getDemoLocal('expenses', []);
+        const expenses = getDemoLocal<Expense[]>('expenses', []);
         expenses.push(newExpense);
         saveDemoLocal('expenses', expenses);
         return newExpense;
@@ -677,7 +677,7 @@ export const addExpense = async (expense: Omit<Expense, 'id'>): Promise<Expense>
 
 export const deleteExpense = async (id: string): Promise<void> => {
     if (isDemo()) {
-        const expenses = getDemoLocal('expenses', []);
+        const expenses = getDemoLocal<Expense[]>('expenses', []);
         saveDemoLocal('expenses', expenses.filter(e => e.id !== id));
         return;
     }
@@ -695,7 +695,7 @@ export const saveExpenseCategories = async (categories: string[]): Promise<strin
 
 // --- Repair Tickets ---
 export const getRepairs = async (): Promise<RepairTicket[]> => {
-    if (isDemo()) return getDemoLocal('repairs', []);
+    if (isDemo()) return getDemoLocal<RepairTicket[]>('repairs', []);
     const { data, error } = await supabase.from('repairs').select('*').order('updatedAt', { ascending: false });
     if (error) return [];
     return data || [];
@@ -711,7 +711,7 @@ export const addRepair = async (repair: Omit<RepairTicket, 'id' | 'createdAt' | 
     } as RepairTicket;
 
     if (isDemo()) {
-        const repairs = getDemoLocal('repairs', []);
+        const repairs = getDemoLocal<RepairTicket[]>('repairs', []);
         repairs.unshift(newRepair);
         saveDemoLocal('repairs', repairs);
         return newRepair;
@@ -724,7 +724,7 @@ export const addRepair = async (repair: Omit<RepairTicket, 'id' | 'createdAt' | 
 
 export const updateRepair = async (repair: RepairTicket): Promise<RepairTicket> => {
     if (isDemo()) {
-        const repairs = getDemoLocal('repairs', []);
+        const repairs = getDemoLocal<RepairTicket[]>('repairs', []);
         const idx = repairs.findIndex(r => r.id === repair.id);
         if (idx !== -1) {
             repairs[idx] = { ...repair, updatedAt: new Date().toISOString() };
@@ -741,7 +741,7 @@ export const updateRepair = async (repair: RepairTicket): Promise<RepairTicket> 
 
 export const deleteRepair = async (id: string): Promise<void> => {
     if (isDemo()) {
-        const repairs = getDemoLocal('repairs', []);
+        const repairs = getDemoLocal<RepairTicket[]>('repairs', []);
         saveDemoLocal('repairs', repairs.filter(r => r.id !== id));
         return;
     }
@@ -751,7 +751,7 @@ export const deleteRepair = async (id: string): Promise<void> => {
 
 // --- Purchase Orders ---
 export const getPurchaseOrders = async (): Promise<PurchaseOrder[]> => {
-    if (isDemo()) return getDemoLocal('purchase_orders', []);
+    if (isDemo()) return getDemoLocal<PurchaseOrder[]>('purchase_orders', []);
     const { data, error } = await supabase.from('purchase_orders').select('*').order('date', { ascending: false });
     if (error) return [];
     return data || [];
@@ -759,7 +759,7 @@ export const getPurchaseOrders = async (): Promise<PurchaseOrder[]> => {
 
 export const savePurchaseOrder = async (order: PurchaseOrder): Promise<PurchaseOrder> => {
     if (isDemo()) {
-        const orders = getDemoLocal('purchase_orders', []);
+        const orders = getDemoLocal<PurchaseOrder[]>('purchase_orders', []);
         const idx = orders.findIndex(o => o.id === order.id);
         if (idx !== -1) {
             orders[idx] = order;
