@@ -1,4 +1,4 @@
-import { Product, Transaction, StoreSettings, PurchaseOrder, StoredUser, Shift, Customer, Supplier, User, CartItem, Expense, RepairTicket } from '../types';
+import { Product, Transaction, StoreSettings, PurchaseOrder, StoredUser, Shift, Customer, Supplier, User, CartItem, Expense, RepairTicket, DefectiveProduct } from '../types';
 import { SEED_PRODUCTS } from '../constants';
 import { supabase } from './supabaseClient';
 
@@ -746,6 +746,53 @@ export const deleteRepair = async (id: string): Promise<void> => {
         return;
     }
     const { error } = await supabase.from('repairs').delete().eq('id', id);
+    if (error) throw error;
+};
+
+// --- Defective Products ---
+export const getDefectiveProducts = async (): Promise<DefectiveProduct[]> => {
+    if (isDemo()) return getDemoLocal<DefectiveProduct[]>('defective_products', []);
+    const { data, error } = await supabase.from('defective_products').select('*').order('date', { ascending: false });
+    if (error) return [];
+    return data || [];
+};
+
+export const addDefectiveProduct = async (defective: Omit<DefectiveProduct, 'id'>): Promise<DefectiveProduct> => {
+    const newDefective = { ...defective, id: `def-${Date.now()}` };
+    if (isDemo()) {
+        const defectives = getDemoLocal<DefectiveProduct[]>('defective_products', []);
+        defectives.unshift(newDefective);
+        saveDemoLocal('defective_products', defectives);
+        return newDefective;
+    }
+
+    const { data, error } = await supabase.from('defective_products').insert(newDefective).select().single();
+    if (error) throw error;
+    return data;
+};
+
+export const updateDefectiveProduct = async (defective: DefectiveProduct): Promise<DefectiveProduct> => {
+    if (isDemo()) {
+        const defectives = getDemoLocal<DefectiveProduct[]>('defective_products', []);
+        const idx = defectives.findIndex(d => d.id === defective.id);
+        if (idx !== -1) {
+            defectives[idx] = defective;
+            saveDemoLocal('defective_products', defectives);
+        }
+        return defective;
+    }
+    const { data, error } = await supabase.from('defective_products').update(defective).eq('id', defective.id).select().single();
+    if (error) throw error;
+    return data;
+};
+
+export const deleteDefectiveProduct = async (id: string): Promise<void> => {
+    if (isDemo()) {
+        const defectives = getDemoLocal<DefectiveProduct[]>('defective_products', []);
+        saveDemoLocal('defective_products', defectives.filter(d => d.id !== id));
+        return;
+    }
+    const { error } = await supabase.from('defective_products').delete().eq('id', id);
     if (error) throw error;
 };
 

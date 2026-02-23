@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Product, StoreSettings, User } from '../types';
-import { Plus, Trash2, RefreshCw, Search, AlertTriangle, Bell, Lock, Box, Edit, ScanBarcode, DollarSign, Download, Upload, Printer, X, QrCode, Type, Minimize, MapPin, CheckSquare, Square, Image as ImageIcon, ArrowUpDown } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Search, AlertTriangle, Bell, Lock, Box, Edit, ScanBarcode, DollarSign, Download, Upload, Printer, X, QrCode, Type, Minimize, MapPin, CheckSquare, Square, Image as ImageIcon, ArrowUpDown, ShieldAlert } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { useAlert } from '../components/Alert';
 import QRCode from 'qrcode';
 import JsBarcode from 'jsbarcode';
 import { TRANSLATIONS } from '../translations';
+import { addDefectiveItem } from '../services/storageService';
 
 interface InventoryViewProps {
   products: Product[];
@@ -271,6 +272,73 @@ const ProductListPrint = ({ products, settings, onClose }: { products: Product[]
     );
 };
 
+const DefectiveModal = ({ product, onClose, onSubmit }: { product: Product, onClose: () => void, onSubmit: (qty: number, reason: string) => void }) => {
+    const [quantity, setQuantity] = useState(1);
+    const [reason, setReason] = useState('');
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSubmit(quantity, reason);
+    };
+
+    return createPortal(
+        <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-white/10">
+                <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                        <ShieldAlert className="text-red-500" size={20} />
+                        Report Defective Item
+                    </h3>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                        <X size={20} />
+                    </button>
+                </div>
+                
+                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                    <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                        <h4 className="font-bold text-slate-800 dark:text-slate-200">{product.name}</h4>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Current Stock: {product.stock}</p>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Quantity Defective</label>
+                        <input 
+                            type="number" 
+                            min="1" 
+                            max={product.stock}
+                            value={quantity}
+                            onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+                            className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all font-bold"
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Reason / Notes</label>
+                        <textarea 
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all min-h-[100px]"
+                            placeholder="Describe the defect..."
+                            required
+                        />
+                    </div>
+
+                    <div className="flex gap-3 pt-2">
+                        <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" className="flex-1 px-4 py-2.5 rounded-xl font-bold bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-500/30 transition-all transform active:scale-95">
+                            Confirm Defective
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>,
+        document.body
+    );
+};
+
 export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDeleteProduct, onUpdateProduct, onImportProducts, settings, currentUser, onOpenProductModal }) => {
   const [search, setSearch] = useState('');
   const [sortOption, setSortOption] = useState<string>('name-asc');
@@ -279,6 +347,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
   const [isBulkPrintOpen, setIsBulkPrintOpen] = useState(false);
   const [isListPrintOpen, setIsListPrintOpen] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
+  const [selectedProductForDefective, setSelectedProductForDefective] = useState<Product | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const lowStockThreshold = settings.lowStockThreshold;
@@ -292,6 +361,31 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
     const lang = settings?.language || 'en';
     // @ts-ignore
     return TRANSLATIONS[lang]?.[key] || TRANSLATIONS.en[key];
+  };
+
+  const handleDefectiveSubmit = async (qty: number, reason: string) => {
+      if (!selectedProductForDefective) return;
+      try {
+          await addDefectiveItem({
+              productId: selectedProductForDefective.id,
+              productName: selectedProductForDefective.name,
+              quantity: qty,
+              reason: reason,
+              date: new Date().toISOString(),
+              reportedBy: currentUser.name
+          });
+          
+          onUpdateProduct({
+              ...selectedProductForDefective,
+              stock: Math.max(0, selectedProductForDefective.stock - qty)
+          });
+
+          showToast('Defective item reported', 'success');
+          setSelectedProductForDefective(null);
+      } catch (e) {
+          console.error(e);
+          showToast('Failed to report defective item', 'error');
+      }
   };
 
   useEffect(() => { if ('Notification' in window) setNotificationPermission(Notification.permission); }, []);
@@ -601,7 +695,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
                     <td className="p-4 font-bold text-slate-800 dark:text-slate-200">{settings.currency}{product.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     {!isStaff && <td className="p-4 font-medium text-slate-500">{product.cost ? `${settings.currency}${product.cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}</td>}
                     <td className="p-4"><div className={`flex items-center gap-2 font-bold transition-all ${isLow ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>{product.stock} Units {isLow && <AlertTriangle size={16} className="text-red-500 animate-pulse" />}</div>{cases !== null && <div className="text-xs text-slate-400 mt-0.5 flex gap-1"><Box size={12}/>{cases} cases</div>}</td>
-                    <td className="p-4 text-right"><div className="flex items-center justify-end gap-2">{isStaff ? <span className="text-slate-300 p-2"><Lock size={16} /></span> : (<>{isLow && <button onClick={() => handleReorder(product)} className="p-2 bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 rounded-lg" title={t('RESTOCK')}><RefreshCw size={16} /></button>}<button onClick={() => setPrintingProduct(product)} className="p-2 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg" title={t('PRINT')}><Printer size={16} /></button><button onClick={() => onOpenProductModal(product)} className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg" title={t('EDIT')}><Edit size={16} /></button><button onClick={() => handleDeleteClick(product.id)} className="p-2 text-red-400 hover:bg-red-500/10 hover:text-red-600 rounded-lg" title={t('DELETE')}><Trash2 size={16} /></button></>)}</div></td>
+                    <td className="p-4 text-right"><div className="flex items-center justify-end gap-2">{isStaff ? <span className="text-slate-300 p-2"><Lock size={16} /></span> : (<>{isLow && <button onClick={() => handleReorder(product)} className="p-2 bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 rounded-lg" title={t('RESTOCK')}><RefreshCw size={16} /></button>}<button onClick={() => setPrintingProduct(product)} className="p-2 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg" title={t('PRINT')}><Printer size={16} /></button><button onClick={() => setSelectedProductForDefective(product)} className="p-2 text-orange-500 hover:bg-orange-500/10 rounded-lg" title="Report Defective"><ShieldAlert size={16} /></button><button onClick={() => onOpenProductModal(product)} className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg" title={t('EDIT')}><Edit size={16} /></button><button onClick={() => handleDeleteClick(product.id)} className="p-2 text-red-400 hover:bg-red-500/10 hover:text-red-600 rounded-lg" title={t('DELETE')}><Trash2 size={16} /></button></>)}</div></td>
                   </tr>
                 )})}
               </tbody>
@@ -645,7 +739,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
                       <div className="flex gap-2">
                         {!isStaff && product.cost && (<div className="flex items-center text-[10px] text-slate-400 bg-slate-100 dark:bg-white/5 px-2 rounded-lg mr-auto"><DollarSign size={10}/> {t('COST')}: {product.cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>)}
                         {!isStaff && isLow && (<button onClick={() => handleReorder(product)} className="p-1.5 bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 rounded-lg text-[10px] font-bold flex items-center gap-1"><RefreshCw size={12} /> {t('RESTOCK')}</button>)}
-                        {!isStaff && (<><button onClick={() => setPrintingProduct(product)} className="p-1.5 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg"><Printer size={14}/></button><button onClick={() => onOpenProductModal(product)} className="p-1.5 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 rounded-lg"><Edit size={14} /></button><button onClick={() => handleDeleteClick(product.id)} className="p-1.5 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg"><Trash2 size={14} /></button></>)}
+                        {!isStaff && (<><button onClick={() => setPrintingProduct(product)} className="p-1.5 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg"><Printer size={14}/></button><button onClick={() => setSelectedProductForDefective(product)} className="p-1.5 bg-orange-500/10 text-orange-500 hover:bg-orange-500/20 rounded-lg"><ShieldAlert size={14} /></button><button onClick={() => onOpenProductModal(product)} className="p-1.5 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 rounded-lg"><Edit size={14} /></button><button onClick={() => handleDeleteClick(product.id)} className="p-1.5 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg"><Trash2 size={14} /></button></>)}
                       </div>
                    </div>
                 </div>
@@ -665,6 +759,14 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
 
       {isListPrintOpen && (
           <ProductListPrint products={getProductsForPrint()} settings={settings} onClose={() => setIsListPrintOpen(false)} />
+      )}
+
+      {selectedProductForDefective && (
+          <DefectiveModal 
+              product={selectedProductForDefective} 
+              onClose={() => setSelectedProductForDefective(null)} 
+              onSubmit={handleDefectiveSubmit} 
+          />
       )}
     </div>
   );

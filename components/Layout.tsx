@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { ViewState, User } from '../types';
-import { LayoutDashboard, ShoppingCart, Package, History, Settings, Truck, LogOut, Wallet, Receipt, BarChart3, Wrench, MoreHorizontal, X, Moon, Sun, Globe } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Package, History, Settings, Truck, LogOut, Wallet, Receipt, BarChart3, Wrench, MoreHorizontal, X, Moon, Sun, Globe, AlertTriangle } from 'lucide-react';
 import { TRANSLATIONS } from '../translations';
 
 interface LayoutProps {
@@ -44,6 +44,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
     { id: 'INVENTORY', label: t('INVENTORY'), icon: Package },
     // Secondary Items
     { id: 'REPAIRS', label: t('REPAIRS'), icon: Wrench },
+    { id: 'DEFECTIVE', label: 'Defective', icon: AlertTriangle },
     { id: 'PURCHASES', label: t('PURCHASES'), icon: Truck },
     { id: 'EXPENSES', label: t('EXPENSES'), icon: Receipt },
     { id: 'REPORTS', label: t('REPORTS'), icon: BarChart3 },

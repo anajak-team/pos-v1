@@ -41,6 +41,16 @@ export interface PurchaseItem {
   unitCost: number;
 }
 
+export interface DefectiveProduct {
+  id: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  reason: string;
+  date: string;
+  status: 'pending' | 'resolved';
+}
+
 export interface Supplier {
   id: string;
   name: string;
@@ -60,7 +70,7 @@ export interface PurchaseOrder {
   expectedDelivery?: string;
 }
 
-export type ViewState = 'DASHBOARD' | 'POS' | 'INVENTORY' | 'TRANSACTIONS' | 'PURCHASES' | 'EXPENSES' | 'REPORTS' | 'SETTINGS' | 'REPAIRS' | 'LANDING_BUILDER' | 'LOGIN' | 'SIGNUP' | 'CUSTOMER_DASHBOARD';
+export type ViewState = 'DASHBOARD' | 'POS' | 'INVENTORY' | 'TRANSACTIONS' | 'PURCHASES' | 'EXPENSES' | 'REPORTS' | 'SETTINGS' | 'REPAIRS' | 'LANDING_BUILDER' | 'LOGIN' | 'SIGNUP' | 'CUSTOMER_DASHBOARD' | 'DEFECTIVE';
 
 export interface SalesMetric {
   date: string;

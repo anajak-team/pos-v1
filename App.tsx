@@ -11,6 +11,7 @@ import { PurchaseView } from './views/PurchaseView';
 import { ExpensesView } from './views/ExpensesView';
 import { ReportsView } from './views/ReportsView';
 import { RepairsView } from './views/RepairsView';
+import { DefectiveProductsView } from './views/DefectiveProductsView';
 import { LandingPage } from './views/LandingPage';
 import { LandingPageBuilderView } from './views/LandingPageBuilderView';
 import { Invoice } from './components/Invoice';
@@ -18,7 +19,7 @@ import { ShiftReport } from './components/ShiftReport';
 import { ShiftEntryModal } from './components/ShiftEntryModal';
 import { CloseShiftModal } from './components/CloseShiftModal';
 import { WalletModal } from './components/WalletModal';
-import { ViewState, Product, Transaction, StoreSettings, PurchaseOrder, User, Shift, Expense, CartItem, Customer, StoredUser, RepairTicket, CashMovement } from './types';
+import { ViewState, Product, Transaction, StoreSettings, PurchaseOrder, User, Shift, Expense, CartItem, Customer, StoredUser, RepairTicket, CashMovement, DefectiveProduct } from './types';
 import * as api from './services/storageService';
 import { sendShiftReport, sendProductReport, sendExpenseReport, sendRepairReport, sendPurchaseReport } from './services/telegramService';
 import { FileText, Printer, Wand2, ScanBarcode, Box, Image as ImageIcon, Upload, X, Check, ZoomIn, ZoomOut, Move, Save, Loader2, Minus, Plus, Undo2, Eye, Camera, CheckCircle2, AlertTriangle, MapPin, Trash2, ArrowLeft } from 'lucide-react';
@@ -525,6 +526,7 @@ export const App = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [expenseCategories, setExpenseCategories] = useState<string[]>([]);
   const [repairs, setRepairs] = useState<RepairTicket[]>([]);
+  const [defectiveProducts, setDefectiveProducts] = useState<DefectiveProduct[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [isCloseShiftModalOpen, setIsCloseShiftModalOpen] = useState(false);
@@ -552,6 +554,7 @@ export const App = () => {
       setExpenses(await api.getExpenses());
       setExpenseCategories(await api.getExpenseCategories());
       setRepairs(await api.getRepairs());
+      setDefectiveProducts(await api.getDefectiveProducts());
       setPurchaseOrders(await api.getPurchaseOrders());
     };
     init();
@@ -855,6 +858,31 @@ export const App = () => {
       await sendPurchaseReport(newOrder, settings);
   };
 
+  const handleAddDefective = async (defective: Omit<DefectiveProduct, 'id'>) => {
+      if (!settings) return;
+      const newDefective = await api.addDefectiveProduct(defective);
+      setDefectiveProducts([newDefective, ...defectiveProducts]);
+      
+      // Deduct from inventory
+      const product = products.find(p => p.id === defective.productId);
+      if (product) {
+          const updatedProduct = await api.updateProduct({ ...product, stock: product.stock - defective.quantity });
+          setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+      }
+  };
+
+  const handleUpdateDefective = async (defective: DefectiveProduct) => {
+      if (!settings) return;
+      const updated = await api.updateDefectiveProduct(defective);
+      setDefectiveProducts(defectiveProducts.map(d => d.id === updated.id ? updated : d));
+  };
+
+  const handleDeleteDefective = async (id: string) => {
+      if (!settings) return;
+      await api.deleteDefectiveProduct(id);
+      setDefectiveProducts(defectiveProducts.filter(d => d.id !== id));
+  };
+
   // Toggle Theme Logic (Reused for Customer View)
   const toggleTheme = () => {
     if (!settings) return;
@@ -924,6 +952,7 @@ export const App = () => {
           case 'EXPENSES': return <ExpensesView expenses={expenses} categories={expenseCategories} onAddExpense={handleAddExpense} onDeleteExpense={handleDeleteExpense} onUpdateCategories={async (c) => { await api.saveExpenseCategories(c); setExpenseCategories(c); }} settings={settings} currentUser={currentUser} />;
           case 'REPORTS': return <ReportsView transactions={transactions} expenses={expenses} settings={settings} currentUser={currentUser} />;
           case 'REPAIRS': return <RepairsView repairs={repairs} customers={customers} onAddRepair={handleAddRepair} onUpdateRepair={handleUpdateRepair} onDeleteRepair={async (id) => { await api.deleteRepair(id); setRepairs(repairs.filter(r => r.id !== id)); }} settings={settings} currentUser={currentUser} />;
+          case 'DEFECTIVE': return <DefectiveProductsView defectiveProducts={defectiveProducts} products={products} onAddDefective={handleAddDefective} onUpdateDefective={handleUpdateDefective} onDeleteDefective={handleDeleteDefective} settings={settings} currentUser={currentUser} />;
           case 'LANDING_BUILDER': return <LandingPageBuilderView settings={settings} onSave={async (s) => { await api.saveSettings(s); setSettings(s); showToast('Landing page updated', 'success'); }} onBack={() => setView('SETTINGS')} />;
           default: return <DashboardView transactions={transactions} isDarkMode={settings.theme === 'dark'} currentUser={currentUser} expenses={expenses} products={products} settings={settings} />;
       }
