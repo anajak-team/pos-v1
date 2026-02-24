@@ -1,8 +1,8 @@
 
 import React, { useState, useMemo } from 'react';
-import { Transaction, Expense, StoreSettings, User } from '../types';
+import { Transaction, Expense, StoreSettings, User, StoredUser, Customer, Shift } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { DollarSign, TrendingUp, ArrowDownRight, Calendar, ArrowUpRight, FileText } from 'lucide-react';
+import { DollarSign, TrendingUp, ArrowDownRight, Calendar, ArrowUpRight, FileText, CreditCard, Users, Percent, UserCircle } from 'lucide-react';
 import { TRANSLATIONS } from '../translations';
 import { DailyReport } from '../components/DailyReport';
 
@@ -12,13 +12,16 @@ interface ReportsViewProps {
   expenses: Expense[];
   settings: StoreSettings;
   currentUser: User;
+  users: StoredUser[];
+  customers: Customer[];
+  shifts: Shift[];
 }
 
 // Date range options
 type DateRangeOption = '7d' | '30d' | '90d' | 'all';
 
 // Main component
-export const ReportsView: React.FC<ReportsViewProps> = ({ transactions, expenses, settings, currentUser }) => {
+export const ReportsView: React.FC<ReportsViewProps> = ({ transactions, expenses, settings, currentUser, users, customers, shifts }) => {
   const [dateRange, setDateRange] = useState<DateRangeOption>('30d');
   const [showDailyReport, setShowDailyReport] = useState(false);
   
@@ -94,7 +97,61 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ transactions, expenses
     return Object.entries(categorySales).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value);
   }, [filteredSales]);
   
+  // Sales by Payment Method
+  const salesByPaymentMethod = useMemo(() => {
+    const paymentSales: { [key: string]: number } = {};
+    filteredSales.forEach(t => {
+      paymentSales[t.paymentMethod] = (paymentSales[t.paymentMethod] || 0) + t.total;
+    });
+    return Object.entries(paymentSales).map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value })).sort((a,b) => b.value - a.value);
+  }, [filteredSales]);
+
+  // Sales by Staff
+  const salesByStaff = useMemo(() => {
+    const staffSales = new Map<string, { name: string; revenue: number }>();
+    
+    // Create a map of shiftId to userName for quick lookup
+    const shiftUserMap = new Map<string, string>();
+    shifts.forEach(s => {
+      shiftUserMap.set(s.id, s.userName);
+    });
+
+    filteredSales.forEach(t => {
+      if (t.shiftId) {
+        const staffName = shiftUserMap.get(t.shiftId) || 'Unknown Staff';
+        const existing = staffSales.get(staffName);
+        if (existing) {
+          existing.revenue += t.total;
+        } else {
+          staffSales.set(staffName, { name: staffName, revenue: t.total });
+        }
+      }
+    });
+    return Array.from(staffSales.values()).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+  }, [filteredSales, shifts]);
+
+  // Top Customers
+  const topCustomers = useMemo(() => {
+    const customerSales = new Map<string, { name: string; revenue: number }>();
+    filteredSales.forEach(t => {
+      if (t.customerId && t.customerName) {
+        const existing = customerSales.get(t.customerId);
+        if (existing) {
+          existing.revenue += t.total;
+        } else {
+          customerSales.set(t.customerId, { name: t.customerName, revenue: t.total });
+        }
+      }
+    });
+    return Array.from(customerSales.values()).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+  }, [filteredSales]);
+
+  // Tax and Discounts
+  const totalTax = filteredSales.reduce((sum, t) => sum + (t.tax || 0), 0);
+  const totalDiscounts = filteredSales.reduce((sum, t) => sum + (t.discount || 0), 0);
+
   const CATEGORY_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#ef4444'];
+  const PAYMENT_COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b'];
   
   // Sales over time
   const salesOverTime = useMemo(() => {
@@ -211,18 +268,86 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ transactions, expenses
         </div>
       </div>
       
-      {/* Sales By Category */}
-      <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-3xl border border-white/30 dark:border-white/10 shadow-lg h-96">
-        <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-2">{t('REVENUE_BY_CATEGORY')}</h3>
-        <ResponsiveContainer width="100%" height="90%">
-          <PieChart>
-            <Pie data={salesByCategory} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-              {salesByCategory.map((entry, index) => <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]} />)}
-            </Pie>
-            <Tooltip contentStyle={{ backgroundColor: tooltipBg, borderRadius: '12px', border: 'none', color: tooltipText }} formatter={(value: number) => `$${formatCurrency(value)}`} />
-            <Legend iconSize={10} wrapperStyle={{fontSize: '12px'}}/>
-          </PieChart>
-        </ResponsiveContainer>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Sales By Category */}
+        <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-3xl border border-white/30 dark:border-white/10 shadow-lg h-96">
+          <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-2">{t('REVENUE_BY_CATEGORY')}</h3>
+          <ResponsiveContainer width="100%" height="90%">
+            <PieChart>
+              <Pie data={salesByCategory} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                {salesByCategory.map((entry, index) => <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]} />)}
+              </Pie>
+              <Tooltip contentStyle={{ backgroundColor: tooltipBg, borderRadius: '12px', border: 'none', color: tooltipText }} formatter={(value: number) => `$${formatCurrency(value)}`} />
+              <Legend iconSize={10} wrapperStyle={{fontSize: '12px'}}/>
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Sales By Payment Method */}
+        <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-3xl border border-white/30 dark:border-white/10 shadow-lg h-96">
+          <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-2 flex items-center gap-2"><CreditCard size={18}/> Payment Methods</h3>
+          <ResponsiveContainer width="100%" height="90%">
+            <PieChart>
+              <Pie data={salesByPaymentMethod} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                {salesByPaymentMethod.map((entry, index) => <Cell key={`cell-${index}`} fill={PAYMENT_COLORS[index % PAYMENT_COLORS.length]} />)}
+              </Pie>
+              <Tooltip contentStyle={{ backgroundColor: tooltipBg, borderRadius: '12px', border: 'none', color: tooltipText }} formatter={(value: number) => `$${formatCurrency(value)}`} />
+              <Legend iconSize={10} wrapperStyle={{fontSize: '12px'}}/>
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Top Staff */}
+        <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-3xl border border-white/30 dark:border-white/10 shadow-lg h-96 flex flex-col">
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-4 shrink-0 flex items-center gap-2"><UserCircle size={18}/> Top Staff</h3>
+            <div className="flex-1 overflow-y-auto space-y-3 no-scrollbar">
+                {salesByStaff.map((s, index) => (
+                    <div key={index} className="flex justify-between items-center bg-white/40 dark:bg-white/5 p-3 rounded-xl border border-white/20">
+                        <span className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{s.name}</span>
+                        <span className="text-sm font-bold text-primary">{settings.currency}{formatCurrency(s.revenue)}</span>
+                    </div>
+                ))}
+                {salesByStaff.length === 0 && <p className="text-sm text-slate-400 text-center pt-10">No staff data.</p>}
+            </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Top Customers */}
+        <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-3xl border border-white/30 dark:border-white/10 shadow-lg h-96 flex flex-col lg:col-span-1">
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-4 shrink-0 flex items-center gap-2"><Users size={18}/> Top Customers</h3>
+            <div className="flex-1 overflow-y-auto space-y-3 no-scrollbar">
+                {topCustomers.map((c, index) => (
+                    <div key={index} className="flex justify-between items-center bg-white/40 dark:bg-white/5 p-3 rounded-xl border border-white/20">
+                        <span className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{c.name}</span>
+                        <span className="text-sm font-bold text-primary">{settings.currency}{formatCurrency(c.revenue)}</span>
+                    </div>
+                ))}
+                {topCustomers.length === 0 && <p className="text-sm text-slate-400 text-center pt-10">No customer data.</p>}
+            </div>
+        </div>
+
+        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-3xl border border-white/30 dark:border-white/10 shadow-lg flex flex-col justify-center">
+            <div>
+              <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 mb-1"><Percent size={18}/> Total Tax Collected</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">For the selected period</p>
+            </div>
+            <div className="text-4xl font-bold text-slate-900 dark:text-white">
+              {settings.currency}{formatCurrency(totalTax)}
+            </div>
+          </div>
+          
+          <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-3xl border border-white/30 dark:border-white/10 shadow-lg flex flex-col justify-center">
+            <div>
+              <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 mb-1"><TrendingUp size={18}/> Total Discounts Given</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">For the selected period</p>
+            </div>
+            <div className="text-4xl font-bold text-amber-600 dark:text-amber-400">
+              {settings.currency}{formatCurrency(totalDiscounts)}
+            </div>
+          </div>
+        </div>
       </div>
 
       {showDailyReport && (

@@ -619,7 +619,7 @@ export const App = () => {
         return;
     }
     
-    setView('DASHBOARD'); // Navigates to Landing Page because user is null
+    setView('LOGIN'); // Navigates to Login form
   };
 
   const handleViewDemo = async () => {
@@ -937,7 +937,7 @@ export const App = () => {
   }
 
   // Active Shift Check for Staff/Admins
-  if (!activeShift && currentUser && currentUser.role !== 'Customer' && view !== 'LANDING_BUILDER' && view !== 'SETTINGS') {
+  if (!activeShift && !completedShift && currentUser && currentUser.role !== 'Customer' && view !== 'LANDING_BUILDER' && view !== 'SETTINGS') {
       return <ShiftEntryModal currentUser={currentUser} onStartShift={handleStartShift} settings={settings} onLogout={handleLogout} />;
   }
 
@@ -950,7 +950,7 @@ export const App = () => {
           case 'SETTINGS': return <SettingsView settings={settings} onSave={async (s) => { await api.saveSettings(s); setSettings(s); document.documentElement.classList.toggle('dark', s.theme === 'dark'); showToast('Settings saved', 'success'); }} transactions={transactions} currentUser={currentUser} categories={categories} onUpdateCategories={async (c) => { await api.saveCategories(c); setCategories(c); }} onRenameCategory={()=>{}} users={users} onAddUser={async (u) => { const n = await api.addUser(u); setUsers([...users, n]); }} onUpdateUser={async (u) => { await api.updateUser(u); setUsers(users.map(us => us.id === u.id ? u : us)); }} onDeleteUser={async (id) => { await api.deleteUser(id); setUsers(users.filter(u => u.id !== id)); }} customers={customers} onAddCustomer={async (c) => { const n = await api.addCustomer(c); setCustomers([...customers, n]); }} onUpdateCustomer={async (c) => { await api.updateCustomer(c); setCustomers(customers.map(cu => cu.id === c.id ? c : cu)); }} onDeleteCustomer={async (id) => { await api.deleteCustomer(id); setCustomers(customers.filter(c => c.id !== id)); }} onNavigate={setView} />;
           case 'PURCHASES': return <PurchaseView orders={purchaseOrders} products={products} settings={settings} onCreateOrder={handleCreatePurchaseOrder} onReceiveOrder={async (id) => { const o = purchaseOrders.find(po => po.id === id); if(o) { const u = await api.savePurchaseOrder({...o, status: 'Received'}); setPurchaseOrders(purchaseOrders.map(p => p.id === id ? u : p)); o.items.forEach(async i => { const p = products.find(prod => prod.id === i.productId); if(p) { const updated = await api.updateProduct({...p, stock: p.stock + i.quantity}); setProducts(prev => prev.map(pr => pr.id === updated.id ? updated : pr)); } }); showToast('Order received, inventory updated', 'success'); } }} currentUser={currentUser} />;
           case 'EXPENSES': return <ExpensesView expenses={expenses} categories={expenseCategories} onAddExpense={handleAddExpense} onDeleteExpense={handleDeleteExpense} onUpdateCategories={async (c) => { await api.saveExpenseCategories(c); setExpenseCategories(c); }} settings={settings} currentUser={currentUser} />;
-          case 'REPORTS': return <ReportsView transactions={transactions} expenses={expenses} settings={settings} currentUser={currentUser} />;
+          case 'REPORTS': return <ReportsView transactions={transactions} expenses={expenses} settings={settings} currentUser={currentUser} users={users} customers={customers} shifts={shifts} />;
           case 'REPAIRS': return <RepairsView repairs={repairs} customers={customers} onAddRepair={handleAddRepair} onUpdateRepair={handleUpdateRepair} onDeleteRepair={async (id) => { await api.deleteRepair(id); setRepairs(repairs.filter(r => r.id !== id)); }} settings={settings} currentUser={currentUser} />;
           case 'DEFECTIVE': return <DefectiveProductsView defectiveProducts={defectiveProducts} products={products} onAddDefective={handleAddDefective} onUpdateDefective={handleUpdateDefective} onDeleteDefective={handleDeleteDefective} settings={settings} currentUser={currentUser} />;
           case 'LANDING_BUILDER': return <LandingPageBuilderView settings={settings} onSave={async (s) => { await api.saveSettings(s); setSettings(s); showToast('Landing page updated', 'success'); }} onBack={() => setView('SETTINGS')} />;

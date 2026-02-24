@@ -7,14 +7,20 @@ const sendTelegramMessage = async (message: string, settings: StoreSettings) => 
   }
 
   try {
-    const url = `https://api.telegram.org/bot${settings.telegramBotToken}/sendMessage`;
+    const token = settings.telegramBotToken.trim();
+    const chatId = settings.telegramChatId.trim();
+    
+    // Remove 'bot' prefix if user accidentally included it
+    const cleanToken = token.startsWith('bot') ? token.slice(3) : token;
+    
+    const url = `https://api.telegram.org/bot${cleanToken}/sendMessage`;
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        chat_id: settings.telegramChatId,
+        chat_id: chatId,
         text: message,
         parse_mode: 'Markdown',
       }),
@@ -24,7 +30,8 @@ const sendTelegramMessage = async (message: string, settings: StoreSettings) => 
       console.error('Failed to send Telegram notification:', await response.text());
     }
   } catch (error) {
-    console.error('Error sending Telegram notification:', error);
+    // Silently handle fetch errors (e.g., adblockers, network issues) to prevent app crashes or console spam
+    console.warn('Telegram notification could not be sent. This may be due to network issues or adblockers.');
   }
 };
 

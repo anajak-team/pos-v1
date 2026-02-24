@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Shift, StoreSettings } from '../types';
-import { Printer, X, LogOut } from 'lucide-react';
+import { Printer, LogOut } from 'lucide-react';
 import { TRANSLATIONS } from '../translations';
 
 interface ShiftReportProps {
@@ -28,11 +28,11 @@ export const ShiftReport: React.FC<ShiftReportProps> = ({ shift, settings, onClo
         return TRANSLATIONS[lang]?.[key] || TRANSLATIONS.en[key];
     };
 
-    const format = (val: number) => val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const format = (val?: number) => (val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     useEffect(() => {
         // Automatically print when report opens (optional, but convenient for POS)
-        // setTimeout(() => window.print(), 500);
+        setTimeout(() => window.print(), 500);
     }, []);
 
     return createPortal(

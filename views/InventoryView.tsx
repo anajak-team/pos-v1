@@ -7,7 +7,7 @@ import { useAlert } from '../components/Alert';
 import QRCode from 'qrcode';
 import JsBarcode from 'jsbarcode';
 import { TRANSLATIONS } from '../translations';
-import { addDefectiveItem } from '../services/storageService';
+import { addDefectiveProduct } from '../services/storageService';
 
 interface InventoryViewProps {
   products: Product[];
@@ -366,13 +366,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ products, onDelete
   const handleDefectiveSubmit = async (qty: number, reason: string) => {
       if (!selectedProductForDefective) return;
       try {
-          await addDefectiveItem({
+          await addDefectiveProduct({
               productId: selectedProductForDefective.id,
               productName: selectedProductForDefective.name,
               quantity: qty,
               reason: reason,
               date: new Date().toISOString(),
-              reportedBy: currentUser.name
+              status: 'pending'
           });
           
           onUpdateProduct({
