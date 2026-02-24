@@ -18,12 +18,19 @@ interface ReportsViewProps {
 }
 
 // Date range options
-type DateRangeOption = '7d' | '30d' | '90d' | 'all';
+type DateRangeOption = '7d' | '30d' | '90d' | 'all' | 'custom';
 
 // Main component
 export const ReportsView: React.FC<ReportsViewProps> = ({ transactions, expenses, settings, currentUser, users, customers, shifts }) => {
   const [dateRange, setDateRange] = useState<DateRangeOption>('30d');
+  const [customStartDate, setCustomStartDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().split('T')[0];
+  });
+  const [customEndDate, setCustomEndDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [showDailyReport, setShowDailyReport] = useState(false);
+  const [dailyReportDate, setDailyReportDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   
   // Translation Helper
   const t = (key: keyof typeof TRANSLATIONS.en) => {
@@ -40,19 +47,36 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ transactions, expenses
       if (range === '7d') startDate.setDate(now.getDate() - 7);
       else if (range === '30d') startDate.setDate(now.getDate() - 30);
       else if (range === '90d') startDate.setDate(now.getDate() - 90);
+      else if (range === 'custom') return new Date(customStartDate);
       else return new Date(0); // 'all' time
       return startDate;
     };
 
+    const getEndDate = (range: DateRangeOption) => {
+      if (range === 'custom') {
+        const d = new Date(customEndDate);
+        d.setHours(23, 59, 59, 999);
+        return d;
+      }
+      return new Date(); // now
+    };
+
     const startDate = getStartDate(dateRange);
+    const endDate = getEndDate(dateRange);
     
-    const fTrans = transactions.filter(t => new Date(t.date) >= startDate);
-    const fExp = expenses.filter(e => new Date(e.date) >= startDate);
+    const fTrans = transactions.filter(t => {
+      const d = new Date(t.date);
+      return d >= startDate && d <= endDate;
+    });
+    const fExp = expenses.filter(e => {
+      const d = new Date(e.date);
+      return d >= startDate && d <= endDate;
+    });
     const fSales = fTrans.filter(t => t.type === 'sale');
     const fReturns = fTrans.filter(t => t.type === 'return');
 
     return { filteredTransactions: fTrans, filteredExpenses: fExp, filteredSales: fSales, filteredReturns: fReturns };
-  }, [transactions, expenses, dateRange]);
+  }, [transactions, expenses, dateRange, customStartDate, customEndDate]);
 
   // Calculate KPIs
   const totalRevenue = filteredSales.reduce((sum, t) => sum + t.total, 0);
@@ -214,18 +238,38 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ transactions, expenses
             </button>
 
             {/* Date Range Selector */}
-            <div className="relative">
-                <select 
-                    value={dateRange} 
-                    onChange={e => setDateRange(e.target.value as DateRangeOption)}
-                    className="appearance-none w-full sm:w-auto pl-10 pr-4 py-3 rounded-xl bg-white/60 dark:bg-slate-900/60 border border-white/20 dark:border-white/10 focus:border-primary/50 outline-none transition-all backdrop-blur-md shadow-sm text-slate-800 dark:text-white font-bold"
-                >
-                    <option value="7d">{t('LAST_7_DAYS')}</option>
-                    <option value="30d">{t('LAST_30_DAYS')}</option>
-                    <option value="90d">{t('LAST_90_DAYS')}</option>
-                    <option value="all">{t('ALL_TIME')}</option>
-                </select>
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18}/>
+            <div className="flex flex-col sm:flex-row gap-2 items-center">
+                {dateRange === 'custom' && (
+                    <div className="flex gap-2 items-center bg-white/60 dark:bg-slate-900/60 p-1 rounded-xl border border-white/20 dark:border-white/10 shadow-sm">
+                        <input 
+                            type="date" 
+                            value={customStartDate}
+                            onChange={(e) => setCustomStartDate(e.target.value)}
+                            className="bg-transparent border-none outline-none text-sm font-bold text-slate-800 dark:text-white px-2 py-1"
+                        />
+                        <span className="text-slate-400">-</span>
+                        <input 
+                            type="date" 
+                            value={customEndDate}
+                            onChange={(e) => setCustomEndDate(e.target.value)}
+                            className="bg-transparent border-none outline-none text-sm font-bold text-slate-800 dark:text-white px-2 py-1"
+                        />
+                    </div>
+                )}
+                <div className="relative">
+                    <select 
+                        value={dateRange} 
+                        onChange={e => setDateRange(e.target.value as DateRangeOption)}
+                        className="appearance-none w-full sm:w-auto pl-10 pr-4 py-3 rounded-xl bg-white/60 dark:bg-slate-900/60 border border-white/20 dark:border-white/10 focus:border-primary/50 outline-none transition-all backdrop-blur-md shadow-sm text-slate-800 dark:text-white font-bold"
+                    >
+                        <option value="7d">{t('LAST_7_DAYS')}</option>
+                        <option value="30d">{t('LAST_30_DAYS')}</option>
+                        <option value="90d">{t('LAST_90_DAYS')}</option>
+                        <option value="all">{t('ALL_TIME')}</option>
+                        <option value="custom">Custom Date</option>
+                    </select>
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18}/>
+                </div>
             </div>
         </div>
       </div>
@@ -356,7 +400,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ transactions, expenses
             expenses={expenses} 
             settings={settings} 
             onClose={() => setShowDailyReport(false)}
-            date={new Date()}
+            date={new Date(dailyReportDate)}
+            onDateChange={(d) => setDailyReportDate(d)}
           />
       )}
     </div>

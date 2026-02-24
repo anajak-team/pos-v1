@@ -11,9 +11,10 @@ interface DailyReportProps {
   settings: StoreSettings;
   onClose: () => void;
   date: Date;
+  onDateChange?: (date: string) => void;
 }
 
-export const DailyReport: React.FC<DailyReportProps> = ({ transactions, expenses, settings, onClose, date }) => {
+export const DailyReport: React.FC<DailyReportProps> = ({ transactions, expenses, settings, onClose, date, onDateChange }) => {
   // Filter for the specific date
   const startOfDay = new Date(date);
   startOfDay.setHours(0, 0, 0, 0);
@@ -67,13 +68,23 @@ export const DailyReport: React.FC<DailyReportProps> = ({ transactions, expenses
   return createPortal(
     <div className="print-portal fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:bg-white print:block animate-fade-in">
       <div className="relative flex flex-col items-center w-full max-w-sm print:w-full print:block print:static">
-        <div className={`flex gap-2 mb-4 shrink-0 print:hidden w-full ${maxWidthClass} justify-between`}>
-            <button onClick={() => window.print()} className="bg-white text-black px-4 py-2 rounded-full font-bold flex items-center gap-2 shadow-lg hover:bg-gray-100 transition-colors">
-                <Printer size={16} /> {t('PRINT')}
-            </button>
-            <button onClick={onClose} className="bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors">
-                <X size={20} />
-            </button>
+        <div className={`flex gap-2 mb-4 shrink-0 print:hidden w-full ${maxWidthClass} justify-between items-center`}>
+            {onDateChange && (
+                <input 
+                    type="date" 
+                    value={new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0]}
+                    onChange={(e) => onDateChange(e.target.value)}
+                    className="bg-white text-black px-3 py-2 rounded-xl font-bold text-sm outline-none shadow-lg"
+                />
+            )}
+            <div className="flex gap-2">
+                <button onClick={() => window.print()} className="bg-white text-black px-4 py-2 rounded-xl font-bold flex items-center gap-2 shadow-lg hover:bg-gray-100 transition-colors">
+                    <Printer size={16} /> {t('PRINT')}
+                </button>
+                <button onClick={onClose} className="bg-black/50 text-white p-2 rounded-xl hover:bg-black/70 transition-colors">
+                    <X size={20} />
+                </button>
+            </div>
         </div>
 
         <div className={`bg-white ${widthClass} mx-auto shadow-2xl overflow-hidden rounded-sm print:shadow-none print:w-full font-mono text-black p-4 text-xs leading-tight`}>

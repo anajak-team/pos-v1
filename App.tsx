@@ -534,6 +534,7 @@ export const App = () => {
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
   const [viewTransaction, setViewTransaction] = useState<Transaction | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
   
   const { showToast } = useToast();
   const { showConfirm } = useAlert();
@@ -556,6 +557,8 @@ export const App = () => {
       setRepairs(await api.getRepairs());
       setDefectiveProducts(await api.getDefectiveProducts());
       setPurchaseOrders(await api.getPurchaseOrders());
+      
+      setIsInitializing(false);
     };
     init();
   }, []);
@@ -598,6 +601,8 @@ export const App = () => {
             setCurrentUser(null);
         }
     } else {
+        const shift = await api.getActiveShift();
+        setActiveShift(shift);
         setView('DASHBOARD');
         showToast(`Welcome back, ${user.name}`, 'success');
     }
@@ -623,6 +628,7 @@ export const App = () => {
   };
 
   const handleViewDemo = async () => {
+      setIsInitializing(true);
       localStorage.setItem('nexus_demo_mode', 'true');
       
       // Refresh all data to use demo/local storage
@@ -650,6 +656,7 @@ export const App = () => {
       };
       setCurrentUser(demoUser);
       setView('DASHBOARD');
+      setIsInitializing(false);
       showToast('Entered Demo Mode - Data is local only', 'success');
   };
 
@@ -903,7 +910,7 @@ export const App = () => {
     api.saveSettings(newSettings).then(() => setSettings(newSettings));
   }
 
-  if (!settings) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" size={40} /></div>;
+  if (isInitializing || !settings) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" size={40} /></div>;
 
   if (!currentUser) {
       if (view === 'LOGIN') {

@@ -460,9 +460,12 @@ export const getCustomerByEmail = async (email: string): Promise<Customer | null
 // --- Shifts ---
 export const getShifts = async (): Promise<Shift[]> => {
     if (isDemo()) return getDemoLocal('shifts', []);
-    const { data, error } = await supabase.from('shifts').select('*').order('startTime', { ascending: false });
+    const { data, error } = await supabase.from('shifts').select('*');
     if (error) return [];
-    return data || [];
+    
+    // Sort in memory to avoid potential column name issues in Supabase
+    const shifts = data as Shift[];
+    return shifts.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
 };
 
 export const getActiveShift = async (): Promise<Shift | null> => {
@@ -470,9 +473,11 @@ export const getActiveShift = async (): Promise<Shift | null> => {
         const shifts = getDemoLocal<Shift[]>('shifts', []);
         return shifts.find(s => s.status === 'OPEN') || null;
     }
-    const { data, error } = await supabase.from('shifts').select('*').eq('status', 'OPEN').single();
-    if (error) return null;
-    return data;
+    
+    const { data, error } = await supabase.from('shifts').select('*').eq('status', 'OPEN').limit(1);
+    
+    if (error || !data || data.length === 0) return null;
+    return data[0];
 };
 
 export const saveShift = async (shift: Partial<Shift>): Promise<Shift> => {
